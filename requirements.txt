@@ -1,0 +1,4 @@
+ddgs
+rich
+pyfiglet
+requests
