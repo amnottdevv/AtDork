@@ -1,4 +1,4 @@
-```markdown
+
 # Atdork
 
 ![Version](https://img.shields.io/badge/version-1.0-blue.svg)
@@ -201,4 +201,4 @@ Distributed under the MIT License. See `LICENSE` for more information.
 GitHub: [github.com/amnottdevv/atdork](https://github.com/amnottdevv/atdork)  
 
 If you find this tool useful, consider leaving a ⭐ on the repository.
-```
+
