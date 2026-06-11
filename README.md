@@ -1,6 +1,6 @@
 # Atdork
 
-![Version](https://img.shields.io/badge/version-1.1-blue.svg)
+![Version](https://img.shields.io/badge/version-1.2-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-linux%20%7C%20macos%20%7C%20windows-lightgrey)
