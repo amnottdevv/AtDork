@@ -15,6 +15,7 @@ from rich.prompt import Prompt
 
 from core.scanner import search_dork
 from core.batch_runner import load_queries_from_file, parse_query_string, run_batch
+from core.multi_thread_runner import run_batch_multithread
 from core.proxy_manager import create_proxy_manager
 from lib.display import show_banner, display_results
 from lib.storage import save_results
@@ -25,7 +26,7 @@ console = Console()
 def build_parser():
     parser = argparse.ArgumentParser(
         prog="atdork",
-        description="Atdork – simple DuckDuckGo metasearch OSINT helper.",
+        description="Atdork – DuckDuckGo metasearch OSINT tool for professionals.",
         epilog='Contoh: %(prog)s -q "site:gov filetype:pdf" -r 10 -o hasil.json',
     )
     # Mode
@@ -80,6 +81,15 @@ def build_parser():
     parser.add_argument("--proxy-cooldown", type=int, default=60, help="Cooldown proxy gagal dalam detik (default 60).")
     parser.add_argument("--strict", action="store_true", help="Jangan fallback ke koneksi langsung jika semua proxy down.")
     parser.add_argument("--max-failures", type=int, default=3, help="Hapus proxy permanen setelah kegagalan berturut-turut sebanyak ini (0=tidak pernah).")
+    # Multi-threading
+    parser.add_argument(
+        "--concurrency", type=int, default=1,
+        help="Jumlah thread paralel untuk batch processing (default 1 = sekuensial)."
+    )
+    parser.add_argument(
+        "--max-fallback-failures", type=int, default=3,
+        help="Batas kegagalan berturut-turut sebelum fallback ke sekuensial (default 3)."
+    )
     # Batch processing
     parser.add_argument(
         "--batch-file", type=str, default=None,
@@ -102,7 +112,7 @@ def build_parser():
     )
     # Lain
     parser.add_argument("--debug", action="store_true", help="Tampilkan log debug.")
-    parser.add_argument("--version", action="version", version="%(prog)s 1.2")
+    parser.add_argument("--version", action="version", version="%(prog)s 2.0")
 
     return parser
 
@@ -203,19 +213,38 @@ def cli_mode(args):
 
         console.print(f"[bold cyan]Batch mode: {len(queries)} query[/bold cyan]")
 
-        batch_results = run_batch(
-            queries=queries,
-            max_results=args.max_results,
-            timeout=args.timeout,
-            retries=args.retries,
-            delay=args.delay,
-            proxy_manager=proxy_manager,
-            region=args.region,
-            safesearch=args.safesearch,
-            timelimit=args.timelimit,
-            backend=args.backend,
-            user_agent=args.user_agent,
-        )
+        # Pilih runner berdasarkan concurrency
+        if args.concurrency > 1:
+            batch_results = run_batch_multithread(
+                queries=queries,
+                concurrency=args.concurrency,
+                fallback_sequential=True,
+                max_consecutive_failures=args.max_fallback_failures,
+                max_results=args.max_results,
+                timeout=args.timeout,
+                retries=args.retries,
+                delay=args.delay,
+                proxy_manager=proxy_manager,
+                region=args.region,
+                safesearch=args.safesearch,
+                timelimit=args.timelimit,
+                backend=args.backend,
+                user_agent=args.user_agent,
+            )
+        else:
+            batch_results = run_batch(
+                queries=queries,
+                max_results=args.max_results,
+                timeout=args.timeout,
+                retries=args.retries,
+                delay=args.delay,
+                proxy_manager=proxy_manager,
+                region=args.region,
+                safesearch=args.safesearch,
+                timelimit=args.timelimit,
+                backend=args.backend,
+                user_agent=args.user_agent,
+            )
 
         # Ringkasan
         total_hits = sum(len(v) for v in batch_results.values())
