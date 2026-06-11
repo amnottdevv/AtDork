@@ -41,7 +41,7 @@ Atdork empowers security researchers, penetration testers, and OSINT analysts to
    ```
 
    Requirements:
-   - `duckduckgo-search>=7.0`
+   - `ddgs>=7.0`
    - `rich>=13.0`
    - `pyfiglet>=0.8`
 
