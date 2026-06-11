@@ -1,0 +1,46 @@
+# Atdork Configuration File
+# All values are optional and fall back to built-in defaults.
+# Command-line arguments will always override these settings.
+
+# ── Search defaults ─────────────────────────────────────────────
+max_results: 20               # Number of results (1-100)
+region: "us-en"               # Region / language code
+safesearch: "moderate"        # on, moderate, off
+timelimit: null               # d, w, m, y (or null for no limit)
+backend: "auto"               # auto, bing, google, duckduckgo, etc.
+
+# ── Request tuning ──────────────────────────────────────────────
+timeout: 10                   # Request timeout in seconds
+retries: 2                    # Number of retries on failure
+delay: 0.5                    # Delay between requests (seconds)
+user_agent: null              # null = auto-rotate; "MyBot/1.0" = custom
+
+# ── Proxy & anonymity ───────────────────────────────────────────
+proxy: null                   # Single proxy URL or comma-separated list
+proxy_file: null              # Path to proxy file
+tor: false                    # Enable Tor fallback
+strict: false                 # Fail instead of falling back to direct connection
+proxy_cooldown: 60            # Seconds to ban a failed proxy
+max_failures: 3               # Consecutive failures before permanent proxy removal
+
+# ── Multi-threading ─────────────────────────────────────────────
+concurrency: 1                # Number of threads (1 = sequential)
+max_fallback_failures: 3      # Consecutive failures before fallback to sequential
+
+# ── Batch processing ────────────────────────────────────────────
+batch_separator: ";"          # Separator for inline multiple queries
+
+# ── Output ──────────────────────────────────────────────────────
+format: "json"                # txt, json, csv
+output_dir: "./results"       # Default output directory (null = current dir)
+output: null                  # Fixed output file (overrides output_dir for single query)
+no_snippet: false             # Hide snippets in terminal
+
+# ── Validation ──────────────────────────────────────────────────
+no_validate: false            # Disable spam/invalid filtering
+strict_filter: false          # Require non-empty snippets
+
+# ── Advanced ────────────────────────────────────────────────────
+no_fallback_backends: false   # Disable automatic backend fallback
+no_verify: false              # Disable SSL verification (not recommended)
+debug: false                  # Enable debug logging
