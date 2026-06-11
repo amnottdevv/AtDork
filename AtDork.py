@@ -13,6 +13,7 @@ import json
 from rich.console import Console
 from rich.prompt import Prompt
 
+from core.config import load_config
 from core.scanner import search_dork, SearchError
 from core.batch_runner import load_queries_from_file, parse_query_string, run_batch
 from core.multi_thread_runner import run_batch_multithread
@@ -29,6 +30,11 @@ def build_parser():
         prog="atdork",
         description="Atdork – DuckDuckGo metasearch OSINT tool for professionals.",
         epilog='Contoh: %(prog)s -q "site:gov filetype:pdf" -r 10 -o hasil.json',
+    )
+    # Konfigurasi file
+    parser.add_argument(
+        "--config", type=str, default=None,
+        help="Path to YAML configuration file (default: atdork.yaml)."
     )
     # Mode
     parser.add_argument(
@@ -379,9 +385,19 @@ def cli_mode(args):
 
 def main():
     parser = build_parser()
-    args = parser.parse_args()
+    # Pisahkan argumen yang diketahui, terutama untuk mengambil --config lebih awal
+    args, remaining = parser.parse_known_args()
 
-    # Jika --interactive atau tidak ada argumen yang menunjukkan mode non-interaktif
+    # Muat konfigurasi dari file (default atdork.yaml) dan environment variable
+    config = load_config(args.config)
+
+    # Terapkan nilai konfigurasi sebagai default parser
+    parser.set_defaults(**config)
+
+    # Parse ulang sisa argumen dengan namespace yang sudah terisi default
+    args = parser.parse_args(remaining, namespace=args)
+
+    # Jalankan mode sesuai
     if args.interactive or (not args.query and not args.batch_file and not args.output and not args.output_dir):
         interactive_mode()
     else:
