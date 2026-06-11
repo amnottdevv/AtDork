@@ -13,7 +13,7 @@ import json
 from rich.console import Console
 from rich.prompt import Prompt
 
-from core.scanner import search_dork
+from core.scanner import search_dork, SearchError
 from core.batch_runner import load_queries_from_file, parse_query_string, run_batch
 from core.multi_thread_runner import run_batch_multithread
 from core.proxy_manager import create_proxy_manager
@@ -120,9 +120,18 @@ def build_parser():
         "--strict-filter", action="store_true",
         help="Filter lebih ketat: tolak hasil tanpa cuplikan atau judul sangat pendek."
     )
+    # Opsi scanner baru
+    parser.add_argument(
+        "--no-fallback-backends", action="store_true",
+        help="Nonaktifkan fallback ke backend lain jika backend utama gagal."
+    )
+    parser.add_argument(
+        "--no-verify", action="store_true",
+        help="Nonaktifkan verifikasi SSL (tidak disarankan)."
+    )
     # Lain
     parser.add_argument("--debug", action="store_true", help="Tampilkan log debug.")
-    parser.add_argument("--version", action="version", version="%(prog)s 2.0")
+    parser.add_argument("--version", action="version", version="%(prog)s 2.1")
 
     return parser
 
@@ -151,9 +160,18 @@ def interactive_mode():
 
     console.print("\n[bold cyan]🔍 Memulai pencarian...[/bold cyan]")
     try:
-        results = search_dork(query, max_results=max_results)
-    except Exception as e:
+        # Mode interaktif menggunakan default aman
+        results = search_dork(
+            query,
+            max_results=max_results,
+            fallback_backends=True,
+            verify=True
+        )
+    except SearchError as e:
         console.print(f"[red]Gagal: {e}[/red]")
+        return
+    except Exception as e:
+        console.print(f"[red]Error tidak terduga: {e}[/red]")
         return
 
     # Filter hasil (jika tidak dimatikan)
@@ -213,6 +231,22 @@ def cli_mode(args):
             console.print(f"[red]Proxy manager error: {e}[/red]")
             sys.exit(1)
 
+    # Konfigurasi scanner
+    scanner_kwargs = {
+        "max_results": args.max_results,
+        "timeout": args.timeout,
+        "retries": args.retries,
+        "delay": args.delay,
+        "proxy_manager": proxy_manager,
+        "region": args.region,
+        "safesearch": args.safesearch,
+        "timelimit": args.timelimit,
+        "backend": args.backend,
+        "user_agent": args.user_agent,
+        "verify": not args.no_verify,
+        "fallback_backends": not args.no_fallback_backends,
+    }
+
     # --- Deteksi mode batch ---
     queries = []
     if args.batch_file:
@@ -238,30 +272,12 @@ def cli_mode(args):
                 concurrency=args.concurrency,
                 fallback_sequential=True,
                 max_consecutive_failures=args.max_fallback_failures,
-                max_results=args.max_results,
-                timeout=args.timeout,
-                retries=args.retries,
-                delay=args.delay,
-                proxy_manager=proxy_manager,
-                region=args.region,
-                safesearch=args.safesearch,
-                timelimit=args.timelimit,
-                backend=args.backend,
-                user_agent=args.user_agent,
+                **scanner_kwargs
             )
         else:
             batch_results = run_batch(
                 queries=queries,
-                max_results=args.max_results,
-                timeout=args.timeout,
-                retries=args.retries,
-                delay=args.delay,
-                proxy_manager=proxy_manager,
-                region=args.region,
-                safesearch=args.safesearch,
-                timelimit=args.timelimit,
-                backend=args.backend,
-                user_agent=args.user_agent,
+                **scanner_kwargs
             )
 
         # Filter hasil batch (jika tidak dimatikan)
@@ -326,21 +342,12 @@ def cli_mode(args):
     console.print(f"[bold cyan]🔍 Searching for:[/bold cyan] {args.query}")
 
     try:
-        results = search_dork(
-            query=args.query,
-            max_results=args.max_results,
-            timeout=args.timeout,
-            retries=args.retries,
-            delay=args.delay,
-            proxy_manager=proxy_manager,
-            region=args.region,
-            safesearch=args.safesearch,
-            timelimit=args.timelimit,
-            backend=args.backend,
-            user_agent=args.user_agent,
-        )
-    except Exception as e:
+        results = search_dork(query=args.query, **scanner_kwargs)
+    except SearchError as e:
         console.print(f"[red]Search failed: {e}[/red]")
+        sys.exit(1)
+    except Exception as e:
+        console.print(f"[red]Unexpected error: {e}[/red]")
         sys.exit(1)
 
     # Filter hasil single (jika tidak dimatikan)
