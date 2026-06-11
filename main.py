@@ -19,6 +19,7 @@ from core.multi_thread_runner import run_batch_multithread
 from core.proxy_manager import create_proxy_manager
 from lib.display import show_banner, display_results
 from lib.storage import save_results
+from lib.validator import filter_results, get_filter_stats
 
 console = Console()
 
@@ -110,6 +111,15 @@ def build_parser():
         "--no-snippet", action="store_true",
         help="Sembunyikan cuplikan di layar."
     )
+    # Validasi output
+    parser.add_argument(
+        "--no-validate", action="store_true",
+        help="Tampilkan semua hasil tanpa filter spam/invalid."
+    )
+    parser.add_argument(
+        "--strict-filter", action="store_true",
+        help="Filter lebih ketat: tolak hasil tanpa cuplikan atau judul sangat pendek."
+    )
     # Lain
     parser.add_argument("--debug", action="store_true", help="Tampilkan log debug.")
     parser.add_argument("--version", action="version", version="%(prog)s 2.0")
@@ -145,6 +155,14 @@ def interactive_mode():
     except Exception as e:
         console.print(f"[red]Gagal: {e}[/red]")
         return
+
+    # Filter hasil (jika tidak dimatikan)
+    if results:
+        original = len(results)
+        results = filter_results(results)  # default tidak strict
+        stats = get_filter_stats(original, len(results))
+        if stats["removed"] > 0:
+            console.print(f"[dim]Filter: {stats['removed']} hasil spam/invalid dihapus.[/dim]")
 
     display_results(results, query)
 
@@ -246,6 +264,16 @@ def cli_mode(args):
                 user_agent=args.user_agent,
             )
 
+        # Filter hasil batch (jika tidak dimatikan)
+        if not args.no_validate:
+            total_removed = 0
+            for q in batch_results:
+                old = len(batch_results[q])
+                batch_results[q] = filter_results(batch_results[q], strict=args.strict_filter)
+                total_removed += old - len(batch_results[q])
+            if total_removed > 0:
+                console.print(f"[dim]Filter: {total_removed} hasil dihapus dari batch.[/dim]")
+
         # Ringkasan
         total_hits = sum(len(v) for v in batch_results.values())
         console.print(f"\n[green]Batch selesai. Total {total_hits} hasil dari {len(queries)} query.[/green]")
@@ -314,6 +342,14 @@ def cli_mode(args):
     except Exception as e:
         console.print(f"[red]Search failed: {e}[/red]")
         sys.exit(1)
+
+    # Filter hasil single (jika tidak dimatikan)
+    if not args.no_validate:
+        original_count = len(results)
+        results = filter_results(results, strict=args.strict_filter)
+        stats = get_filter_stats(original_count, len(results))
+        if stats["removed"] > 0:
+            console.print(f"[dim]Filter: {stats['removed']} hasil dihapus (spam/invalid).[/dim]")
 
     display_results(results, args.query, no_snippet=args.no_snippet)
 
