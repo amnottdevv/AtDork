@@ -39,26 +39,31 @@ jobs:
     name: Lint with flake8
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Install flake8
         run: pip install flake8
-      - name: Run flake8
-        run: flake8 core/ lib/ main.py --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: Run flake8 on source files
+        run: |
+          # Find all Python files excluding tests/ and helloworld.py
+          find . -type f -name '*.py' \
+            ! -path './tests/*' \
+            ! -name 'helloworld.py' \
+            -exec flake8 --count --select=E9,F63,F7,F82 --show-source --statistics {} +
 
   # ── Security Scan (Bandit) ───────────────────────────────────────────
   security:
     name: Security scan with Bandit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Install Bandit
         run: pip install bandit
+
       - name: Run Bandit
         run: bandit -r core/ lib/ main.py -f custom -ll
 
@@ -67,11 +72,11 @@ jobs:
     name: Dependency vulnerability check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Install safety
         run: pip install safety
+
       - name: Check dependencies
         run: safety check -r requirements.txt
