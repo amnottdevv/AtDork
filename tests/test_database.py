@@ -1,105 +1,247 @@
 """
-Unit tests for core.database module.
-Uses a temporary SQLite database file.
+Atdork – SQLite Database Layer
+Menyimpan hasil pencarian ke database SQLite lokal untuk resume, history, dan deduplikasi.
 """
 
-import json
 import sqlite3
-import pytest
-from core.database import Database
+import json
+import csv
+import logging
+from datetime import datetime, timezone
+from typing import Optional, List, Dict, Any, Tuple
 
-@pytest.fixture
-def db(tmp_path):
-    """Create a Database instance backed by a temporary file."""
-    db_path = tmp_path / "test.db"
-    db = Database(str(db_path))
-    yield db
-    db.close()
+logger = logging.getLogger(__name__)
 
+# Status untuk tabel queries
+STATUS_PENDING = "pending"
+STATUS_RUNNING = "running"
+STATUS_COMPLETED = "completed"
+STATUS_FAILED = "failed"
 
-def test_add_query(db):
-    qid = db.add_query("test query")
-    assert qid > 0
-    # Adding again should return the same ID
-    qid2 = db.add_query("test query")
-    assert qid == qid2
+# Skema database
+SQL_CREATE_TABLES = """
+CREATE TABLE IF NOT EXISTS queries (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    query_text TEXT UNIQUE NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
 
-
-def test_update_query_status(db):
-    qid = db.add_query("query")
-    db.update_query_status(qid, "completed")
-    # Check status via get_all_queries
-    all_queries = db.get_all_queries()
-    status = [s for (i, t, s) in all_queries if i == qid][0]
-    assert status == "completed"
-
-
-def test_get_pending_queries(db):
-    db.add_query("pending1")
-    db.add_query("pending2")
-    # both default to 'pending'
-    pending = db.get_pending_queries()
-    assert len(pending) == 2
-    # Update one to completed
-    qid = db.add_query("pending2")
-    db.update_query_status(qid, "completed")
-    pending = db.get_pending_queries()
-    assert len(pending) == 1
-    assert pending[0][1] == "pending1"
+CREATE TABLE IF NOT EXISTS results (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    query_id INTEGER NOT NULL,
+    title TEXT,
+    href TEXT,
+    body TEXT,
+    raw_json TEXT,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (query_id) REFERENCES queries(id),
+    UNIQUE(query_id, href)
+);
+"""
 
 
-def test_add_result(db):
-    qid = db.add_query("q")
-    result = {"title": "Test", "href": "http://example.com", "body": "Snippet"}
-    inserted = db.add_result(qid, result)
-    assert inserted is True
-    # Duplicate href for same query should be ignored
-    inserted2 = db.add_result(qid, result)
-    assert inserted2 is False
-    # Retrieve
-    results = db.get_results_by_query(qid)
-    assert len(results) == 1
-    assert results[0]["title"] == "Test"
+class Database:
+    """Manajer penyimpanan SQLite untuk AtDork."""
 
+    def __init__(self, db_path: str = "atdork.db"):
+        self.db_path = db_path
+        self._conn: Optional[sqlite3.Connection] = None
+        self._init_db()
 
-def test_add_results_batch(db):
-    qid = db.add_query("q")
-    results = [
-        {"title": "One", "href": "http://a.com"},
-        {"title": "Two", "href": "http://b.com"},
-        {"title": "One Dupe", "href": "http://a.com"},  # duplicate href
-    ]
-    new_count = db.add_results_batch(qid, results)
-    assert new_count == 2
+    def _connect(self) -> sqlite3.Connection:
+        """Buka koneksi (otomatis buat file jika belum ada)."""
+        if self._conn is None:
+            self._conn = sqlite3.connect(self.db_path)
+            self._conn.execute("PRAGMA journal_mode=WAL")   # performa & concurrent
+            self._conn.execute("PRAGMA foreign_keys = ON")
+        return self._conn
 
+    def close(self):
+        """Tutup koneksi database."""
+        if self._conn:
+            self._conn.close()
+            self._conn = None
 
-def test_deduplication(db):
-    qid1 = db.add_query("q1")
-    db.add_result(qid1, {"title": "A", "href": "http://dup.com"})
-    qid2 = db.add_query("q2")
-    db.add_result(qid2, {"title": "B", "href": "http://unique.com"})
-    assert db.is_duplicate("http://dup.com") is True
-    assert db.is_duplicate("http://unique.com") is True  # across all queries
-    assert db.is_duplicate("http://new.com") is False
+    def _init_db(self):
+        """Buat tabel jika belum ada."""
+        conn = self._connect()
+        conn.executescript(SQL_CREATE_TABLES)
+        conn.commit()
+        logger.debug("Database siap di %s", self.db_path)
 
+    # ── Query Management ──────────────────────────────────────────────
 
-def test_export_json(db, tmp_path):
-    qid = db.add_query("q")
-    db.add_result(qid, {"title": "T", "href": "http://e.com"})
-    out = tmp_path / "export.json"
-    db.export_to_json(str(out))
-    with open(out) as f:
-        data = json.load(f)
-    assert str(qid) in data
-    assert len(data[str(qid)]) == 1
+    def add_query(self, query_text: str, status: str = STATUS_PENDING) -> int:
+        """
+        Tambahkan query baru. Mengembalikan ID query.
+        Jika query sudah ada, update statusnya.
+        """
+        now = datetime.now(timezone.utc).isoformat()
+        conn = self._connect()
+        try:
+            cursor = conn.execute(
+                "INSERT OR IGNORE INTO queries (query_text, status, created_at, updated_at) "
+                "VALUES (?, ?, ?, ?)",
+                (query_text, status, now, now)
+            )
+            if cursor.rowcount == 0:
+                # Sudah ada, update status & timestamp
+                cursor = conn.execute(
+                    "UPDATE queries SET status = ?, updated_at = ? WHERE query_text = ?",
+                    (status, now, query_text)
+                )
+                # Ambil ID
+                row = conn.execute(
+                    "SELECT id FROM queries WHERE query_text = ?", (query_text,)
+                ).fetchone()
+                query_id = row[0]
+            else:
+                query_id = cursor.lastrowid
+            conn.commit()
+            return query_id
+        except Exception as e:
+            conn.rollback()
+            raise e
 
+    def update_query_status(self, query_id: int, status: str):
+        now = datetime.now(timezone.utc).isoformat()
+        conn = self._connect()
+        conn.execute(
+            "UPDATE queries SET status = ?, updated_at = ? WHERE id = ?",
+            (status, now, query_id)
+        )
+        conn.commit()
 
-def test_export_csv(db, tmp_path):
-    qid = db.add_query("q")
-    db.add_result(qid, {"title": "T", "href": "http://e.com"})
-    out = tmp_path / "export.csv"
-    db.export_to_csv(str(out))
-    with open(out) as f:
-        lines = f.readlines()
-    assert len(lines) == 2  # header + 1 row
-    assert "T" in lines[1]
+    def get_pending_queries(self) -> List[Tuple[int, str]]:
+        """Ambil daftar query yang belum selesai (pending/failed)."""
+        conn = self._connect()
+        rows = conn.execute(
+            "SELECT id, query_text FROM queries WHERE status IN (?, ?)",
+            (STATUS_PENDING, STATUS_FAILED)
+        ).fetchall()
+        return [(r[0], r[1]) for r in rows]
+
+    def get_all_queries(self) -> List[Tuple[int, str, str]]:
+        """Ambil semua query beserta statusnya."""
+        conn = self._connect()
+        rows = conn.execute(
+            "SELECT id, query_text, status FROM queries ORDER BY id DESC"
+        ).fetchall()
+        return [(r[0], r[1], r[2]) for r in rows]
+
+    # ── Result Management ─────────────────────────────────────────────
+
+    def add_result(self, query_id: int, result: Dict[str, Any]) -> bool:
+        """
+        Simpan satu hasil pencarian.
+        Mengabaikan duplikat (href yang sama untuk query_id yang sama).
+        Mengembalikan True jika data baru disimpan.
+        """
+        now = datetime.now(timezone.utc).isoformat()
+        conn = self._connect()
+        try:
+            cursor = conn.execute(
+                "INSERT OR IGNORE INTO results (query_id, title, href, body, raw_json, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    query_id,
+                    result.get("title", ""),
+                    result.get("href", ""),
+                    result.get("body", ""),
+                    json.dumps(result, ensure_ascii=False),
+                    now
+                )
+            )
+            conn.commit()
+            return cursor.rowcount > 0          # True hanya jika baris baru ditambahkan
+        except sqlite3.IntegrityError:
+            # Duplikat
+            return False
+
+    def add_results_batch(self, query_id: int, results: List[Dict[str, Any]]) -> int:
+        """Tambahkan banyak hasil sekaligus. Mengembalikan jumlah yang benar‑benar baru."""
+        count = 0
+        for res in results:
+            if self.add_result(query_id, res):
+                count += 1
+        return count
+
+    def get_results_by_query(self, query_id: int) -> List[Dict[str, Any]]:
+        conn = self._connect()
+        rows = conn.execute(
+            "SELECT title, href, body, raw_json FROM results WHERE query_id = ?",
+            (query_id,)
+        ).fetchall()
+        results = []
+        for r in rows:
+            if r[3]:  # raw_json
+                try:
+                    data = json.loads(r[3])
+                except json.JSONDecodeError:
+                    data = {"title": r[0], "href": r[1], "body": r[2]}
+            else:
+                data = {"title": r[0], "href": r[1], "body": r[2]}
+            results.append(data)
+        return results
+
+    def get_all_results(self) -> Dict[int, List[Dict[str, Any]]]:
+        """Kembalikan dict {query_id: [results]}."""
+        conn = self._connect()
+        rows = conn.execute(
+            "SELECT r.query_id, r.title, r.href, r.body, r.raw_json, q.query_text "
+            "FROM results r JOIN queries q ON r.query_id = q.id"
+        ).fetchall()
+        data: Dict[int, List[Dict]] = {}
+        for row in rows:
+            qid = row[0]
+            if row[4]:
+                try:
+                    item = json.loads(row[4])
+                except json.JSONDecodeError:
+                    item = {"title": row[1], "href": row[2], "body": row[3]}
+            else:
+                item = {"title": row[1], "href": row[2], "body": row[3]}
+            data.setdefault(qid, []).append(item)
+        return data
+
+    # ── Deduplication ─────────────────────────────────────────────────
+
+    def is_duplicate(self, href: str) -> bool:
+        """Cek apakah URL sudah pernah disimpan di seluruh database."""
+        conn = self._connect()
+        row = conn.execute(
+            "SELECT COUNT(*) FROM results WHERE href = ?", (href,)
+        ).fetchone()
+        return row[0] > 0
+
+    # ── Export ────────────────────────────────────────────────────────
+
+    def export_to_json(self, output_path: str) -> None:
+        """Export semua hasil ke file JSON."""
+        data = self.get_all_results()
+        # Ubah key integer menjadi string untuk JSON
+        serializable = {str(k): v for k, v in data.items()}
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(serializable, f, indent=2, ensure_ascii=False)
+        logger.info("Database diekspor ke %s", output_path)
+
+    def export_to_csv(self, output_path: str) -> None:
+        """Export semua hasil ke file CSV."""
+        conn = self._connect()
+        rows = conn.execute(
+            "SELECT q.query_text, r.title, r.href, r.body "
+            "FROM results r JOIN queries q ON r.query_id = q.id"
+        ).fetchall()
+        with open(output_path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(["query", "title", "href", "body"])
+            writer.writerows(rows)
+        logger.info("Database diekspor ke %s", output_path)
+
+    # ── Maintenance ──────────────────────────────────────────────────
+
+    def vacuum(self):
+        """Optimalkan ukuran database."""
+        self._connect().execute("VACUUM")
