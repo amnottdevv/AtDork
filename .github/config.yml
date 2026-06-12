@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or Discussion
+    url: https://github.com/amnottdevv/atdork/discussions
+    about: Please ask questions here instead of opening an issue.
+  - name: Code of Conduct
+    url: https://github.com/amnottdevv/atdork/blob/master/CODE_OF_CONDUCT.md
+    about: Review our Code of Conduct before participating.
+  - name : wiki documentations
+    url : https://github.com/amnottdevv/AtDork/wiki
+    about : wiki documentations func, how to use, report
