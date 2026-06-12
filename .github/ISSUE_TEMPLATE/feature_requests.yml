@@ -1,0 +1,39 @@
+name: Feature Request
+description: Suggest an idea for AtDork.
+title: "[Feature]: "
+labels: ["enhancement"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        We appreciate your feedback. Please provide as much detail as possible.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What problem are you trying to solve? How do you currently work around it?
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: Describe the feature or improvement you'd like to see.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Have you thought of another approach? If so, please share.
+
+  - type: checkboxes
+    id: ethical
+    attributes:
+      label: Ethical alignment
+      description: Confirm that this feature aligns with the project's ethical standards.
+      options:
+        - label: This feature is intended for lawful and authorized use only.
+          required: true
