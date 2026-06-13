@@ -1,6 +1,6 @@
 """
 Atdork - Proxy Manager (Upgraded)
-Rotasi proxy dengan validasi, strict mode, statistik, dan health check.
+Rotasi proxy dengan validasi (termasuk autentikasi), strict mode, statistik, dan health check.
 """
 
 import re
@@ -12,22 +12,23 @@ from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
-# Pola validasi: harus punya skema://host:port
+# Pola validasi: harus punya skema://[user:pass@]host:port
 PROXY_PATTERN = re.compile(
-    r'^(http|https|socks4|socks5|socks5h)://'
-    r'([^:/]+)'
-    r':(\d{1,5})$'
+    r'^(http|https|socks4|socks5|socks5h)://'   # skema
+    r'([^@]*@)?'                                 # opsional: user:pass@
+    r'([^:/]+)'                                   # host
+    r':(\d{1,5})$'                                # port
 )
 
 
 def is_valid_proxy(proxy: str) -> bool:
-    """Memvalidasi format proxy: skema://host:port."""
+    """Memvalidasi format proxy: skema://[user:pass@]host:port."""
     if not proxy:
         return False
     m = PROXY_PATTERN.match(proxy)
     if not m:
         return False
-    port = int(m.group(3))
+    port = int(m.group(4))
     return 1 <= port <= 65535
 
 
