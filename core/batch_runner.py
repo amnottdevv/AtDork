@@ -1,10 +1,12 @@
 """
-Atdork - Batch Query Runner
-Menjalankan banyak dork sekaligus (dari file atau string) dengan progress bar.
+Atdork - Batch Query Runner (Enhanced with Resilience & Rate Limiter)
+Menjalankan banyak dork sekaligus (dari file atau string) dengan progress bar,
+dukungan resilience handler, rate limiter adaptif, dan eksekusi paralel.
 """
 
 import logging
-from typing import List, Dict
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import List, Dict, Optional
 
 from rich.progress import (
     Progress,
@@ -42,11 +44,22 @@ def parse_query_string(query_str: str, separator: str = ";") -> List[str]:
     return [q.strip() for q in query_str.split(separator) if q.strip()]
 
 
-def run_batch(queries: List[str], **kwargs) -> Dict[str, list]:
+def run_batch(
+    queries: List[str],
+    resilience_handler=None,
+    rate_limiter=None,
+    concurrency: int = 1,
+    **kwargs,
+) -> Dict[str, list]:
     """
-    Jalankan pencarian untuk setiap query secara berurutan.
-    kwargs diteruskan ke search_dork (max_results, timeout, retries, delay,
-    proxy, region, safesearch, timelimit, backend, user_agent).
+    Jalankan pencarian untuk setiap query.
+
+    Args:
+        queries: Daftar query string.
+        resilience_handler: Instance ResilienceHandler (opsional, untuk mode tahan banting).
+        rate_limiter: Instance RateLimiter (opsional, untuk delay adaptif).
+        concurrency: Jumlah thread paralel (1 = sekuensial).
+        **kwargs: Diteruskan ke search_dork (atau resilience_handler.execute).
 
     Returns:
         Dictionary {query: [list of result dicts]}.
@@ -57,6 +70,41 @@ def run_batch(queries: List[str], **kwargs) -> Dict[str, list]:
     if total == 0:
         return results
 
+    def _execute_single(q: str) -> list:
+        """Wrapper yang menangani resilience, rate limiting, dan fallback."""
+        backend = kwargs.get("backend", "auto")
+        if rate_limiter:
+            rate_limiter.wait(backend)
+
+        if resilience_handler:
+            res, err = resilience_handler.execute(q, **kwargs)
+            if err:
+                if rate_limiter:
+                    # Klasifikasi error sederhana untuk rate limiter
+                    if "429" in str(err):
+                        rate_limiter.report_response(backend, 429, False)
+                    else:
+                        rate_limiter.report_response(backend, 500, False)
+                logger.error(f"'{q[:60]}' gagal: {err}")
+                return []
+            if rate_limiter:
+                rate_limiter.report_response(backend, 200, len(res) > 0)
+            return res
+        else:
+            try:
+                res = search_dork(q, **kwargs)
+                if rate_limiter:
+                    rate_limiter.report_response(backend, 200, len(res) > 0)
+                return res
+            except Exception as e:
+                if rate_limiter:
+                    if "429" in str(e):
+                        rate_limiter.report_response(backend, 429, False)
+                    else:
+                        rate_limiter.report_response(backend, 500, False)
+                logger.error(f"'{q[:60]}' gagal: {e}")
+                return []
+
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
@@ -66,18 +114,28 @@ def run_batch(queries: List[str], **kwargs) -> Dict[str, list]:
     ) as progress:
         task = progress.add_task("[cyan]Running batch queries...", total=total)
 
-        for idx, q in enumerate(queries, 1):
-            desc = q if len(q) <= 60 else q[:57] + "..."
-            progress.update(task, description=f"[{idx}/{total}] {desc}")
-
-            try:
-                res = search_dork(q, **kwargs)
+        if concurrency > 1:
+            # Parallel execution
+            with ThreadPoolExecutor(max_workers=concurrency) as executor:
+                future_to_query = {
+                    executor.submit(_execute_single, q): q for q in queries
+                }
+                for future in as_completed(future_to_query):
+                    q = future_to_query[future]
+                    try:
+                        res = future.result()
+                    except Exception as e:
+                        logger.error(f"'{q[:60]}' failed unexpectedly: {e}")
+                        res = []
+                    results[q] = res
+                    progress.update(task, advance=1)
+        else:
+            # Sequential execution
+            for idx, q in enumerate(queries, 1):
+                desc = q if len(q) <= 60 else q[:57] + "..."
+                progress.update(task, description=f"[{idx}/{total}] {desc}")
+                res = _execute_single(q)
                 results[q] = res
-                logger.debug(f"'{desc}' -> {len(res)} hasil")
-            except Exception as e:
-                logger.error(f"'{desc}' gagal: {e}")
-                results[q] = []
-
-            progress.advance(task)
+                progress.advance(task)
 
     return results
