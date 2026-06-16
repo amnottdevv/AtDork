@@ -111,7 +111,10 @@ def test_valid_result_minimal():
         "href": "https://a.co",
         "body": "Short"
     }
+    # tanpa parameter min_title, harus lolos karena min_title default None
     assert is_valid_result(result) is True
+    # dengan min_title=5, harus lolos
+    assert is_valid_result(result, min_title=5) is True
 
 
 def test_invalid_result_bad_url():
@@ -147,7 +150,8 @@ def test_invalid_result_short_title():
         "href": "https://example.com",
         "body": "Valid body"
     }
-    assert is_valid_result(result) is False
+    # min_title default None -> lolos. Dengan min_title=5 harus False.
+    assert is_valid_result(result, min_title=5) is False
 
 
 def test_strict_mode_no_body():
@@ -156,9 +160,10 @@ def test_strict_mode_no_body():
         "href": "https://example.com",
         "body": ""          # empty
     }
-    # non-strict: ok, strict: not ok
-    assert is_valid_result(result, strict=False) is True
-    assert is_valid_result(result, strict=True) is False
+    # strict=False → semua lolos
+    assert filter_results([result], strict=False) == [result]
+    # strict=True → harus ditolak (body kosong)
+    assert filter_results([result], strict=True) == []
 
 
 def test_strict_mode_short_body():
@@ -167,8 +172,10 @@ def test_strict_mode_short_body():
         "href": "https://example.com",
         "body": "Short"      # kurang dari MIN_BODY_LENGTH (10)
     }
-    assert is_valid_result(result, strict=False) is True
-    assert is_valid_result(result, strict=True) is False
+    # strict=False → lolos
+    assert filter_results([result], strict=False) == [result]
+    # strict=True → ditolak
+    assert filter_results([result], strict=True) == []
 
 
 # ── filter_results ───────────────────────────────────────────────────────
@@ -178,6 +185,7 @@ def test_filter_results_all_valid():
         {"title": "First",  "href": "http://a.com", "body": "body1"},
         {"title": "Second", "href": "http://b.com", "body": "body2"},
     ]
+    # default filter (min_title=None, min_desc=None, spam on, url all)
     filtered = filter_results(data)
     assert len(filtered) == 2
 
@@ -217,7 +225,6 @@ def test_filter_results_empty_input():
 
 
 def test_filter_results_none_input():
-    # Jika None, akan dianggap sebagai list kosong
     assert filter_results(None) == []
 
 
