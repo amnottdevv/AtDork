@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Atdork - Professional OSINT Tool
-Version : 1.3
+Version : 1.3.1
 Author  : alzzmarket
 GitHub  : github.com/amnottdevv/atdork
 """
@@ -43,7 +43,7 @@ def _show_ascii_banner():
     banner = f.renderText('Atdork')
     console.print(f"[bold green]{banner}[/bold green]")
     console.print("[bold cyan]Professional OSINT Tool[/bold cyan]")
-    console.print(f"[dim]v1.3 - {datetime.now().strftime('%Y-%m-%d %H:%M')}[/dim]")
+    console.print(f"[dim]v1.3.1 - {datetime.now().strftime('%Y-%m-%d %H:%M')}[/dim]")
     console.print()
 
 
@@ -95,9 +95,21 @@ def build_parser():
     parser.add_argument("--format", type=str, choices=["txt","json","csv"], default="txt")
     parser.add_argument("--no-snippet", action="store_true")
 
-    # Validasi
-    parser.add_argument("--no-validate", action="store_true")
-    parser.add_argument("--strict-filter", action="store_true")
+    # Validasi (legacy)
+    parser.add_argument("--no-validate", action="store_true", help="Matikan semua filter validasi.")
+    parser.add_argument("--strict-filter", action="store_true", help="Filter ketat (title≥5, desc≥10, spam on, url all).")
+
+    # Validasi granular (v1.3.1)
+    parser.add_argument("--validate-url", type=str, default="all",
+                        choices=["only", "path", "params", "all", "false"],
+                        help="Mode validasi URL: only (domain), path (domain+path), params (domain+params), all (lengkap), false (mati).")
+    parser.add_argument("--validate-title", type=str, default="5",
+                        help="Panjang minimal judul (integer) atau 'false' untuk matikan (default: 5).")
+    parser.add_argument("--validate-desc", type=str, default="10",
+                        help="Panjang minimal deskripsi (integer) atau 'false' untuk matikan (default: 10).")
+    parser.add_argument("--validate-spam", type=str, default="true",
+                        choices=["true", "false"],
+                        help="Aktifkan/matikan filter spam (default: true).")
 
     # Filter kerentanan
     parser.add_argument("--filter-vuln", type=str, help="Filter platform (e.g., wordpress).")
@@ -123,8 +135,35 @@ def build_parser():
                         help="Gunakan delay adaptif berdasarkan respons backend.")
 
     parser.add_argument("--debug", action="store_true")
-    parser.add_argument("--version", action="version", version="%(prog)s 1.3")
+    parser.add_argument("--version", action="version", version="%(prog)s 1.3.1")
     return parser
+
+
+def _parse_validation_args(args) -> dict:
+    """
+    Konversi argumen validasi ke dictionary untuk filter_results.
+    Memprioritaskan flag baru, dengan fallback ke flag lama.
+    """
+    # Flag lama override semua
+    if args.no_validate:
+        return {"strict": False}
+
+    if args.strict_filter:
+        return {"strict": True}
+
+    # Flag granular
+    min_title = None if args.validate_title == "false" else int(args.validate_title)
+    min_desc = None if args.validate_desc == "false" else int(args.validate_desc)
+    check_spam = args.validate_spam == "true"
+    url_mode = args.validate_url
+
+    return {
+        "strict": None,
+        "min_title": min_title,
+        "min_desc": min_desc,
+        "check_spam": check_spam,
+        "url_mode": url_mode,
+    }
 
 
 def _create_resilience_handler(args, proxy_manager=None) -> Optional[ResilienceHandler]:
@@ -177,9 +216,10 @@ def interactive_mode(db: Database):
         console.print(f"[red]Gagal: {e}[/red]")
         return
 
+    # Filter default (validasi standar)
     if results:
         original = len(results)
-        results = filter_results(results)
+        results = filter_results(results)   # default aman
         stats = get_filter_stats(original, len(results))
         if stats["removed"] > 0:
             console.print(f"[dim]Filter: {stats['removed']} hasil spam/invalid dihapus.[/dim]")
@@ -301,6 +341,9 @@ def cli_mode(args):
         "fallback_backends": not args.no_fallback_backends,
     }
 
+    # Dapatkan parameter validasi
+    val_kwargs = _parse_validation_args(args)
+
     # Jalankan batch dengan run_batch yang sudah ditingkatkan
     if len(queries) > 1 or args.resume:
         console.print(f"[bold cyan]Batch mode: {len(queries)} query[/bold cyan]")
@@ -312,15 +355,14 @@ def cli_mode(args):
             **scanner_kwargs
         )
 
-        # Filter spam
-        if not args.no_validate:
-            total_removed = 0
-            for q in batch_results:
-                old = len(batch_results[q])
-                batch_results[q] = filter_results(batch_results[q], strict=args.strict_filter)
-                total_removed += old - len(batch_results[q])
-            if total_removed:
-                console.print(f"[dim]Filter: {total_removed} hasil spam/invalid dihapus.[/dim]")
+        # Filter spam/validasi
+        total_removed = 0
+        for q in batch_results:
+            old = len(batch_results[q])
+            batch_results[q] = filter_results(batch_results[q], **val_kwargs)
+            total_removed += old - len(batch_results[q])
+        if total_removed:
+            console.print(f"[dim]Filter: {total_removed} hasil dihapus.[/dim]")
 
         # Filter vuln jika diminta
         if args.filter_vuln:
@@ -404,13 +446,12 @@ def cli_mode(args):
             console.print(f"[red]Search failed: {e}[/red]")
             sys.exit(1)
 
-        # Filter spam
-        if not args.no_validate:
-            original = len(results)
-            results = filter_results(results, strict=args.strict_filter)
-            stats = get_filter_stats(original, len(results))
-            if stats["removed"]:
-                console.print(f"[dim]Filter: {stats['removed']} hasil dihapus.[/dim]")
+        # Filter validasi
+        original = len(results)
+        results = filter_results(results, **val_kwargs)
+        stats = get_filter_stats(original, len(results))
+        if stats["removed"]:
+            console.print(f"[dim]Filter: {stats['removed']} hasil dihapus.[/dim]")
 
         # Filter vulnerability
         if args.filter_vuln:
