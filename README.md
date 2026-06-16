@@ -1,29 +1,38 @@
+
 # Atdork
 
-![Version](https://img.shields.io/badge/version-1.2-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-linux%20%7C%20macos%20%7C%20windows-lightgrey)
+[![CI](https://github.com/amnottdevv/atdork/actions/workflows/ci.yml/badge.svg)](https://github.com/amnottdevv/atdork/actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/tests-114%20passed-brightgreen)](https://github.com/amnottdevv/atdork/actions)
 
-A lightweight, ethical DuckDuckGo‑based OSINT tool for running advanced search queries (dorks) from the command line.  
-Atdork empowers security researchers, penetration testers, and OSINT analysts to rapidly discover publicly available information across multiple search engines.
+A lightweight, ethical DuckDuckGo-based OSINT tool for running advanced search queries (dorks) from the command line.  
+Atdork helps security researchers, penetration testers, and OSINT analysts quickly discover publicly available information across multiple search engines.
+
+**v1.3 introduces built‑in resilience, adaptive rate limiting, SQLite storage, and comprehensive logging — making it production‑ready.**
 
 ---
 
 ## Features
 
 - **Interactive & CLI modes** – use an interactive prompt or pass arguments directly.
-- **Multi‑engine support** – choose backend search engines (Google, Bing, DuckDuckGo, Yandex, and more).
+- **Multi‑engine support** – choose backend search engines (Google, Bing, DuckDuckGo, Startpage, Yandex, etc.).
 - **Batch processing** – run dozens of dorks from a text file or inline string, now with **multi‑threaded execution** for speed.
-- **Smart multi‑threading** – parallel queries with configurable concurrency and automatic **sequential fallback** if too many failures occur.
-- **Output validation** – built‑in filters to **remove spam, invalid URLs, and low‑quality results**; optional strict mode that rejects entries without a snippet.
-- **Proxy rotation** – load proxies from a file, a comma‑separated list, or automatic Tor fallback.
+- **Resilience engine** (`--resilient`) – circuit breaker, automatic backend fallback, and intelligent retry handling.
+- **Adaptive rate limiter** (`--adaptive-delay`) – dynamic per‑backend delay that responds to rate‑limits and recovers automatically.
+- **Output validation** – built‑in filters to **remove spam, invalid URLs, and low‑quality results**; optional strict mode.
+- **Vulnerability filter** (`--filter-vuln`) – identify results matching platform‑specific signatures (e.g. WordPress, Joomla).
+- **Proxy rotation** – load proxies from a file, comma‑separated list, or Tor fallback (now with `user:pass@host:port` support).
 - **Strict proxy mode** – prevent leaking your real IP if all proxies fail.
-- **Intelligent proxy manager** – validates proxy format, auto‑removes dead proxies after consecutive failures, tracks success/failure statistics, and enforces cooldown periods.
+- **Intelligent proxy manager** – validates format, auto‑removes dead proxies, tracks statistics.
+- **SQLite database** – persistent storage of all queries and results with resume, history, deduplication, and export.
+- **Rotating file logs** – timestamped, module‑aware log files with automatic rotation.
 - **User‑Agent rotation** – built‑in pool of modern User‑Agent strings, automatically rotated.
 - **Flexible output** – save results as TXT, JSON, or CSV; store batch results per query or in a single file.
-- **Throttle & retry** – configurable delays and retries to avoid rate limits.
-- **Debug mode** – verbose logging for troubleshooting proxy, threading, and validation behaviour.
+- **YAML configuration** – store your favourite settings in `atdork.yaml` for reproducibility.
+- **CI/CD pipeline** – automated tests, linting, and security scanning on every commit.
 
 ---
 
@@ -41,9 +50,13 @@ Atdork empowers security researchers, penetration testers, and OSINT analysts to
    ```
 
    Requirements:
-   - `ddgs>=7.0`
+   - `duckduckgo-search>=7.0`
    - `rich>=13.0`
    - `pyfiglet>=0.8`
+   - `pyyaml>=6.0`
+
+3. **(Optional) Tor**
+   Install Tor if you plan to use the `--tor` flag. Atdork will automatically connect to `127.0.0.1:9050`.
 
 ---
 
@@ -54,30 +67,24 @@ Atdork empowers security researchers, penetration testers, and OSINT analysts to
 python main.py --interactive
 ```
 
-### Command-line mode
+### Command‑line mode
 ```bash
 python main.py -q "site:gov filetype:pdf" -r 10
 ```
 
-### Batch from file (single‑threaded, legacy)
+### Batch from file (with resilience and rate limiter)
 ```bash
-python main.py --batch-file dorks.txt -r 5 --format json -o results.json
+python main.py --batch-file dorks.txt --resilient --adaptive-delay -r 20 --format json -o results.json
 ```
 
-### Batch with multi‑threading (new)
+### Proxy with strict mode (now with authentication)
 ```bash
-python main.py --batch-file dorks.txt --concurrency 5 --format json -o results.json
+python main.py -q "admin login" --proxy "http://user:pass@proxy:8080" --strict
 ```
 
-### Proxy with strict mode
+### Filter vulnerable WordPress results
 ```bash
-python main.py -q "test" --proxy-file proxies.txt --strict
-```
-
-### Validate output (default on, disable with `--no-validate`)
-```bash
-python main.py -q "cheap pills" --no-validate   # raw results
-python main.py -q "admin login" --strict-filter # only results with valid snippets
+python main.py -q "inurl:wp-content" -r 30 --filter-vuln wordpress
 ```
 
 ---
@@ -86,36 +93,48 @@ python main.py -q "admin login" --strict-filter # only results with valid snippe
 
 | Argument | Description | Default |
 |----------|-------------|---------|
-| `-q`, `--query` | Search query / dork | (required in CLI) |
+| `--interactive` | Launch interactive mode | (off) |
+| `-q`, `--query` | Search query / dork | |
 | `-r`, `--max-results` | Maximum number of results (1‑100) | 20 |
-| `--region` | Search region (e.g., `us-en`, `uk-en`, `ru-ru`) | `us-en` |
-| `--safesearch` | SafeSearch level: `on`, `moderate`, `off` | `moderate` |
-| `--timelimit` | Time limit: `d` (day), `w` (week), `m` (month), `y` (year) | (none) |
-| `--backend` | Backend engine(s) – comma‑separated list (see full list below) | `auto` |
-| `--user-agent` | Custom User‑Agent; leave empty for automatic rotation | (auto) |
-| `--timeout` | Request timeout in seconds | 10 |
+| `--region` | Search region (e.g. `us-en`, `uk-en`) | `us-en` |
+| `--safesearch` | `on`, `moderate`, `off` | `moderate` |
+| `--timelimit` | `d` (day), `w` (week), `m` (month), `y` (year) | (none) |
+| `--backend` | Backend engine(s) – comma‑separated | `auto` |
+| `--user-agent` | Custom User‑Agent (auto‑rotate if empty) | (auto) |
+| `--timeout` | Request timeout (seconds) | 10 |
 | `--retries` | Number of retry attempts on failure | 2 |
 | `--delay` | Delay between requests (seconds) | 0 |
 | `--proxy` | One or more proxy URLs (comma‑separated) | |
-| `--proxy-file` | File containing proxy URLs (one per line) | |
-| `--tor` | Use Tor SOCKS5 proxy at `127.0.0.1:9050` (if available) | |
-| `--strict` | Do **not** fall back to direct connection if all proxies fail | `False` |
-| `--proxy-cooldown` | Cooldown (seconds) after a proxy failure | 60 |
-| `--max-failures` | Remove proxy permanently after N consecutive failures (0 = never) | 3 |
-| `--concurrency` | Number of parallel threads for batch processing (1 = sequential) | 1 |
-| `--max-fallback-failures` | Consecutive failures that trigger fallback to sequential mode | 3 |
+| `--proxy-file` | File containing proxy URLs | |
+| `--tor` | Use Tor SOCKS5 proxy | |
+| `--strict` | Fail instead of falling back to direct connection | `False` |
+| `--proxy-cooldown` | Cooldown after a proxy failure (seconds) | 60 |
+| `--max-failures` | Remove proxy after N consecutive failures | 3 |
+| `--resilient` | Enable resilience mode (circuit breaker + fallback) | `False` |
+| `--adaptive-delay` | Enable adaptive rate limiting per backend | `False` |
+| `--concurrency` | Number of parallel threads for batch | 1 |
+| `--max-fallback-failures` | Consecutive failures before fallback to sequential | 3 |
 | `--batch-file` | File with one query per line | |
-| `--batch-separator` | Separator when `-q` contains multiple queries (default `;`) | `;` |
-| `-o`, `--output` | Save results to this file (for single query or combined batch) | |
-| `--output-dir` | Save each query result in a separate file inside this folder | |
+| `--batch-separator` | Separator for inline multiple queries | `;` |
+| `-o`, `--output` | Save results to file | |
+| `--output-dir` | Save each query result as a separate file | |
 | `--format` | Output format: `txt`, `json`, `csv` | `txt` |
-| `--no-snippet` | Hide snippet text in terminal output | |
+| `--no-snippet` | Hide snippet text in terminal | |
 | `--no-validate` | Disable spam/invalid result filtering | |
-| `--strict-filter` | Only keep results that have a non‑empty snippet and a minimum title length | |
+| `--strict-filter` | Stricter filter (require non‑empty snippet) | |
+| `--filter-vuln` | Filter results by vulnerability platform (e.g. `wordpress`) | |
+| `--db-path` | SQLite database path | `atdork.db` |
+| `--resume` | Resume pending queries from the database | |
+| `--history` | Show search history | |
+| `--no-dedup` | Disable global URL deduplication | |
+| `--export-db` | Export database to JSON/CSV | |
+| `--log-file` | Log file path | `atdork.log` |
+| `--no-fallback-backends` | Disable backend fallback | |
+| `--no-verify` | Disable SSL verification (not recommended) | |
 | `--debug` | Enable debug logging | |
 | `--version` | Show version and exit | |
 
-**Available backends:** `auto`, `bing`, `brave`, `duckduckgo`, `google`, `grokipedia`, `mojeek`, `startpage`, `yandex`, `yahoo`, `wikipedia`
+**Available backends:** `auto`, `bing`, `brave`, `duckduckgo`, `google`, `grokipedia`, `mojeek`, `startpage`, `yandex`, `yahoo`, `wikipedia`.
 
 ---
 
@@ -126,30 +145,29 @@ python main.py -q "admin login" --strict-filter # only results with valid snippe
 python main.py -q "intitle:index.of mp3" -r 30 --backend google --safesearch off
 ```
 
-### 2. Search with region and time filter
+### 2. High‑anonymity scan with Tor and strict proxy rules
 ```bash
-python main.py -q "cyber attack" --region uk-en --timelimit m -r 20
-```
-
-### 3. High‑anonymity scan using Tor and strict proxy rules
-```bash
-# Start Tor first, then:
 python main.py -q "confidential filetype:xlsx" --tor --strict --delay 2 -r 50 -o secret.json
 ```
 
-### 4. Batch processing with multi‑threading and output validation
+### 3. Batch processing with resilience and rate limiter
 ```bash
-python main.py --batch-file pentest_dorks.txt --concurrency 5 --max-fallback-failures 5 --proxy-file proxies.txt --strict --output-dir results --format csv
+python main.py --batch-file pentest_dorks.txt --concurrency 5 --resilient --adaptive-delay --proxy-file proxies.txt --output-dir results --format csv
 ```
 
-### 5. Debug run to inspect proxy and thread behaviour
+### 4. Resume an interrupted batch
 ```bash
-python main.py -q "test" --proxy "http://p1:8080,socks5://p2:1080" --debug
+python main.py --resume
 ```
 
-### 6. Disable filtering to see raw search engine output
+### 5. Export all stored results
 ```bash
-python main.py -q "buy now" --no-validate
+python main.py --export-db all_results.json
+```
+
+### 6. Debug run to inspect proxy and thread behaviour
+```bash
+python main.py -q "test" --proxy "http://user:pass@proxy:8080" --debug
 ```
 
 ### 7. Strict filtering for high‑quality OSINT reports
@@ -165,17 +183,25 @@ python main.py -q "financial report filetype:pdf" --strict-filter -o clean_resul
 atdork/
 ├── main.py                        # Entry point, CLI argument parser, orchestration
 ├── core/
-│   ├── __init__.py
+│   ├── case/
+│   │   ├── resilience.py          # Circuit breaker, backend fallback
+│   │   └── rate_limiter.py        # Adaptive per‑backend rate limiting
 │   ├── scanner.py                 # Search logic, retry, proxy/UA integration
-│   ├── batch_runner.py            # Sequential batch execution (legacy)
-│   ├── multi_thread_runner.py     # Parallel batch execution with fallback
-│   ├── user_agents_managements.py # User‑Agent pool and rotation
-│   └── proxy_manager.py           # Proxy validation, rotation, cooldown, stats
+│   ├── batch_runner.py            # Batch execution (sequential/parallel)
+│   ├── proxy_manager.py           # Proxy validation, rotation, statistics
+│   ├── database.py                # SQLite storage and export
+│   ├── logger.py                  # Rotating file + console logging
+│   ├── filter_vuln.py             # Vulnerability signature filtering
+│   └── config.py                  # YAML configuration loader
 ├── lib/
-│   ├── __init__.py
-│   ├── display.py                 # Terminal output, banner, rich formatting
+│   ├── display.py                 # Terminal output, banner
 │   ├── storage.py                 # Save results as TXT / JSON / CSV
-│   └── validator.py               # Output filtering (URL, title, snippet validation)
+│   └── validator.py               # Output filtering (spam, URL validation)
+├── tests/                         # 114 unit tests (pytest)
+├── wordlists/                     # Vulnerability signature files
+├── presets/                       # Dork templates (YAML)
+├── .github/workflows/ci.yml       # CI pipeline
+├── atdork.yaml                    # User configuration file
 ├── requirements.txt
 └── README.md
 ```
