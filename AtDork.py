@@ -22,7 +22,6 @@ from pyfiglet import Figlet
 from core.config import load_config
 from core.scanner import search_dork, SearchError
 from core.batch_runner import load_queries_from_file, parse_query_string, run_batch
-from core.multi_thread_runner import run_batch_multithread
 from core.proxy_manager import create_proxy_manager
 from core.filter_vuln import filter_vulnerable
 from lib.display import show_banner, display_results
@@ -37,6 +36,7 @@ from core.case.rate_limiter import RateLimiter
 
 console = Console()
 
+
 def _show_ascii_banner():
     """Tampilkan ASCII art header."""
     f = Figlet(font='slant')
@@ -45,6 +45,7 @@ def _show_ascii_banner():
     console.print("[bold cyan]Professional OSINT Tool[/bold cyan]")
     console.print(f"[dim]v1.3 - {datetime.now().strftime('%Y-%m-%d %H:%M')}[/dim]")
     console.print()
+
 
 def build_parser():
     parser = argparse.ArgumentParser(
@@ -80,9 +81,9 @@ def build_parser():
     parser.add_argument("--strict", action="store_true", help="Jangan fallback ke direct.")
     parser.add_argument("--max-failures", type=int, default=3)
 
-    # Multi-threading
-    parser.add_argument("--concurrency", type=int, default=1)
-    parser.add_argument("--max-fallback-failures", type=int, default=3)
+    # Multi-threading (handled inside batch_runner)
+    parser.add_argument("--concurrency", type=int, default=1, help="Jumlah thread paralel untuk batch (1 = sekuensial).")
+    parser.add_argument("--max-fallback-failures", type=int, default=3, help="Batas kegagalan berturut-turut sebelum fallback ke sekuensial (deprecated, handled by resilience)")
 
     # Batch
     parser.add_argument("--batch-file", type=str)
@@ -139,6 +140,7 @@ def _create_resilience_handler(args, proxy_manager=None) -> Optional[ResilienceH
         circuit_cooldown=120.0,
         proxy_manager=proxy_manager,
     )
+
 
 def _create_rate_limiter(args) -> Optional[RateLimiter]:
     """Buat RateLimiter jika --adaptive-delay diaktifkan."""
@@ -216,7 +218,8 @@ def cli_mode(args):
             console.print("[bold cyan]Riwayat Pencarian:[/bold cyan]")
             for qid, text, status in rows:
                 console.print(f"  [green]#{qid}[/green] [{status}] {text[:80]}")
-        if db: db.close()
+        if db:
+            db.close()
         return
 
     # Handle --export-db
@@ -227,7 +230,8 @@ def cli_mode(args):
         else:
             db.export_to_csv(out)
         console.print(f"[green]✅ Database diekspor ke: {out}[/green]")
-        if db: db.close()
+        if db:
+            db.close()
         return
 
     # Handle --resume
@@ -235,7 +239,8 @@ def cli_mode(args):
         pending = db.get_pending_queries()
         if not pending:
             console.print("[yellow]Tidak ada query yang tertunda.[/yellow]")
-            if db: db.close()
+            if db:
+                db.close()
             return
         queries = [q[1] for q in pending]
         console.print(f"[bold cyan]Resume mode: {len(queries)} query tertunda[/bold cyan]")
@@ -280,6 +285,7 @@ def cli_mode(args):
     resilience_handler = _create_resilience_handler(args, proxy_manager)
     rate_limiter = _create_rate_limiter(args)
 
+    # Parameter scanner yang akan diteruskan
     scanner_kwargs = {
         "max_results": args.max_results,
         "timeout": args.timeout,
@@ -295,96 +301,16 @@ def cli_mode(args):
         "fallback_backends": not args.no_fallback_backends,
     }
 
-    # ── Fungsi pembantu untuk menjalankan satu query ───────────────────
-    def _execute_single_query(q: str) -> List[Dict[str, Any]]:
-        """Jalankan satu query, gunakan resilience dan rate limiter jika tersedia."""
-        if resilience_handler:
-            # Jika ada resilience handler (--resilient), gunakan execute
-            results, err = resilience_handler.execute(q, **scanner_kwargs)
-            if err:
-                # Resilience handler mengembalikan error string jika gagal total
-                raise SearchError(err)
-            return results
-        else:
-            # Gunakan search_dork biasa
-            return search_dork(query=q, **scanner_kwargs)
-
-    # ── Eksekusi ───────────────────────────────────────────────────────
+    # Jalankan batch dengan run_batch yang sudah ditingkatkan
     if len(queries) > 1 or args.resume:
-        # Mode batch
         console.print(f"[bold cyan]Batch mode: {len(queries)} query[/bold cyan]")
-
-        # Modifikasi batch runner sementara: kita bisa menggunakan run_batch / run_batch_multithread
-        # yang sudah ada, tetapi dengan wrapper _execute_single_query.
-        # Untuk itu, kita buat dictionary hasil sendiri dengan loop manual jika menggunakan rate limiter,
-        # atau kita gunakan batch runner yang sudah mendukung concurrency.
-        # Pendekatan sederhana: gunakan run_batch / run_batch_multithread seperti biasa,
-        # karena resilience dan rate limiter diintegrasikan ke dalam _execute_single_query,
-        # kita perlu mengganti fungsi pencarian yang dipanggil di dalam batch runner.
-        # Cara termudah: monkey-patch search_dork di dalam module batch runner? Tidak dianjurkan.
-        # Sebagai gantinya, kita akan menjalankan batch secara manual di sini jika perlu.
-        # Untuk menjaga kesederhanaan, kita gunakan run_batch / run_batch_multithread yang sudah ada,
-        # tetapi sebelumnya kita bisa menimpa fungsi search_dork dengan _execute_single_query untuk sesi ini.
-        # Namun karena batch runner menggunakan search_dork langsung, kita bisa menggunakan parameter
-        # `**scanner_kwargs` yang diteruskan. Tetapi kita ingin menggunakan resilience handler.
-        # Alternatif: kita tidak menggunakan resilience handler di level batch ini, melainkan
-        # mengandalkan fitur bawaan search_dork (retry sederhana). Flag --resilient hanya untuk single query?
-        # Tidak ideal.
-
-        # Solusi: kita buat batch runner sendiri dengan loop sederhana yang menggunakan _execute_single_query,
-        # sambil tetap memanfaatkan concurrency melalui ThreadPoolExecutor sendiri jika diperlukan.
-        # Ini memberikan kontrol penuh.
-
-        # Kita akan tulis ulang bagian batch untuk v1.3 dengan integrasi penuh.
-        # Gunakan run_batch yang sudah ada jika tidak ada resilience/rate limiter,
-        # jika ada, kita lakukan loop manual atau gunakan run_batch_multithread yang dimodifikasi.
-        # Untuk menyederhanakan, kita akan gunakan run_batch (sequential) atau run_batch_multithread
-        # dari modul yang sudah ada, tetapi kita override fungsi search_dork di module tersebut sementara.
-        # Cara aman: kita buat wrapper yang akan dipakai oleh batch runner dengan menimpa
-        # core.scanner.search_dork selama pemrosesan batch? Tidak.
-
-        # Karena waktu terbatas, kita akan implementasikan batch sederhana di sini:
-        # Jika ada resilience/rate limiter, kita lakukan loop sendiri. Jika tidak, gunakan fungsi lama.
-        if resilience_handler or rate_limiter:
-            # Loop manual dengan progress bar
-            results_dict = {}
-            total = len(queries)
-            with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"),
-                          console=console) as progress:
-                task = progress.add_task("Processing...", total=total)
-                for q in queries:
-                    if rate_limiter:
-                        # Gunakan backend yang dipakai (dari scanner_kwargs)
-                        backend = scanner_kwargs.get("backend", "auto")
-                        rate_limiter.wait(backend)
-                    try:
-                        res = _execute_single_query(q)
-                        results_dict[q] = res
-                        if rate_limiter:
-                            # Laporkan sukses (status 200, hasil ada)
-                            rate_limiter.report_response(backend, 200, len(res) > 0)
-                    except Exception as e:
-                        logger.error(f"'{q[:60]}' gagal: {e}")
-                        results_dict[q] = []
-                        if rate_limiter:
-                            # Anggap rate limit jika error mengandung 429
-                            if "429" in str(e):
-                                rate_limiter.report_response(backend, 429, False)
-                            else:
-                                rate_limiter.report_response(backend, 500, False)
-                    progress.advance(task)
-            batch_results = results_dict
-        else:
-            if args.concurrency > 1:
-                batch_results = run_batch_multithread(
-                    queries=queries,
-                    concurrency=args.concurrency,
-                    fallback_sequential=True,
-                    max_consecutive_failures=args.max_fallback_failures,
-                    **scanner_kwargs
-                )
-            else:
-                batch_results = run_batch(queries=queries, **scanner_kwargs)
+        batch_results = run_batch(
+            queries=queries,
+            resilience_handler=resilience_handler,
+            rate_limiter=rate_limiter,
+            concurrency=args.concurrency,
+            **scanner_kwargs
+        )
 
         # Filter spam
         if not args.no_validate:
@@ -454,12 +380,19 @@ def cli_mode(args):
         q = queries[0]
         console.print(f"[bold cyan]🔍 Searching for:[/bold cyan] {q}")
 
+        # Eksekusi dengan resilience jika ada, jika tidak gunakan search_dork langsung
         backend_for_rate = scanner_kwargs.get("backend", "auto")
         if rate_limiter:
             rate_limiter.wait(backend_for_rate)
 
         try:
-            results = _execute_single_query(q)
+            if resilience_handler:
+                results, err = resilience_handler.execute(q, **scanner_kwargs)
+                if err:
+                    raise SearchError(err)
+            else:
+                results = search_dork(query=q, **scanner_kwargs)
+
             if rate_limiter:
                 rate_limiter.report_response(backend_for_rate, 200, len(results) > 0)
         except Exception as e:
@@ -471,6 +404,7 @@ def cli_mode(args):
             console.print(f"[red]Search failed: {e}[/red]")
             sys.exit(1)
 
+        # Filter spam
         if not args.no_validate:
             original = len(results)
             results = filter_results(results, strict=args.strict_filter)
@@ -478,11 +412,13 @@ def cli_mode(args):
             if stats["removed"]:
                 console.print(f"[dim]Filter: {stats['removed']} hasil dihapus.[/dim]")
 
+        # Filter vulnerability
         if args.filter_vuln:
             vuln, safe = filter_vulnerable(results, platform=args.filter_vuln)
             console.print(f"[bold red]🔴 Rentan: {len(vuln)}[/bold red] | [green]🟢 Aman: {len(safe)}[/green]")
             results = vuln
 
+        # Database insert
         if db and not args.no_dedup:
             original_len = len(results)
             unique_results = []
