@@ -7,6 +7,8 @@
 ![Platform](https://img.shields.io/badge/platform-linux%20%7C%20macos%20%7C%20windows-lightgrey)
 [![CI](https://github.com/amnottdevv/atdork/actions/workflows/ci.yml/badge.svg)](https://github.com/amnottdevv/atdork/actions/workflows/ci.yml)
 [![Tests](https://img.shields.io/badge/tests-114%20passed-brightgreen)](https://github.com/amnottdevv/atdork/actions)
+![GitHub Clones](https://img.shields.io/badge/clones-985%2F14d-blue)
+![GitHub Visitors](https://img.shields.io/badge/visitors-519%2F14d-brightgreen)
 
 A lightweight, ethical DuckDuckGo-based OSINT tool for running advanced search queries (dorks) from the command line.  
 Atdork helps security researchers, penetration testers, and OSINT analysts quickly discover publicly available information across multiple search engines.
