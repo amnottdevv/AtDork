@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Atdork - Professional OSINT Tool
-Version : 1.3.1
+Version : 1.3.2
 Author  : alzzmarket
 GitHub  : github.com/amnottdevv/atdork
 """
@@ -24,6 +24,7 @@ from core.scanner import search_dork, SearchError
 from core.batch_runner import load_queries_from_file, parse_query_string, run_batch
 from core.proxy_manager import create_proxy_manager
 from core.filter_vuln import filter_vulnerable
+from core.template_dork import load_template_dorks, list_available_templates
 from lib.display import show_banner, display_results
 from lib.storage import save_results
 from lib.validator import filter_results, get_filter_stats
@@ -43,7 +44,7 @@ def _show_ascii_banner():
     banner = f.renderText('Atdork')
     console.print(f"[bold green]{banner}[/bold green]")
     console.print("[bold cyan]Professional OSINT Tool[/bold cyan]")
-    console.print(f"[dim]v1.3.1 - {datetime.now().strftime('%Y-%m-%d %H:%M')}[/dim]")
+    console.print(f"[dim]v1.3.2 - {datetime.now().strftime('%Y-%m-%d %H:%M')}[/dim]")
     console.print()
 
 
@@ -81,7 +82,7 @@ def build_parser():
     parser.add_argument("--strict", action="store_true", help="Jangan fallback ke direct.")
     parser.add_argument("--max-failures", type=int, default=3)
 
-    # Multi-threading (handled inside batch_runner)
+    # Multi-threading
     parser.add_argument("--concurrency", type=int, default=1, help="Jumlah thread paralel untuk batch (1 = sekuensial).")
     parser.add_argument("--max-fallback-failures", type=int, default=3, help="Batas kegagalan berturut-turut sebelum fallback ke sekuensial (deprecated, handled by resilience)")
 
@@ -134,24 +135,26 @@ def build_parser():
     parser.add_argument("--adaptive-delay", action="store_true",
                         help="Gunakan delay adaptif berdasarkan respons backend.")
 
+    # Template Dork (v1.3.2)
+    parser.add_argument("--template", type=str, help="Nama template dork (tanpa ekstensi) atau path ke file YAML.")
+    parser.add_argument("--target", type=str, help="Target domain untuk substitusi {target} di template.")
+    parser.add_argument("--select", type=str, help="Pilih dork tertentu dari template (contoh: 1,3,5).")
+    parser.add_argument("--list-templates", action="store_true", help="Tampilkan daftar template yang tersedia.")
+    parser.add_argument("--template-path", type=str, help="Path ke folder template (default: wordlists/templates/).")
+    parser.add_argument("--preview", action="store_true", help="Pratinjau isi template tanpa menjalankannya.")
+
     parser.add_argument("--debug", action="store_true")
-    parser.add_argument("--version", action="version", version="%(prog)s 1.3.1")
+    parser.add_argument("--version", action="version", version="%(prog)s 1.3.2")
     return parser
 
 
 def _parse_validation_args(args) -> dict:
-    """
-    Konversi argumen validasi ke dictionary untuk filter_results.
-    Memprioritaskan flag baru, dengan fallback ke flag lama.
-    """
-    # Flag lama override semua
+    """Konversi argumen validasi ke dictionary untuk filter_results."""
     if args.no_validate:
         return {"strict": False}
-
     if args.strict_filter:
         return {"strict": True}
 
-    # Flag granular
     min_title = None if args.validate_title == "false" else int(args.validate_title)
     min_desc = None if args.validate_desc == "false" else int(args.validate_desc)
     check_spam = args.validate_spam == "true"
@@ -167,7 +170,6 @@ def _parse_validation_args(args) -> dict:
 
 
 def _create_resilience_handler(args, proxy_manager=None) -> Optional[ResilienceHandler]:
-    """Buat ResilienceHandler jika diminta."""
     if not args.resilient:
         return None
     return ResilienceHandler(
@@ -182,7 +184,6 @@ def _create_resilience_handler(args, proxy_manager=None) -> Optional[ResilienceH
 
 
 def _create_rate_limiter(args) -> Optional[RateLimiter]:
-    """Buat RateLimiter jika --adaptive-delay diaktifkan."""
     if not args.adaptive_delay:
         return None
     return RateLimiter(
@@ -216,15 +217,13 @@ def interactive_mode(db: Database):
         console.print(f"[red]Gagal: {e}[/red]")
         return
 
-    # Filter default (validasi standar)
     if results:
         original = len(results)
-        results = filter_results(results)   # default aman
+        results = filter_results(results)
         stats = get_filter_stats(original, len(results))
         if stats["removed"] > 0:
             console.print(f"[dim]Filter: {stats['removed']} hasil spam/invalid dihapus.[/dim]")
 
-    # Simpan ke database
     if db:
         qid = db.add_query(query, "completed")
         db.add_results_batch(qid, results)
@@ -249,6 +248,35 @@ def cli_mode(args):
     # Database connection
     db = Database(args.db_path) if (args.resume or args.history or args.export_db or not args.no_dedup) else None
 
+    # Handle --list-templates
+    if args.list_templates:
+        templates = list_available_templates(args.template_path or "wordlists/templates")
+        if not templates:
+            console.print("[yellow]Tidak ada template ditemukan.[/yellow]")
+        else:
+            console.print("[bold cyan]Template Dorks Tersedia:[/bold cyan]")
+            for t in templates:
+                console.print(f"  [green]{t['name']}[/green] - {t['description']}")
+        if db: db.close()
+        return
+
+    # Handle --preview
+    if args.preview and args.template:
+        try:
+            dorks = load_template_dorks(
+                args.template,
+                target=args.target,
+                select=args.select,
+                template_path=args.template_path
+            )
+            console.print(f"[bold cyan]Preview template '{args.template}':[/bold cyan]")
+            for i, d in enumerate(dorks, 1):
+                console.print(f"  {i}. {d}")
+        except Exception as e:
+            console.print(f"[red]Error: {e}[/red]")
+        if db: db.close()
+        return
+
     # Handle --history
     if args.history and db:
         rows = db.get_all_queries()
@@ -258,8 +286,7 @@ def cli_mode(args):
             console.print("[bold cyan]Riwayat Pencarian:[/bold cyan]")
             for qid, text, status in rows:
                 console.print(f"  [green]#{qid}[/green] [{status}] {text[:80]}")
-        if db:
-            db.close()
+        if db: db.close()
         return
 
     # Handle --export-db
@@ -270,8 +297,7 @@ def cli_mode(args):
         else:
             db.export_to_csv(out)
         console.print(f"[green]✅ Database diekspor ke: {out}[/green]")
-        if db:
-            db.close()
+        if db: db.close()
         return
 
     # Handle --resume
@@ -279,29 +305,48 @@ def cli_mode(args):
         pending = db.get_pending_queries()
         if not pending:
             console.print("[yellow]Tidak ada query yang tertunda.[/yellow]")
-            if db:
-                db.close()
+            if db: db.close()
             return
         queries = [q[1] for q in pending]
         console.print(f"[bold cyan]Resume mode: {len(queries)} query tertunda[/bold cyan]")
     else:
         queries = []
 
-    # Deteksi batch dari file/string
+    # Kumpulkan query dari berbagai sumber
     if not queries:
+        # Template dork
+        if args.template:
+            try:
+                template_dorks = load_template_dorks(
+                    args.template,
+                    target=args.target,
+                    select=args.select,
+                    template_path=args.template_path
+                )
+                queries.extend(template_dorks)
+            except Exception as e:
+                console.print(f"[red]Error loading template: {e}[/red]")
+                sys.exit(1)
+
+        # Query dari -q (bisa digabung)
+        if args.query:
+            if args.batch_separator in args.query:
+                custom_queries = parse_query_string(args.query, args.batch_separator)
+            else:
+                custom_queries = [args.query]
+            queries.extend(custom_queries)
+
+        # Batch file
         if args.batch_file:
             try:
-                queries = load_queries_from_file(args.batch_file)
+                file_queries = load_queries_from_file(args.batch_file)
+                queries.extend(file_queries)
             except Exception as e:
                 console.print(f"[red]Gagal membaca file batch: {e}[/red]")
                 sys.exit(1)
-        elif args.query and args.batch_separator in args.query:
-            queries = parse_query_string(args.query, args.batch_separator)
-        elif args.query:
-            queries = [args.query]
 
     if not queries:
-        console.print("[red]Error: Tidak ada query yang diberikan.[/red]")
+        console.print("[red]Error: Tidak ada query yang diberikan. Gunakan -q, --template, atau --batch-file.[/red]")
         sys.exit(1)
 
     # Proxy manager
@@ -325,7 +370,7 @@ def cli_mode(args):
     resilience_handler = _create_resilience_handler(args, proxy_manager)
     rate_limiter = _create_rate_limiter(args)
 
-    # Parameter scanner yang akan diteruskan
+    # Parameter scanner
     scanner_kwargs = {
         "max_results": args.max_results,
         "timeout": args.timeout,
@@ -341,11 +386,11 @@ def cli_mode(args):
         "fallback_backends": not args.no_fallback_backends,
     }
 
-    # Dapatkan parameter validasi
+    # Parameter validasi
     val_kwargs = _parse_validation_args(args)
 
-    # Jalankan batch dengan run_batch yang sudah ditingkatkan
-    if len(queries) > 1 or args.resume:
+    # Jalankan batch atau single query
+    if len(queries) > 1:
         console.print(f"[bold cyan]Batch mode: {len(queries)} query[/bold cyan]")
         batch_results = run_batch(
             queries=queries,
@@ -355,7 +400,7 @@ def cli_mode(args):
             **scanner_kwargs
         )
 
-        # Filter spam/validasi
+        # Filter validasi
         total_removed = 0
         for q in batch_results:
             old = len(batch_results[q])
@@ -364,7 +409,7 @@ def cli_mode(args):
         if total_removed:
             console.print(f"[dim]Filter: {total_removed} hasil dihapus.[/dim]")
 
-        # Filter vuln jika diminta
+        # Filter kerentanan
         if args.filter_vuln:
             total_vuln = 0
             for q in batch_results:
@@ -379,7 +424,6 @@ def cli_mode(args):
                 qid = db.add_query(q, "completed")
                 db.add_results_batch(qid, results)
 
-        # Ringkasan
         total_hits = sum(len(v) for v in batch_results.values())
         console.print(f"\n[green]Batch selesai. Total {total_hits} hasil.[/green]")
 
@@ -411,18 +455,17 @@ def cli_mode(args):
                             f.write(f"[{i}] {r.get('title','')}\n{r.get('href','')}\n{r.get('body','')}\n\n")
             console.print(f"[green]✅ Batch disimpan di folder: {args.output_dir}[/green]")
 
-        # Tampilkan saran rate limiter jika ada
+        # Rate limiter recommendations
         if rate_limiter:
             console.print("\n[bold cyan]Rate Limiter Recommendations:[/bold cyan]")
             for backend, rec in rate_limiter.all_recommendations().items():
                 console.print(f"  [yellow]{backend}[/yellow]: {rec}")
 
     else:
-        # ── Single query ──────────────────────────────────────────────
+        # Single query
         q = queries[0]
         console.print(f"[bold cyan]🔍 Searching for:[/bold cyan] {q}")
 
-        # Eksekusi dengan resilience jika ada, jika tidak gunakan search_dork langsung
         backend_for_rate = scanner_kwargs.get("backend", "auto")
         if rate_limiter:
             rate_limiter.wait(backend_for_rate)
@@ -453,13 +496,13 @@ def cli_mode(args):
         if stats["removed"]:
             console.print(f"[dim]Filter: {stats['removed']} hasil dihapus.[/dim]")
 
-        # Filter vulnerability
+        # Filter kerentanan
         if args.filter_vuln:
             vuln, safe = filter_vulnerable(results, platform=args.filter_vuln)
             console.print(f"[bold red]🔴 Rentan: {len(vuln)}[/bold red] | [green]🟢 Aman: {len(safe)}[/green]")
             results = vuln
 
-        # Database insert
+        # Database
         if db and not args.no_dedup:
             original_len = len(results)
             unique_results = []
@@ -502,7 +545,8 @@ def main():
 
     setup_logging(debug=args.debug, log_file=args.log_file)
 
-    if args.interactive or (not args.query and not args.batch_file and not args.resume and not args.history and not args.export_db):
+    # Jika tidak ada perintah spesifik dan tidak interaktif, masuk interaktif
+    if args.interactive or (not args.query and not args.batch_file and not args.resume and not args.history and not args.export_db and not args.template and not args.list_templates and not args.preview):
         db = Database(args.db_path)
         interactive_mode(db)
         db.close()
