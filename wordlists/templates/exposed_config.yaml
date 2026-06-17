@@ -1,0 +1,17 @@
+name: "Exposed Configuration Files"
+description: "Find exposed configuration files across the web"
+category: "exposure"
+version: "1.0"
+author: "AtDork Community"
+
+targeted:
+  - 'site:{target} filetype:env'
+  - 'site:{target} filetype:ini "password"'
+  - 'site:{target} "wp-config.php.bak"'
+  - 'site:{target} "config.php" "password"'
+
+generic:
+  - 'filetype:env "DB_PASSWORD"'
+  - 'filetype:ini "password"'
+  - '"wp-config.php.bak"'
+  - '"config.php" "password"'
