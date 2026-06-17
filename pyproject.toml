@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "atdork"
+version = "1.3.2"
+description = "Professional DuckDuckGo metasearch OSINT tool"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    {name = "alzzmarket"}
+]
+keywords = ["osint", "dork", "pentest", "security", "duckduckgo", "metasearch"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: System Administrators",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "duckduckgo-search>=7.0",
+    "rich>=13.0",
+    "pyfiglet>=0.8",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "flake8>=7.0",
+    "bandit>=1.7",
+    "safety>=3.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/amnottdevv/atdork"
+"Bug Reports" = "https://github.com/amnottdevv/atdork/issues"
+"Source Code" = "https://github.com/amnottdevv/atdork"
+
+[tool.setuptools]
+py-modules = ["atdork"]
+
+[project.scripts]
+atdork = "atdork:main"
