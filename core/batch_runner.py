@@ -17,6 +17,8 @@ from rich.progress import (
 )
 
 from core.scanner import search_dork
+from core.case.resilience import ResilienceHandler
+from core.case.rate_limiter import RateLimiter
 
 logger = logging.getLogger(__name__)
 
@@ -46,8 +48,8 @@ def parse_query_string(query_str: str, separator: str = ";") -> List[str]:
 
 def run_batch(
     queries: List[str],
-    resilience_handler=None,
-    rate_limiter=None,
+    resilience_handler: Optional[ResilienceHandler] = None,
+    rate_limiter: Optional[RateLimiter] = None,
     concurrency: int = 1,
     **kwargs,
 ) -> Dict[str, list]:
@@ -71,12 +73,16 @@ def run_batch(
         return results
 
     def _execute_single(q: str) -> list:
-        """Wrapper yang menangani resilience, rate limiting, dan fallback."""
+        """
+        Wrapper yang menangani resilience, rate limiting, dan fallback.
+        Mengembalikan list hasil (kosong jika gagal).
+        """
         backend = kwargs.get("backend", "auto")
         if rate_limiter:
             rate_limiter.wait(backend)
 
         if resilience_handler:
+            # Resilience handler mengembalikan tuple (results, error_message)
             res, err = resilience_handler.execute(q, **kwargs)
             if err:
                 if rate_limiter:
@@ -85,7 +91,7 @@ def run_batch(
                         rate_limiter.report_response(backend, 429, False)
                     else:
                         rate_limiter.report_response(backend, 500, False)
-                logger.error(f"'{q[:60]}' gagal: {err}")
+                logger.error("'%s' gagal: %s", q[:60], err)
                 return []
             if rate_limiter:
                 rate_limiter.report_response(backend, 200, len(res) > 0)
@@ -102,7 +108,7 @@ def run_batch(
                         rate_limiter.report_response(backend, 429, False)
                     else:
                         rate_limiter.report_response(backend, 500, False)
-                logger.error(f"'{q[:60]}' gagal: {e}")
+                logger.error("'%s' gagal: %s", q[:60], e)
                 return []
 
     with Progress(
@@ -125,7 +131,7 @@ def run_batch(
                     try:
                         res = future.result()
                     except Exception as e:
-                        logger.error(f"'{q[:60]}' failed unexpectedly: {e}")
+                        logger.error("'%s' failed unexpectedly: %s", q[:60], e)
                         res = []
                     results[q] = res
                     progress.update(task, advance=1)
