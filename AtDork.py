@@ -84,7 +84,7 @@ def build_parser():
 
     # Multi-threading
     parser.add_argument("--concurrency", type=int, default=1, help="Jumlah thread paralel untuk batch (1 = sekuensial).")
-    parser.add_argument("--max-fallback-failures", type=int, default=3, help="Batas kegagalan berturut-turut sebelum fallback ke sekuensial (deprecated, handled by resilience)")
+    parser.add_argument("--max-fallback-failures", type=int, default=3, help="Batas kegagalan berturut-turut sebelum fallback ke sekuensial")
 
     # Batch
     parser.add_argument("--batch-file", type=str)
@@ -95,6 +95,7 @@ def build_parser():
     parser.add_argument("--output-dir", type=str)
     parser.add_argument("--format", type=str, choices=["txt","json","csv"], default="txt")
     parser.add_argument("--no-snippet", action="store_true")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Tampilkan hasil pencarian ke layar dalam mode batch.")
 
     # Validasi (legacy)
     parser.add_argument("--no-validate", action="store_true", help="Matikan semua filter validasi.")
@@ -136,7 +137,7 @@ def build_parser():
                         help="Gunakan delay adaptif berdasarkan respons backend.")
 
     # Template Dork (v1.3.2)
-    parser.add_argument("--template", type=str, help="Nama template dork (tanpa ekstensi) atau path ke file YAML.")
+    parser.add_argument("--template", type=str, help="Nama template dork (tanpa ekstensi) atau path ke file YAML. Bisa multiple (pisahkan dengan koma).")
     parser.add_argument("--target", type=str, help="Target domain untuk substitusi {target} di template.")
     parser.add_argument("--select", type=str, help="Pilih dork tertentu dari template (contoh: 1,3,5).")
     parser.add_argument("--list-templates", action="store_true", help="Tampilkan daftar template yang tersedia.")
@@ -263,15 +264,20 @@ def cli_mode(args):
     # Handle --preview
     if args.preview and args.template:
         try:
-            dorks = load_template_dorks(
-                args.template,
-                target=args.target,
-                select=args.select,
-                template_path=args.template_path
-            )
-            console.print(f"[bold cyan]Preview template '{args.template}':[/bold cyan]")
-            for i, d in enumerate(dorks, 1):
-                console.print(f"  {i}. {d}")
+            # Preview mendukung multiple template dengan koma
+            for tname in args.template.split(","):
+                tname = tname.strip()
+                if not tname:
+                    continue
+                dorks = load_template_dorks(
+                    tname,
+                    target=args.target,
+                    select=args.select,
+                    template_path=args.template_path
+                )
+                console.print(f"[bold cyan]Preview template '{tname}':[/bold cyan]")
+                for i, d in enumerate(dorks, 1):
+                    console.print(f"  {i}. {d}")
         except Exception as e:
             console.print(f"[red]Error: {e}[/red]")
         if db: db.close()
@@ -314,19 +320,23 @@ def cli_mode(args):
 
     # Kumpulkan query dari berbagai sumber
     if not queries:
-        # Template dork
+        # Template dork (dukung multiple dengan koma)
         if args.template:
-            try:
-                template_dorks = load_template_dorks(
-                    args.template,
-                    target=args.target,
-                    select=args.select,
-                    template_path=args.template_path
-                )
-                queries.extend(template_dorks)
-            except Exception as e:
-                console.print(f"[red]Error loading template: {e}[/red]")
-                sys.exit(1)
+            for tname in args.template.split(","):
+                tname = tname.strip()
+                if not tname:
+                    continue
+                try:
+                    template_dorks = load_template_dorks(
+                        tname,
+                        target=args.target,
+                        select=args.select,
+                        template_path=args.template_path
+                    )
+                    queries.extend(template_dorks)
+                except Exception as e:
+                    console.print(f"[red]Error loading template '{tname}': {e}[/red]")
+                    sys.exit(1)
 
         # Query dari -q (bisa digabung)
         if args.query:
@@ -399,6 +409,12 @@ def cli_mode(args):
             concurrency=args.concurrency,
             **scanner_kwargs
         )
+
+        # Tampilkan hasil jika --verbose
+        if args.verbose:
+            for q, res in batch_results.items():
+                console.print(f"\n[bold yellow]━━━ {q} ━━━[/bold yellow]")
+                display_results(res, q, no_snippet=args.no_snippet)
 
         # Filter validasi
         total_removed = 0
@@ -489,6 +505,9 @@ def cli_mode(args):
             console.print(f"[red]Search failed: {e}[/red]")
             sys.exit(1)
 
+        # Tampilkan hasil (single query selalu tampil)
+        display_results(results, q, no_snippet=args.no_snippet)
+
         # Filter validasi
         original = len(results)
         results = filter_results(results, **val_kwargs)
@@ -517,8 +536,6 @@ def cli_mode(args):
             qid = db.add_query(q, "completed")
             db.add_results_batch(qid, results)
 
-        display_results(results, q, no_snippet=args.no_snippet)
-
         if args.output:
             save_results(results, q, output_path=args.output, output_format=args.format)
             console.print(f"[green]✅ Disimpan ke: {args.output}[/green]")
@@ -545,7 +562,6 @@ def main():
 
     setup_logging(debug=args.debug, log_file=args.log_file)
 
-    # Jika tidak ada perintah spesifik dan tidak interaktif, masuk interaktif
     if args.interactive or (not args.query and not args.batch_file and not args.resume and not args.history and not args.export_db and not args.template and not args.list_templates and not args.preview):
         db = Database(args.db_path)
         interactive_mode(db)
