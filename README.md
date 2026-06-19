@@ -207,7 +207,9 @@ atdork/
 ├── requirements.txt
 └── README.md
 ```
+## activitie graph
 
+[![CodeQL](https://github.com/amnottdevv/atdork/actions/workflows/codeql.yml/badge.svg)](https://github.com/amnottdevv/atdork/actions)
 ---
 
 ## Ethical Use & Disclaimer
