@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Atdork - Professional OSINT Tool
-Version : 1.3.2
+Version : 1.3.3
 Author  : alzzmarket
 GitHub  : github.com/amnottdevv/atdork
 """
@@ -44,7 +44,7 @@ def _show_ascii_banner():
     banner = f.renderText('Atdork')
     console.print(f"[bold green]{banner}[/bold green]")
     console.print("[bold cyan]Professional OSINT Tool[/bold cyan]")
-    console.print(f"[dim]v1.3.2 - {datetime.now().strftime('%Y-%m-%d %H:%M')}[/dim]")
+    console.print(f"[dim]v1.3.3 - {datetime.now().strftime('%Y-%m-%d %H:%M')}[/dim]")
     console.print()
 
 
@@ -145,7 +145,7 @@ def build_parser():
     parser.add_argument("--preview", action="store_true", help="Pratinjau isi template tanpa menjalankannya.")
 
     parser.add_argument("--debug", action="store_true")
-    parser.add_argument("--version", action="version", version="%(prog)s 1.3.2")
+    parser.add_argument("--version", action="version", version="%(prog)s 1.3.3")
     return parser
 
 
@@ -264,7 +264,6 @@ def cli_mode(args):
     # Handle --preview
     if args.preview and args.template:
         try:
-            # Preview mendukung multiple template dengan koma
             for tname in args.template.split(","):
                 tname = tname.strip()
                 if not tname:
@@ -380,7 +379,7 @@ def cli_mode(args):
     resilience_handler = _create_resilience_handler(args, proxy_manager)
     rate_limiter = _create_rate_limiter(args)
 
-    # Parameter scanner
+    # Parameter scanner yang akan diteruskan
     scanner_kwargs = {
         "max_results": args.max_results,
         "timeout": args.timeout,
@@ -400,7 +399,7 @@ def cli_mode(args):
     val_kwargs = _parse_validation_args(args)
 
     # Jalankan batch atau single query
-    if len(queries) > 1:
+    if len(queries) > 1 or args.resume:
         console.print(f"[bold cyan]Batch mode: {len(queries)} query[/bold cyan]")
         batch_results = run_batch(
             queries=queries,
@@ -425,11 +424,11 @@ def cli_mode(args):
         if total_removed:
             console.print(f"[dim]Filter: {total_removed} hasil dihapus.[/dim]")
 
-        # Filter kerentanan
+        # Filter kerentanan (v1.3.3: gunakan parameter baru dan unpack 3 nilai)
         if args.filter_vuln:
             total_vuln = 0
             for q in batch_results:
-                vuln, _ = filter_vulnerable(batch_results[q], platform=args.filter_vuln)
+                vuln, safe, _ = filter_vulnerable(batch_results[q], filter_arg=args.filter_vuln)
                 total_vuln += len(vuln)
                 batch_results[q] = vuln
             console.print(f"[bold red]🔴 {total_vuln} hasil berpotensi rentan ({args.filter_vuln}).[/bold red]")
@@ -478,7 +477,7 @@ def cli_mode(args):
                 console.print(f"  [yellow]{backend}[/yellow]: {rec}")
 
     else:
-        # Single query
+        # ── Single query ──────────────────────────────────────────────
         q = queries[0]
         console.print(f"[bold cyan]🔍 Searching for:[/bold cyan] {q}")
 
@@ -515,13 +514,13 @@ def cli_mode(args):
         if stats["removed"]:
             console.print(f"[dim]Filter: {stats['removed']} hasil dihapus.[/dim]")
 
-        # Filter kerentanan
+        # Filter kerentanan (v1.3.3: gunakan parameter baru dan unpack 3 nilai)
         if args.filter_vuln:
-            vuln, safe = filter_vulnerable(results, platform=args.filter_vuln)
+            vuln, safe, _ = filter_vulnerable(results, filter_arg=args.filter_vuln)
             console.print(f"[bold red]🔴 Rentan: {len(vuln)}[/bold red] | [green]🟢 Aman: {len(safe)}[/green]")
             results = vuln
 
-        # Database
+        # Database insert
         if db and not args.no_dedup:
             original_len = len(results)
             unique_results = []
