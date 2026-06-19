@@ -208,8 +208,7 @@ atdork/
 └── README.md
 ```
 ## activitie graph
-
-[![CodeQL](https://github.com/amnottdevv/atdork/actions/workflows/codeql.yml/badge.svg)](https://github.com/amnottdevv/atdork/actions)
+![Alt](https://repobeats.axiom.co/api/embed/34d4bf05a783d8e3ea0762148747c10ed8f53e9f.svg "Repobeats analytics image")
 ---
 
 ## Ethical Use & Disclaimer
