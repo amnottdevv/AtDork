@@ -1,181 +1,377 @@
 
-# Atdork
+# AtDork – Professional OSINT Dorking Tool
 
-![Version](https://img.shields.io/badge/version-1.3-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.3-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-linux%20%7C%20macos%20%7C%20windows-lightgrey)
-[![CI](https://github.com/amnottdevv/atdork/actions/workflows/ci.yml/badge.svg)](https://github.com/amnottdevv/atdork/actions/workflows/ci.yml)
-[![Tests](https://img.shields.io/badge/tests-114%20passed-brightgreen)](https://github.com/amnottdevv/atdork/actions)
-![GitHub Clones](https://img.shields.io/badge/clones-985%2F14d-blue)
-![GitHub Visitors](https://img.shields.io/badge/visitors-519%2F14d-brightgreen)
+![Tests](https://img.shields.io/badge/tests-114%20passed-brightgreen)
+![Lines](https://img.shields.io/badge/total%20lines-9%2C383-orange)
+![Visitors](https://img.shields.io/badge/visitors-519%2F14d-brightgreen)
+![Clones](https://img.shields.io/badge/clones-985%2F14d-blue)
 
-A lightweight, ethical DuckDuckGo-based OSINT tool for running advanced search queries (dorks) from the command line.  
-Atdork helps security researchers, penetration testers, and OSINT analysts quickly discover publicly available information across multiple search engines.
-
-**v1.3 introduces built‑in resilience, adaptive rate limiting, SQLite storage, and comprehensive logging — making it production‑ready.**
+**AtDork** is a powerful, ethical OSINT tool that performs advanced search queries (Google Dorks) across multiple search engines simultaneously. Designed for security researchers, penetration testers, and bug bounty hunters, it automates the discovery of exposed documents, vulnerable parameters, misconfigured servers, and other sensitive information available on the public web.
 
 ---
 
-## Features
+## Why AtDork?
 
-- **Interactive & CLI modes** – use an interactive prompt or pass arguments directly.
-- **Multi‑engine support** – choose backend search engines (Google, Bing, DuckDuckGo, Startpage, Yandex, etc.).
-- **Batch processing** – run dozens of dorks from a text file or inline string, now with **multi‑threaded execution** for speed.
-- **Resilience engine** (`--resilient`) – circuit breaker, automatic backend fallback, and intelligent retry handling.
-- **Adaptive rate limiter** (`--adaptive-delay`) – dynamic per‑backend delay that responds to rate‑limits and recovers automatically.
-- **Output validation** – built‑in filters to **remove spam, invalid URLs, and low‑quality results**; optional strict mode.
-- **Vulnerability filter** (`--filter-vuln`) – identify results matching platform‑specific signatures (e.g. WordPress, Joomla).
-- **Proxy rotation** – load proxies from a file, comma‑separated list, or Tor fallback (now with `user:pass@host:port` support).
-- **Strict proxy mode** – prevent leaking your real IP if all proxies fail.
-- **Intelligent proxy manager** – validates format, auto‑removes dead proxies, tracks statistics.
-- **SQLite database** – persistent storage of all queries and results with resume, history, deduplication, and export.
-- **Rotating file logs** – timestamped, module‑aware log files with automatic rotation.
-- **User‑Agent rotation** – built‑in pool of modern User‑Agent strings, automatically rotated.
-- **Flexible output** – save results as TXT, JSON, or CSV; store batch results per query or in a single file.
-- **YAML configuration** – store your favourite settings in `atdork.yaml` for reproducibility.
-- **CI/CD pipeline** – automated tests, linting, and security scanning on every commit.
+- 🚀 **Blazing fast** – Multi‑threaded batch processing with configurable concurrency.
+- 🔍 **Multi‑engine** – Queries DuckDuckGo, Google, Bing, Startpage, Yandex, Yahoo, and more.
+- 🛡️ **Anonymous** – Built‑in proxy rotation, Tor integration, strict mode to prevent IP leaks.
+- 🧹 **Clean results** – Automatic spam filtering, URL validation, and deduplication.
+- 📊 **Professional output** – Export to JSON, CSV, TXT; SQLite database for history and resume.
+- 🎯 **Smart filtering** – Vulnerability signature detection for WordPress, Joomla, SQLi, and more.
+- 📝 **Template system** – Curated YAML‑based dork collections for instant productivity.
+- ⚙️ **Highly configurable** – 47 CLI flags to control every aspect of your search.
 
 ---
 
 ## Installation
 
-1. **Clone the repository**
-   ```bash
-   git clone https://github.com/amnottdevv/atdork.git
-   cd atdork
-   ```
+### From PyPI (Recommended)
+```bash
+pip install atdork
+```
 
-2. **Install dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
+### From Source
+```bash
+git clone https://github.com/amnottdevv/atdork.git
+cd atdork
+pip install .
+```
 
-   Requirements:
-   - `duckduckgo-search>=7.0`
-   - `rich>=13.0`
-   - `pyfiglet>=0.8`
-   - `pyyaml>=6.0`
-
-3. **(Optional) Tor**
-   Install Tor if you plan to use the `--tor` flag. Atdork will automatically connect to `127.0.0.1:9050`.
+### Verify Installation
+```bash
+atdork --version
+# Output: atdork 1.3.3
+```
 
 ---
 
 ## Quick Start
 
-### Interactive mode (guided prompts)
+### 1. Your First Search
 ```bash
-python main.py --interactive
+atdork -q "site:gov filetype:pdf" -r 10
+```
+This finds PDF files on government websites and displays the top 10 results.
+
+### 2. Save Results to a File
+```bash
+atdork -q "intitle:index.of mp3" -r 20 --format json -o music.json
 ```
 
-### Command‑line mode
-```bash
-python main.py -q "site:gov filetype:pdf" -r 10
+### 3. Batch Processing
+Create a file `dorks.txt`:
+```text
+site:edu filetype:xls
+inurl:admin login
+intitle:"index of" "backup"
 ```
 
-### Batch from file (with resilience and rate limiter)
+Run them all at once:
 ```bash
-python main.py --batch-file dorks.txt --resilient --adaptive-delay -r 20 --format json -o results.json
+atdork --batch-file dorks.txt -r 30 --format csv -o results.csv
 ```
 
-### Proxy with strict mode (now with authentication)
+### 4. Search with Proxy (Anonymous)
 ```bash
-python main.py -q "admin login" --proxy "http://user:pass@proxy:8080" --strict
-```
-
-### Filter vulnerable WordPress results
-```bash
-python main.py -q "inurl:wp-content" -r 30 --filter-vuln wordpress
+atdork -q "confidential filetype:docx" --proxy "http://user:pass@proxy:8080" --strict
 ```
 
 ---
 
-## Command-Line Arguments
+## Detailed Usage
 
-| Argument | Description | Default |
-|----------|-------------|---------|
-| `--interactive` | Launch interactive mode | (off) |
-| `-q`, `--query` | Search query / dork | |
-| `-r`, `--max-results` | Maximum number of results (1‑100) | 20 |
-| `--region` | Search region (e.g. `us-en`, `uk-en`) | `us-en` |
-| `--safesearch` | `on`, `moderate`, `off` | `moderate` |
-| `--timelimit` | `d` (day), `w` (week), `m` (month), `y` (year) | (none) |
-| `--backend` | Backend engine(s) – comma‑separated | `auto` |
-| `--user-agent` | Custom User‑Agent (auto‑rotate if empty) | (auto) |
-| `--timeout` | Request timeout (seconds) | 10 |
-| `--retries` | Number of retry attempts on failure | 2 |
-| `--delay` | Delay between requests (seconds) | 0 |
-| `--proxy` | One or more proxy URLs (comma‑separated) | |
-| `--proxy-file` | File containing proxy URLs | |
-| `--tor` | Use Tor SOCKS5 proxy | |
-| `--strict` | Fail instead of falling back to direct connection | `False` |
-| `--proxy-cooldown` | Cooldown after a proxy failure (seconds) | 60 |
-| `--max-failures` | Remove proxy after N consecutive failures | 3 |
-| `--resilient` | Enable resilience mode (circuit breaker + fallback) | `False` |
-| `--adaptive-delay` | Enable adaptive rate limiting per backend | `False` |
-| `--concurrency` | Number of parallel threads for batch | 1 |
-| `--max-fallback-failures` | Consecutive failures before fallback to sequential | 3 |
+### Single Query
+```bash
+atdork -q "inurl:product.php?id=" -r 50 --backend google --region uk-en --safesearch off
+```
+
+| Flag | Purpose |
+|------|---------|
+| `-q` | Your dork query |
+| `-r` | Number of results (max 100) |
+| `--backend` | Search engine: `google`, `bing`, `duckduckgo`, `startpage`, `yandex`, `auto` |
+| `--region` | Region code: `us-en`, `uk-en`, `de-de`, `ru-ru`, etc. |
+| `--safesearch` | `on`, `moderate`, `off` |
+
+### Batch Processing with Multi‑Threading
+```bash
+atdork --batch-file dorks.txt -r 40 --concurrency 5 --delay 2 --format json -o batch_results.json
+```
+
+| Flag | Purpose |
+|------|---------|
+| `--batch-file` | Text file with one dork per line |
+| `--concurrency` | Number of parallel threads (1‑10) |
+| `--delay` | Seconds between requests (avoid rate limits) |
+| `-o` | Save all results to a single file |
+| `--output-dir` | Save each query result as a separate file |
+
+### Template Dorks (Pre‑Built)
+List available templates:
+```bash
+atdork --list-templates
+```
+
+Use a template:
+```bash
+atdork --template sqli --target example.com -r 30
+```
+
+Combine multiple templates with custom queries:
+```bash
+atdork --template sqli,wordpress,exposed_config -q "site:gov filetype:pdf" -r 25
+```
+
+Preview what a template will do:
+```bash
+atdork --template login_panels --preview
+```
+
+Run only specific dorks from a template:
+```bash
+atdork --template sqli --select 1,3,5 -r 20
+```
+
+| Flag | Purpose |
+|------|---------|
+| `--template` | Template name(s), comma‑separated |
+| `--target` | Domain to substitute `{target}` in template dorks |
+| `--select` | Run specific dork numbers from template |
+| `--list-templates` | Show all available templates |
+| `--preview` | Show dorks without executing |
+| `--template-path` | Custom template folder |
+
+### Proxy & Anonymity
+```bash
+# Single proxy
+atdork -q "target" --proxy "http://user:pass@host:8080"
+
+# Multiple proxies (comma‑separated)
+atdork -q "target" --proxy "http://p1:8080,socks5://p2:1080"
+
+# From file
+atdork -q "target" --proxy-file proxies.txt
+
+# Tor integration
+atdork -q "target" --tor --strict
+
+# Strict mode (fail if all proxies down)
+atdork -q "target" --proxy-file proxies.txt --strict
+
+# Proxy management
+atdork -q "target" --proxy-file proxies.txt --proxy-cooldown 120 --max-failures 3
+```
+
+**Proxy file format (`proxies.txt`):**
+```text
+# HTTP proxies
+http://user:pass@dc1.provider.com:3128
+http://user:pass@dc2.provider.com:3128
+
+# SOCKS proxies
+socks5://res1.provider.com:1080
+socks5h://res2.provider.com:1080
+
+# Comments with # are ignored
+```
+
+### Vulnerability Filtering
+```bash
+# Basic WordPress detection
+atdork -q "inurl:wp-content" -r 30 --filter-vuln wordpress
+
+# Link‑only filter (only matches URLs)
+atdork -q "site:example.com" --filter-vuln wordpress-link
+```
+
+Create your own wordlist files in `wordlists/` folder:
+```text
+# wordlists/myplatform.txt
+wp-content
+wp-admin
+wp-includes
+```
+
+### Resilience & Rate Limiting
+```bash
+# Enable circuit breaker & backend fallback
+atdork --batch-file dorks.txt --resilient
+
+# Adaptive delay based on backend response
+atdork --batch-file dorks.txt --adaptive-delay
+
+# Combined
+atdork --batch-file dorks.txt --resilient --adaptive-delay --concurrency 5 --delay 2
+```
+
+### Output Validation
+```bash
+# Disable all filtering (keep raw results)
+atdork -q "test" --no-validate
+
+# Strict filtering (require non‑empty snippet)
+atdork -q "test" --strict-filter
+
+# Granular control
+atdork -q "test" --validate-url only --validate-title 10 --validate-desc 50 --validate-spam true
+```
+
+### Database & History
+```bash
+# Resume interrupted batch
+atdork --resume
+
+# View search history
+atdork --history
+
+# Export database to JSON/CSV
+atdork --export-db all_results.json
+
+# Disable duplicate URL detection
+atdork -q "test" --no-dedup
+```
+
+### Advanced Options
+```bash
+# Custom User‑Agent
+atdork -q "test" --user-agent "MyBot/1.0"
+
+# Disable SSL verification (not recommended)
+atdork -q "test" --no-verify
+
+# Disable backend fallback
+atdork -q "test" --no-fallback-backends
+
+# Debug mode (verbose logging)
+atdork -q "test" --debug
+
+# Custom log file
+atdork -q "test" --log-file my_scan.log
+
+# Show results during batch
+atdork --batch-file dorks.txt -v
+```
+
+---
+
+## Complete Flag Reference
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-q`, `--query` | Search dork query | |
+| `-r`, `--max-results` | Maximum results (1‑100) | 20 |
 | `--batch-file` | File with one query per line | |
-| `--batch-separator` | Separator for inline multiple queries | `;` |
+| `--batch-separator` | Separator for inline queries | `;` |
 | `-o`, `--output` | Save results to file | |
-| `--output-dir` | Save each query result as a separate file | |
+| `--output-dir` | Save each query to separate file | |
 | `--format` | Output format: `txt`, `json`, `csv` | `txt` |
-| `--no-snippet` | Hide snippet text in terminal | |
-| `--no-validate` | Disable spam/invalid result filtering | |
-| `--strict-filter` | Stricter filter (require non‑empty snippet) | |
-| `--filter-vuln` | Filter results by vulnerability platform (e.g. `wordpress`) | |
-| `--db-path` | SQLite database path | `atdork.db` |
-| `--resume` | Resume pending queries from the database | |
-| `--history` | Show search history | |
-| `--no-dedup` | Disable global URL deduplication | |
-| `--export-db` | Export database to JSON/CSV | |
-| `--log-file` | Log file path | `atdork.log` |
+| `-v`, `--verbose` | Show results in batch mode | |
+| `--no-snippet` | Hide snippets in terminal | |
+| `--template` | Load dork template(s) | |
+| `--target` | Domain for template substitution | |
+| `--select` | Select specific dorks from template | |
+| `--list-templates` | List available templates | |
+| `--template-path` | Custom template directory | |
+| `--preview` | Preview template dorks | |
+| `--region` | Search region | `us-en` |
+| `--safesearch` | `on`, `moderate`, `off` | `moderate` |
+| `--timelimit` | `d`, `w`, `m`, `y` | |
+| `--backend` | Search engine(s) | `auto` |
+| `--user-agent` | Custom User‑Agent | auto‑rotate |
+| `--timeout` | Request timeout (seconds) | 10 |
+| `--retries` | Retry attempts on failure | 2 |
+| `--delay` | Delay between requests (seconds) | 0 |
+| `--proxy` | Comma‑separated proxy URLs | |
+| `--proxy-file` | File with proxy URLs | |
+| `--tor` | Use Tor SOCKS5 proxy | |
+| `--strict` | Fail if all proxies down | |
+| `--proxy-cooldown` | Cooldown after proxy failure (seconds) | 60 |
+| `--max-failures` | Remove proxy after N failures | 3 |
+| `--concurrency` | Parallel threads for batch | 1 |
+| `--resilient` | Enable circuit breaker & fallback | |
+| `--adaptive-delay` | Enable adaptive rate limiting | |
+| `--no-validate` | Disable spam filtering | |
+| `--strict-filter` | Strict validation | |
+| `--validate-url` | URL validation mode | `all` |
+| `--validate-title` | Minimum title length | 5 |
+| `--validate-desc` | Minimum description length | 10 |
+| `--validate-spam` | Enable spam detection | `true` |
+| `--filter-vuln` | Vulnerability platform filter | |
 | `--no-fallback-backends` | Disable backend fallback | |
-| `--no-verify` | Disable SSL verification (not recommended) | |
+| `--no-verify` | Disable SSL verification | |
+| `--log-file` | Log file path | `atdork.log` |
+| `--db-path` | Database path | `atdork.db` |
+| `--resume` | Resume pending queries | |
+| `--history` | Show search history | |
+| `--no-dedup` | Disable URL deduplication | |
+| `--export-db` | Export database to file | |
+| `--config` | YAML config file path | |
+| `--interactive` | Interactive mode | |
 | `--debug` | Enable debug logging | |
 | `--version` | Show version and exit | |
 
-**Available backends:** `auto`, `bing`, `brave`, `duckduckgo`, `google`, `grokipedia`, `mojeek`, `startpage`, `yandex`, `yahoo`, `wikipedia`.
+---
+
+## Real‑World Use Cases
+
+### Bug Bounty Reconnaissance
+```bash
+atdork --template sqli,xss,lfi --target target.com --proxy-file proxies.txt --strict --format json -o recon.json
+```
+
+### Exposed Database Credentials
+```bash
+atdork -q 'filetype:env "DB_PASSWORD"' -r 50 --no-validate -v
+```
+
+### Finding Admin Panels
+```bash
+atdork -q 'intitle:"admin panel" inurl:login' -r 30 --backend google --region uk-en
+```
+
+### WordPress Vulnerability Scanning
+```bash
+atdork -q "inurl:wp-content site:example.com" -r 40 --filter-vuln wordpress -v
+```
+
+### Automated Weekly Monitoring
+```bash
+# Add to crontab (Linux/macOS)
+0 6 * * 1 cd /path/to/atdork && atdork --batch-file weekly_dorks.txt --format csv --output-dir /reports/$(date +\%Y-\%W)/
+```
 
 ---
 
-## Examples
+## Configuration File
 
-### 1. Basic OSINT search with validation
-```bash
-python main.py -q "intitle:index.of mp3" -r 30 --backend google --safesearch off
+Create `atdork.yaml` for persistent settings:
+```yaml
+max_results: 30
+region: "uk-en"
+safesearch: "off"
+delay: 1.0
+format: "json"
+output_dir: "./results"
+proxy_file: "proxies.txt"
 ```
 
-### 2. High‑anonymity scan with Tor and strict proxy rules
-```bash
-python main.py -q "confidential filetype:xlsx" --tor --strict --delay 2 -r 50 -o secret.json
-```
+AtDork automatically loads this file from the current directory. CLI flags override YAML values.
 
-### 3. Batch processing with resilience and rate limiter
-```bash
-python main.py --batch-file pentest_dorks.txt --concurrency 5 --resilient --adaptive-delay --proxy-file proxies.txt --output-dir results --format csv
-```
+---
 
-### 4. Resume an interrupted batch
-```bash
-python main.py --resume
-```
+## Troubleshooting
 
-### 5. Export all stored results
-```bash
-python main.py --export-db all_results.json
-```
-
-### 6. Debug run to inspect proxy and thread behaviour
-```bash
-python main.py -q "test" --proxy "http://user:pass@proxy:8080" --debug
-```
-
-### 7. Strict filtering for high‑quality OSINT reports
-```bash
-python main.py -q "financial report filetype:pdf" --strict-filter -o clean_results.json
-```
+| Problem | Solution |
+|---------|----------|
+| **Rate limited (429)** | Add `--delay 3`, use `--proxy-file`, or enable `--adaptive-delay` |
+| **No results** | Try different `--backend` (e.g., `startpage`, `yandex`) or `--region` |
+| **Proxy fails** | Check format: `scheme://user:pass@host:port` |
+| **Batch stuck** | Reduce `--concurrency`, add `--timeout 15` |
+| **Install error** | Use `pip install -e .` for development mode |
 
 ---
 
@@ -183,73 +379,56 @@ python main.py -q "financial report filetype:pdf" --strict-filter -o clean_resul
 
 ```
 atdork/
-├── main.py                        # Entry point, CLI argument parser, orchestration
+├── atdork.py                    # CLI entry point
 ├── core/
-│   ├── case/
-│   │   ├── resilience.py          # Circuit breaker, backend fallback
-│   │   └── rate_limiter.py        # Adaptive per‑backend rate limiting
-│   ├── scanner.py                 # Search logic, retry, proxy/UA integration
-│   ├── batch_runner.py            # Batch execution (sequential/parallel)
-│   ├── proxy_manager.py           # Proxy validation, rotation, statistics
-│   ├── database.py                # SQLite storage and export
-│   ├── logger.py                  # Rotating file + console logging
-│   ├── filter_vuln.py             # Vulnerability signature filtering
-│   └── config.py                  # YAML configuration loader
+│   ├── scanner.py               # Search engine integration
+│   ├── batch_runner.py          # Sequential & parallel batch execution
+│   ├── proxy_manager.py         # Proxy pool management
+│   ├── filter_vuln.py           # Vulnerability signature filtering
+│   ├── template_dork.py         # YAML template loader
+│   ├── database.py              # SQLite storage & export
+│   ├── config.py                # YAML configuration loader
+│   ├── logger.py                # Rotating file logger
+│   └── case/
+│       ├── resilience.py        # Circuit breaker & fallback
+│       └── rate_limiter.py      # Adaptive rate limiting
 ├── lib/
-│   ├── display.py                 # Terminal output, banner
-│   ├── storage.py                 # Save results as TXT / JSON / CSV
-│   └── validator.py               # Output filtering (spam, URL validation)
-├── tests/                         # 114 unit tests (pytest)
-├── wordlists/                     # Vulnerability signature files
-├── presets/                       # Dork templates (YAML)
-├── .github/workflows/ci.yml       # CI pipeline
-├── atdork.yaml                    # User configuration file
-├── requirements.txt
+│   ├── display.py               # Terminal output formatting
+│   ├── storage.py               # File export (TXT/JSON/CSV)
+│   └── validator.py             # Spam/invalid result filtering
+├── wordlists/                   # Vulnerability signatures & templates
+├── tests/                       # 114 unit tests (pytest)
+├── pyproject.toml               # Package configuration
 └── README.md
 ```
-## activitie graph
-![Alt](https://repobeats.axiom.co/api/embed/34d4bf05a783d8e3ea0762148747c10ed8f53e9f.svg "Repobeats analytics image")
+
 ---
 
 ## Ethical Use & Disclaimer
 
-Atdork is intended for **ethical and legal purposes only**, such as:
-- Authorised penetration testing
-- Security research
-- OSINT investigations with proper consent
-- Educational use
+AtDork is intended for **legal, authorized security testing only**.  
+You must have explicit written permission from the target owner before scanning.
 
-**Do not use this tool for:**
-- Unauthorised access to systems or data
-- Harvesting information in violation of laws or regulations
+**Prohibited uses:**
+- Unauthorized access to systems or data
+- Harvesting information in violation of laws
 - Any activity that infringes on privacy or intellectual property rights
 
-Always ensure you comply with applicable local and international laws. The developer assumes no liability for misuse of this software.
-
----
-
-## Contributing
-
-Pull requests, issues, and feature suggestions are welcome.  
-Please open an issue first to discuss what you would like to change.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+The developer assumes no liability for misuse of this software.
 
 ---
 
 ## License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+Distributed under the MIT License. See `LICENSE` for details.
 
 ---
 
-## Contact
+## Contact & Support
 
-**alzzmarket**  
-GitHub: [github.com/amnottdevv/atdork](https://github.com/amnottdevv/atdork)  
+- **GitHub:** [github.com/amnottdevv/atdork](https://github.com/amnottdevv/atdork)
+- **Issues:** [github.com/amnottdevv/atdork/issues](https://github.com/amnottdevv/atdork/issues)
+- **PyPI:** [pypi.org/project/atdork](https://pypi.org/project/atdork/)
 
-If you find this tool useful, consider leaving a ⭐ on the repository.
+If you find this tool useful, consider leaving a ⭐ on GitHub!
+```
