@@ -1,0 +1,3 @@
+# about
+link release : https://github.com/amnottdevv/AtDork/releases/tag/1.3.6
+link pypi : pypi.org/project/atdork/1.3.6
