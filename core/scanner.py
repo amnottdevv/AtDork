@@ -1,7 +1,7 @@
 """
 Atdork - Advanced Search Scanner
 Professional-grade search module with error classification, backend fallback,
-exponential backoff, and result validation.
+exponential backoff, result validation, and credential-safe logging.
 """
 
 import time
@@ -10,6 +10,7 @@ import logging
 from typing import Optional, List, Dict, Any
 from ddgs import DDGS
 from core.user_agents_managements import get_random_user_agent
+from lib.redactor import redact_proxy_url
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +70,7 @@ def _classify_error(exception: Exception, proxy: Optional[str] = None) -> Search
     elif any(keyword in error_str for keyword in ("block", "forbidden", "403", "captcha", "access denied")):
         return BlockedError(f"Blocked: {exception}")
     elif proxy and any(keyword in error_str for keyword in ("proxy", "socks", "connection refused", "tunnel")):
-        return ProxyError(f"Proxy failure ({proxy}): {exception}")
+        return ProxyError(f"Proxy failure ({redact_proxy_url(proxy)}): {exception}")
     elif any(keyword in error_str for keyword in ("parse", "json", "html", "unexpected")):
         return ParseError(f"Parsing error: {exception}")
     else:
@@ -236,7 +237,7 @@ def search_dork(
 
                 logger.warning(
                     "Attempt %d/%d failed [backend=%s, proxy=%s]: %s",
-                    attempt + 1, retries + 1, backend_name, current_proxy, search_error
+                    attempt + 1, retries + 1, backend_name, redact_proxy_url(current_proxy), search_error
                 )
 
                 # Report failure to proxy manager
