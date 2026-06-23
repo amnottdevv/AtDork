@@ -9,6 +9,7 @@ import threading
 import socket
 import logging
 from urllib.parse import urlparse
+from lib.redactor import redact_proxy_url
 
 logger = logging.getLogger(__name__)
 
