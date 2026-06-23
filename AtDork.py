@@ -48,6 +48,14 @@ def _show_ascii_banner():
     console.print()
 
 
+def _apply_vulnerability_filter(results, filter_arg: str):
+    try:
+        return filter_vulnerable(results, filter_arg=filter_arg)
+    except FileNotFoundError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        raise SystemExit(1)
+
+
 def build_parser():
     parser = argparse.ArgumentParser(
         prog="atdork",
@@ -428,7 +436,7 @@ def cli_mode(args):
         if args.filter_vuln:
             total_vuln = 0
             for q in batch_results:
-                vuln, safe, _ = filter_vulnerable(batch_results[q], filter_arg=args.filter_vuln)
+                vuln, safe, _ = _apply_vulnerability_filter(batch_results[q], args.filter_vuln)
                 total_vuln += len(vuln)
                 batch_results[q] = vuln
             console.print(f"[bold red]🔴 {total_vuln} hasil berpotensi rentan ({args.filter_vuln}).[/bold red]")
@@ -516,7 +524,7 @@ def cli_mode(args):
 
         # Filter kerentanan (v1.3.3: gunakan parameter baru dan unpack 3 nilai)
         if args.filter_vuln:
-            vuln, safe, _ = filter_vulnerable(results, filter_arg=args.filter_vuln)
+            vuln, safe, _ = _apply_vulnerability_filter(results, args.filter_vuln)
             console.print(f"[bold red]🔴 Rentan: {len(vuln)}[/bold red] | [green]🟢 Aman: {len(safe)}[/green]")
             results = vuln
 

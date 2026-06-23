@@ -1,124 +1,136 @@
 """
-Atdork – Template Dork Loader (core/template_dork.py)
-Memuat, memvalidasi, dan menyediakan daftar dork dari file YAML template.
+AtDork template dork loader.
 
-Fitur:
-- Memisahkan dork bertarget (memerlukan --target) dan generik
-- Substitusi variabel {target}
-- Seleksi dork tertentu (--select 1,3,5)
-- Daftar template yang tersedia
-- Penanganan error yang jelas dan tidak membuat crash
+Default YAML templates are loaded from packaged resources so they remain
+available after installation from a wheel.
 """
 
-import os
 import logging
-from typing import List, Dict, Optional, Union
+import os
+from importlib import resources
+from importlib.resources.abc import Traversable
+from typing import Dict, List, Optional, Union
+
 import yaml
 
 logger = logging.getLogger(__name__)
 
-# Folder default untuk template
 DEFAULT_TEMPLATE_DIR = os.path.join("wordlists", "templates")
-
-# Nama file template harus berakhiran .yaml atau .yml
+TEMPLATE_PACKAGE = "wordlists.templates"
 VALID_EXTENSIONS = (".yaml", ".yml")
 
 
-def _find_template_file(name: str, template_dir: str) -> str:
-    """
-    Mencari file template berdasarkan nama (tanpa ekstensi).
-    Mengembalikan path lengkap file YAML.
-    Jika tidak ditemukan, raise FileNotFoundError.
-    """
-    if not os.path.isdir(template_dir):
-        raise FileNotFoundError(
-            f"Direktori template tidak ditemukan: '{template_dir}'. "
-            "Pastikan folder 'wordlists/templates/' ada atau gunakan --template-path."
-        )
+def _is_default_template_dir(template_dir: str) -> bool:
+    return os.path.normpath(template_dir) == os.path.normpath(DEFAULT_TEMPLATE_DIR)
 
-    # Coba semua ekstensi yang valid
-    for ext in VALID_EXTENSIONS:
-        path = os.path.join(template_dir, f"{name}{ext}")
-        if os.path.isfile(path):
-            return path
+
+def _get_template_root(template_dir: str) -> Union[str, Traversable]:
+    if _is_default_template_dir(template_dir):
+        return resources.files(TEMPLATE_PACKAGE)
+    return template_dir
+
+
+def _display_template_path(filepath: Union[str, Traversable]) -> str:
+    if isinstance(filepath, str):
+        return filepath
+    return f"{TEMPLATE_PACKAGE}/{filepath.name}"
+
+
+def _basename(filepath: Union[str, Traversable]) -> str:
+    if isinstance(filepath, str):
+        return os.path.basename(filepath)
+    return filepath.name
+
+
+def _find_template_file(name: str, template_dir: str) -> Union[str, Traversable]:
+    """
+    Find a template YAML file by name (without extension).
+    """
+    root = _get_template_root(template_dir)
+    if isinstance(root, str):
+        if not os.path.isdir(root):
+            raise FileNotFoundError(
+                f"Direktori template tidak ditemukan: '{root}'. "
+                "Pastikan folder 'wordlists/templates/' ada atau gunakan --template-path."
+            )
+
+        for ext in VALID_EXTENSIONS:
+            path = os.path.join(root, f"{name}{ext}")
+            if os.path.isfile(path):
+                return path
+    else:
+        for ext in VALID_EXTENSIONS:
+            resource = root.joinpath(f"{name}{ext}")
+            if resource.is_file():
+                return resource
 
     raise FileNotFoundError(
         f"Template '{name}' tidak ditemukan di '{template_dir}'. "
-        f"Gunakan --list-templates untuk melihat daftar yang tersedia."
+        "Gunakan --list-templates untuk melihat daftar yang tersedia."
     )
 
 
-def _parse_template(filepath: str) -> Dict:
+def _parse_template(filepath: Union[str, Traversable]) -> Dict:
     """
-    Membaca dan memparsing file YAML template.
-    Mengembalikan dictionary dengan keys: name, description, targeted, generic, dll.
-    Jika YAML tidak valid, raise ValueError.
+    Parse a YAML template file into a normalized dictionary.
     """
+    filename = _basename(filepath)
     try:
-        with open(filepath, "r", encoding="utf-8") as f:
+        if isinstance(filepath, str):
+            stream = open(filepath, "r", encoding="utf-8")
+        else:
+            stream = filepath.open("r", encoding="utf-8")
+        with stream as f:
             data = yaml.safe_load(f)
-    except yaml.YAMLError as e:
-        raise ValueError(
-            f"Format YAML di template '{os.path.basename(filepath)}' tidak valid: {e}"
-        )
-    except Exception as e:
-        raise ValueError(
-            f"Tidak dapat membaca template '{os.path.basename(filepath)}': {e}"
-        )
+    except yaml.YAMLError as exc:
+        raise ValueError(f"Format YAML di template '{filename}' tidak valid: {exc}") from exc
+    except Exception as exc:
+        raise ValueError(f"Tidak dapat membaca template '{filename}': {exc}") from exc
 
     if not isinstance(data, dict):
         raise ValueError(
-            f"Template '{os.path.basename(filepath)}' harus berisi mapping YAML, "
-            f"bukan {type(data).__name__}."
+            f"Template '{filename}' harus berisi mapping YAML, bukan {type(data).__name__}."
         )
 
-    # Pastikan setidaknya ada satu dork (targeted atau generic)
     targeted = data.get("targeted", [])
     generic = data.get("generic", [])
     if not targeted and not generic:
         raise ValueError(
-            f"Template '{data.get('name', os.path.basename(filepath))}' "
-            "tidak memiliki dork (targeted maupun generic)."
+            f"Template '{data.get('name', filename)}' tidak memiliki dork (targeted maupun generic)."
         )
 
-    # Normalisasi: pastikan targeted dan generic adalah list
     if not isinstance(targeted, list):
         logger.warning("'targeted' bukan list, diabaikan.")
         data["targeted"] = []
     else:
-        data["targeted"] = [str(d) for d in targeted if d]
+        data["targeted"] = [str(item) for item in targeted if item]
+
     if not isinstance(generic, list):
         logger.warning("'generic' bukan list, diabaikan.")
         data["generic"] = []
     else:
-        data["generic"] = [str(d) for d in generic if d]
+        data["generic"] = [str(item) for item in generic if item]
 
     return data
 
 
 def _render_dorks(template: Dict, target: Optional[str] = None) -> List[str]:
     """
-    Menggabungkan dan merender dork dari template.
-    - Jika target diberikan, substitusi {target} di bagian targeted.
-    - Jika target tidak diberikan, dork targeted di-skip (dengan warning).
-    - Generic selalu disertakan.
+    Render targeted and generic dorks from a parsed template.
     """
     dorks = []
     has_targeted = bool(template.get("targeted"))
-    has_generic = bool(template.get("generic"))
 
-    # Proses targeted
     if has_targeted:
         if target:
-            dorks.extend([d.replace("{target}", target) for d in template["targeted"]])
+            dorks.extend([dork.replace("{target}", target) for dork in template["targeted"]])
         else:
             logger.warning(
                 "Template '%s' memiliki dork bertarget, tetapi --target tidak diberikan. "
                 "Dork targeted akan diabaikan.",
-                template.get("name", "unknown")
+                template.get("name", "unknown"),
             )
 
-    # Proses generic
     dorks.extend(template.get("generic", []))
 
     if not dorks:
@@ -132,11 +144,7 @@ def _render_dorks(template: Dict, target: Optional[str] = None) -> List[str]:
 
 def _select_dorks(dorks: List[str], select_str: str) -> List[str]:
     """
-    Memilih dork berdasarkan nomor (1-based).
-    select_str bisa berupa:
-      - "1"       -> pilih dork ke-1
-      - "1,3,5"   -> pilih dork ke-1, 3, dan 5
-    Indeks yang tidak valid akan raise ValueError.
+    Select dorks by 1-based index.
     """
     indices = []
     for part in select_str.split(","):
@@ -146,43 +154,52 @@ def _select_dorks(dorks: List[str], select_str: str) -> List[str]:
         idx = int(part)
         if idx < 1 or idx > len(dorks):
             raise ValueError(
-                f"Indeks select tidak valid: {idx}. "
-                f"Template ini memiliki {len(dorks)} dork (1-{len(dorks)})."
+                f"Indeks select tidak valid: {idx}. Template ini memiliki {len(dorks)} dork (1-{len(dorks)})."
             )
-        indices.append(idx - 1)  # konversi ke 0-based
+        indices.append(idx - 1)
 
     return [dorks[i] for i in indices]
 
 
 def list_available_templates(template_dir: str = DEFAULT_TEMPLATE_DIR) -> List[Dict]:
     """
-    Mengembalikan daftar template yang tersedia beserta informasi singkat.
-    Setiap item: {'name': ..., 'description': ..., 'file': ...}
+    Return available template metadata for a directory or packaged template set.
     """
-    if not os.path.isdir(template_dir):
-        return []
+    root = _get_template_root(template_dir)
+    if isinstance(root, str):
+        if not os.path.isdir(root):
+            return []
+        entries: List[Union[str, Traversable]] = [
+            os.path.join(root, filename)
+            for filename in sorted(os.listdir(root))
+        ]
+    else:
+        entries = sorted(root.iterdir(), key=lambda entry: entry.name)
 
     available = []
-    for filename in sorted(os.listdir(template_dir)):
-        if filename.endswith(VALID_EXTENSIONS):
-            name = os.path.splitext(filename)[0]
-            filepath = os.path.join(template_dir, filename)
-            try:
-                data = _parse_template(filepath)
-                available.append({
-                    "name": name,
-                    "description": data.get("description", ""),
-                    "category": data.get("category", ""),
-                    "file": filepath,
-                })
-            except Exception as e:
-                logger.warning("Gagal membaca template %s: %s", filepath, e)
-                available.append({
-                    "name": name,
-                    "description": f"(error: {e})",
-                    "category": "",
-                    "file": filepath,
-                })
+    for entry in entries:
+        filename = _basename(entry)
+        if not filename.endswith(VALID_EXTENSIONS):
+            continue
+
+        name = os.path.splitext(filename)[0]
+        try:
+            data = _parse_template(entry)
+            available.append({
+                "name": name,
+                "description": data.get("description", ""),
+                "category": data.get("category", ""),
+                "file": _display_template_path(entry),
+            })
+        except Exception as exc:
+            logger.warning("Gagal membaca template %s: %s", _display_template_path(entry), exc)
+            available.append({
+                "name": name,
+                "description": f"(error: {exc})",
+                "category": "",
+                "file": _display_template_path(entry),
+            })
+
     return available
 
 
@@ -193,39 +210,18 @@ def load_template_dorks(
     template_path: Optional[str] = None,
 ) -> List[str]:
     """
-    Fungsi utama untuk memuat dork dari template.
-
-    Args:
-        template_name: Nama template (tanpa ekstensi) atau path relatif ke file YAML.
-        target: Domain atau string pengganti {target} di dork targeted.
-        select: String seleksi indeks dork (contoh: "1" atau "1,3,5").
-        template_path: Path ke folder template (default: wordlists/templates/).
-
-    Returns:
-        List string dork yang siap digunakan.
-
-    Raises:
-        FileNotFoundError: Jika template tidak ditemukan.
-        ValueError: Jika format YAML salah, tidak ada dork, atau indeks select tidak valid.
+    Load rendered dorks from a template name or YAML path.
     """
-    # Tentukan direktori template
     template_dir = template_path or DEFAULT_TEMPLATE_DIR
 
-    # Jika template_name mengandung path, gunakan langsung
     if os.path.isfile(template_name):
-        filepath = template_name
-        name = os.path.splitext(os.path.basename(template_name))[0]
+        filepath: Union[str, Traversable] = template_name
     else:
         filepath = _find_template_file(template_name, template_dir)
-        name = template_name
 
-    # Parse YAML
     template = _parse_template(filepath)
-
-    # Render dork
     dorks = _render_dorks(template, target)
 
-    # Seleksi jika diminta
     if select:
         dorks = _select_dorks(dorks, select)
 
