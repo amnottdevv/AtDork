@@ -1,4 +1,4 @@
-```markdown
+
 # AtDork – Professional OSINT Dorking Tool
 
 ![Version](https://img.shields.io/badge/version-1.3.8-blue.svg)
@@ -474,4 +474,4 @@ Distributed under the MIT License. See `LICENSE` for details.
 - **PyPI:** [pypi.org/project/atdork](https://pypi.org/project/atdork/)
 
 If you find this tool useful, consider leaving a ⭐ on GitHub!
-```
+
