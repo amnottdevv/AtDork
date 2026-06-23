@@ -49,5 +49,9 @@ Homepage = "https://github.com/amnottdevv/atdork"
 py-modules = ["atdork"]
 packages = ["core", "lib", "core.case", "wordlists","wordlists.templates"]
 
+[tool.setuptools.package-data]
+wordlists = ["*.txt"]
+"wordlists.templates" = ["*.yaml", "*.yml"]
+
 [project.scripts]
 atdork = "atdork:main"
