@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Atdork - Professional OSINT Tool
-Version : 1.3.3
+Version : 1.3.8
 Author  : alzzmarket
 GitHub  : github.com/amnottdevv/atdork
 """
@@ -16,7 +16,6 @@ from typing import Optional, Dict, Any, List
 
 from rich.console import Console
 from rich.prompt import Prompt
-from rich.progress import Progress, SpinnerColumn, TextColumn
 from pyfiglet import Figlet
 
 from core.config import load_config
@@ -25,15 +24,22 @@ from core.batch_runner import load_queries_from_file, parse_query_string, run_ba
 from core.proxy_manager import create_proxy_manager
 from core.filter_vuln import filter_vulnerable
 from core.template_dork import load_template_dorks, list_available_templates
+from core.post_processor import PostProcessor, extract_urls
 from lib.display import show_banner, display_results
 from lib.storage import save_results
 from lib.validator import filter_results, get_filter_stats
 from core.database import Database
 from core.logger import setup_logging
 
-# ── Resilience & Rate Limiter ──────────────────────────────────────────
-from core.case.resilience import ResilienceHandler
-from core.case.rate_limiter import RateLimiter
+# ── Case modules ──────────────────────────────────────────────────────
+from core.case.circuit_breaker import CircuitBreaker
+from core.case.ip_guard import IPGuard
+from core.case.fallback_manager import FallbackManager
+from core.case.retry_handler import RetryHandler
+from core.case.adaptive_delay import AdaptiveDelay
+
+# ── Cache Manager ─────────────────────────────────────────────────────
+from core.manage_cache import SearchCache
 
 console = Console()
 
@@ -44,11 +50,12 @@ def _show_ascii_banner():
     banner = f.renderText('Atdork')
     console.print(f"[bold green]{banner}[/bold green]")
     console.print("[bold cyan]Professional OSINT Tool[/bold cyan]")
-    console.print(f"[dim]v1.3.3 - {datetime.now().strftime('%Y-%m-%d %H:%M')}[/dim]")
+    console.print(f"[dim]v1.3.8 - {datetime.now().strftime('%Y-%m-%d %H:%M')}[/dim]")
     console.print()
 
 
 def _apply_vulnerability_filter(results, filter_arg: str):
+    """Wrapper untuk filter kerentanan dengan error handling."""
     try:
         return filter_vulnerable(results, filter_arg=filter_arg)
     except FileNotFoundError as e:
@@ -92,7 +99,6 @@ def build_parser():
 
     # Multi-threading
     parser.add_argument("--concurrency", type=int, default=1, help="Jumlah thread paralel untuk batch (1 = sekuensial).")
-    parser.add_argument("--max-fallback-failures", type=int, default=3, help="Batas kegagalan berturut-turut sebelum fallback ke sekuensial")
 
     # Batch
     parser.add_argument("--batch-file", type=str)
@@ -109,17 +115,17 @@ def build_parser():
     parser.add_argument("--no-validate", action="store_true", help="Matikan semua filter validasi.")
     parser.add_argument("--strict-filter", action="store_true", help="Filter ketat (title≥5, desc≥10, spam on, url all).")
 
-    # Validasi granular (v1.3.1)
+    # Validasi granular
     parser.add_argument("--validate-url", type=str, default="all",
                         choices=["only", "path", "params", "all", "false"],
-                        help="Mode validasi URL: only (domain), path (domain+path), params (domain+params), all (lengkap), false (mati).")
+                        help="Mode validasi URL.")
     parser.add_argument("--validate-title", type=str, default="5",
-                        help="Panjang minimal judul (integer) atau 'false' untuk matikan (default: 5).")
+                        help="Panjang minimal judul (integer) atau 'false' untuk matikan.")
     parser.add_argument("--validate-desc", type=str, default="10",
-                        help="Panjang minimal deskripsi (integer) atau 'false' untuk matikan (default: 10).")
+                        help="Panjang minimal deskripsi (integer) atau 'false' untuk matikan.")
     parser.add_argument("--validate-spam", type=str, default="true",
                         choices=["true", "false"],
-                        help="Aktifkan/matikan filter spam (default: true).")
+                        help="Aktifkan/matikan filter spam.")
 
     # Filter kerentanan
     parser.add_argument("--filter-vuln", type=str, help="Filter platform (e.g., wordpress).")
@@ -138,37 +144,46 @@ def build_parser():
     parser.add_argument("--no-dedup", action="store_true", help="Nonaktifkan deduplikasi global.")
     parser.add_argument("--export-db", type=str, help="Export database ke file (json/csv).")
 
-    # Resilience & Rate Limiter (v1.3)
-    parser.add_argument("--resilient", action="store_true",
-                        help="Aktifkan mode tahan banting (circuit breaker, backend fallback).")
-    parser.add_argument("--adaptive-delay", action="store_true",
-                        help="Gunakan delay adaptif berdasarkan respons backend.")
+    # Case modules (v1.3.5)
+    parser.add_argument("--resilient", action="store_true", help="Aktifkan mode tahan banting (circuit breaker, fallback).")
+    parser.add_argument("--adaptive-delay", action="store_true", help="Gunakan delay adaptif berdasarkan respons backend.")
+    parser.add_argument("--ip-guard", action="store_true", help="Aktifkan deteksi kebocoran IP (wajib dengan --strict).")
 
-    # Template Dork (v1.3.2)
-    parser.add_argument("--template", type=str, help="Nama template dork (tanpa ekstensi) atau path ke file YAML. Bisa multiple (pisahkan dengan koma).")
+    # Post-Processor (v1.3.6)
+    parser.add_argument("--exec", type=str, help="Jalankan command untuk setiap URL hasil (gunakan {} untuk URL).")
+    parser.add_argument("--exec-on-vuln", type=str, help="Seperti --exec, tapi hanya untuk hasil rentan.")
+    parser.add_argument("--exec-parallel", type=int, default=1, help="Jumlah proses paralel untuk --exec.")
+    parser.add_argument("--exec-timeout", type=int, default=30, help="Timeout per command dalam detik.")
+
+    # Cache (v1.3.7)
+    parser.add_argument("--cache", action="store_true", help="Aktifkan caching hasil pencarian.")
+    parser.add_argument("--cache-db", type=str, default="atdork_cache.db", help="Path database cache.")
+    parser.add_argument("--cache-ttl", type=int, default=24, help="TTL cache dalam jam (default: 24).")
+    parser.add_argument("--cache-only", action="store_true", help="Hanya gunakan cache, jangan lakukan pencarian baru.")
+    parser.add_argument("--clear-cache", action="store_true", help="Hapus semua cache sebelum memulai.")
+
+    # Template Dork
+    parser.add_argument("--template", type=str, help="Nama template dork.")
     parser.add_argument("--target", type=str, help="Target domain untuk substitusi {target} di template.")
     parser.add_argument("--select", type=str, help="Pilih dork tertentu dari template (contoh: 1,3,5).")
     parser.add_argument("--list-templates", action="store_true", help="Tampilkan daftar template yang tersedia.")
-    parser.add_argument("--template-path", type=str, help="Path ke folder template (default: wordlists/templates/).")
+    parser.add_argument("--template-path", type=str, help="Path ke folder template.")
     parser.add_argument("--preview", action="store_true", help="Pratinjau isi template tanpa menjalankannya.")
 
     parser.add_argument("--debug", action="store_true")
-    parser.add_argument("--version", action="version", version="%(prog)s 1.3.3")
+    parser.add_argument("--version", action="version", version="%(prog)s 1.3.8")
     return parser
 
 
 def _parse_validation_args(args) -> dict:
-    """Konversi argumen validasi ke dictionary untuk filter_results."""
     if args.no_validate:
         return {"strict": False}
     if args.strict_filter:
         return {"strict": True}
-
     min_title = None if args.validate_title == "false" else int(args.validate_title)
     min_desc = None if args.validate_desc == "false" else int(args.validate_desc)
     check_spam = args.validate_spam == "true"
     url_mode = args.validate_url
-
     return {
         "strict": None,
         "min_title": min_title,
@@ -178,34 +193,78 @@ def _parse_validation_args(args) -> dict:
     }
 
 
-def _create_resilience_handler(args, proxy_manager=None) -> Optional[ResilienceHandler]:
-    if not args.resilient:
-        return None
-    return ResilienceHandler(
-        active=True,
-        max_retries=args.retries,
-        backoff_base=2.0,
-        max_backoff=30.0,
-        circuit_threshold=3,
-        circuit_cooldown=120.0,
-        proxy_manager=proxy_manager,
-    )
+def _setup_case_modules(args, proxy_manager) -> dict:
+    """Inisialisasi modul-modul case berdasarkan flag."""
+    modules = {
+        "circuit_breaker": None,
+        "ip_guard": None,
+        "fallback_manager": None,
+        "retry_handler": None,
+        "adaptive_delay": None,
+    }
+
+    if args.resilient:
+        modules["circuit_breaker"] = CircuitBreaker(threshold=3, cooldown=120.0)
+        modules["fallback_manager"] = FallbackManager(
+            backends=["duckduckgo", "startpage", "yandex", "yahoo", "wikipedia"],
+            circuit_breaker=modules["circuit_breaker"],
+            proxy_manager=proxy_manager,
+        )
+        modules["retry_handler"] = RetryHandler(max_retries=args.retries, base_delay=2.0)
+
+    if args.adaptive_delay:
+        modules["adaptive_delay"] = AdaptiveDelay(
+            base_delay=1.0, max_delay=60.0, backoff_factor=2.0, recovery_factor=0.9
+        )
+
+    if args.ip_guard and args.strict:
+        try:
+            real_ip = IPGuard.get_public_ip()
+            if real_ip:
+                modules["ip_guard"] = IPGuard(real_ip, strict=True)
+                if proxy_manager:
+                    first_proxy = proxy_manager.get_proxy()
+                    modules["ip_guard"].establish_baseline(first_proxy)
+        except Exception as e:
+            console.print(f"[yellow]⚠️ Gagal menginisialisasi IP Guard: {e}[/yellow]")
+
+    return modules
 
 
-def _create_rate_limiter(args) -> Optional[RateLimiter]:
-    if not args.adaptive_delay:
+def _setup_cache(args) -> Optional[SearchCache]:
+    """Inisialisasi cache manager jika diminta."""
+    if not (args.cache or args.clear_cache or args.cache_only):
         return None
-    return RateLimiter(
-        base_delay=1.0,
-        max_delay=60.0,
-        backoff_factor=2.0,
-        recovery_factor=0.9,
-        min_delay=0.1,
+
+    cache = SearchCache(
+        db_path=args.cache_db,
+        default_ttl_hours=args.cache_ttl,
+        auto_cleanup=True,
     )
+
+    if args.clear_cache:
+        deleted = cache.clear_all()
+        console.print(f"[dim]Cache cleared: {deleted} entries removed.[/dim]")
+
+    if not args.cache and not args.cache_only:
+        cache.close()
+        return None
+
+    return cache
+
+
+def _build_cache_params(args) -> Dict[str, Any]:
+    """Bangun parameter untuk key cache."""
+    return {
+        "region": args.region,
+        "safesearch": args.safesearch,
+        "timelimit": args.timelimit,
+        "backend": args.backend,
+        "max_results": args.max_results,
+    }
 
 
 def interactive_mode(db: Database):
-    """Alur interaktif seperti skrip awal."""
     show_banner()
     query = Prompt.ask("[bold yellow]Masukkan keyword/dork[/bold yellow]").strip()
     if not query:
@@ -245,13 +304,11 @@ def interactive_mode(db: Database):
 
 
 def cli_mode(args):
-    """Mode command line utama yang sudah terintegrasi penuh."""
     setup_logging(debug=args.debug, log_file=args.log_file)
     logger = logging.getLogger(__name__)
 
     _show_ascii_banner()
 
-    # Validasi max_results
     args.max_results = max(1, min(100, args.max_results))
 
     # Database connection
@@ -276,12 +333,7 @@ def cli_mode(args):
                 tname = tname.strip()
                 if not tname:
                     continue
-                dorks = load_template_dorks(
-                    tname,
-                    target=args.target,
-                    select=args.select,
-                    template_path=args.template_path
-                )
+                dorks = load_template_dorks(tname, target=args.target, select=args.select, template_path=args.template_path)
                 console.print(f"[bold cyan]Preview template '{tname}':[/bold cyan]")
                 for i, d in enumerate(dorks, 1):
                     console.print(f"  {i}. {d}")
@@ -325,27 +377,20 @@ def cli_mode(args):
     else:
         queries = []
 
-    # Kumpulkan query dari berbagai sumber
+    # Kumpulkan query
     if not queries:
-        # Template dork (dukung multiple dengan koma)
         if args.template:
             for tname in args.template.split(","):
                 tname = tname.strip()
                 if not tname:
                     continue
                 try:
-                    template_dorks = load_template_dorks(
-                        tname,
-                        target=args.target,
-                        select=args.select,
-                        template_path=args.template_path
-                    )
+                    template_dorks = load_template_dorks(tname, target=args.target, select=args.select, template_path=args.template_path)
                     queries.extend(template_dorks)
                 except Exception as e:
                     console.print(f"[red]Error loading template '{tname}': {e}[/red]")
                     sys.exit(1)
 
-        # Query dari -q (bisa digabung)
         if args.query:
             if args.batch_separator in args.query:
                 custom_queries = parse_query_string(args.query, args.batch_separator)
@@ -353,7 +398,6 @@ def cli_mode(args):
                 custom_queries = [args.query]
             queries.extend(custom_queries)
 
-        # Batch file
         if args.batch_file:
             try:
                 file_queries = load_queries_from_file(args.batch_file)
@@ -371,39 +415,30 @@ def cli_mode(args):
     if args.proxy or args.proxy_file or args.tor:
         try:
             proxy_manager = create_proxy_manager(
-                proxy_arg=args.proxy,
-                proxy_file=args.proxy_file,
-                enable_tor=args.tor,
-                cooldown=args.proxy_cooldown,
-                strict=args.strict,
-                max_failures=args.max_failures,
+                proxy_arg=args.proxy, proxy_file=args.proxy_file, enable_tor=args.tor,
+                cooldown=args.proxy_cooldown, strict=args.strict, max_failures=args.max_failures,
             )
             console.print("[dim]Proxy manager diinisialisasi.[/dim]")
         except ValueError as e:
             console.print(f"[red]Proxy manager error: {e}[/red]")
             sys.exit(1)
 
-    # Resilience & Rate limiter
-    resilience_handler = _create_resilience_handler(args, proxy_manager)
-    rate_limiter = _create_rate_limiter(args)
+    # Setup case modules
+    case_modules = _setup_case_modules(args, proxy_manager)
 
-    # Parameter scanner yang akan diteruskan
+    # Setup cache
+    cache = _setup_cache(args)
+    cache_params = _build_cache_params(args) if cache else None
+
+    # Parameter scanner
     scanner_kwargs = {
-        "max_results": args.max_results,
-        "timeout": args.timeout,
-        "retries": args.retries,
-        "delay": args.delay,
-        "proxy_manager": proxy_manager,
-        "region": args.region,
-        "safesearch": args.safesearch,
-        "timelimit": args.timelimit,
-        "backend": args.backend,
-        "user_agent": args.user_agent,
-        "verify": not args.no_verify,
+        "max_results": args.max_results, "timeout": args.timeout, "retries": args.retries,
+        "delay": args.delay, "proxy_manager": proxy_manager, "region": args.region,
+        "safesearch": args.safesearch, "timelimit": args.timelimit, "backend": args.backend,
+        "user_agent": args.user_agent, "verify": not args.no_verify,
         "fallback_backends": not args.no_fallback_backends,
     }
 
-    # Parameter validasi
     val_kwargs = _parse_validation_args(args)
 
     # Jalankan batch atau single query
@@ -411,19 +446,16 @@ def cli_mode(args):
         console.print(f"[bold cyan]Batch mode: {len(queries)} query[/bold cyan]")
         batch_results = run_batch(
             queries=queries,
-            resilience_handler=resilience_handler,
-            rate_limiter=rate_limiter,
+            case_modules=case_modules,
             concurrency=args.concurrency,
             **scanner_kwargs
         )
 
-        # Tampilkan hasil jika --verbose
         if args.verbose:
             for q, res in batch_results.items():
                 console.print(f"\n[bold yellow]━━━ {q} ━━━[/bold yellow]")
                 display_results(res, q, no_snippet=args.no_snippet)
 
-        # Filter validasi
         total_removed = 0
         for q in batch_results:
             old = len(batch_results[q])
@@ -432,7 +464,6 @@ def cli_mode(args):
         if total_removed:
             console.print(f"[dim]Filter: {total_removed} hasil dihapus.[/dim]")
 
-        # Filter kerentanan (v1.3.3: gunakan parameter baru dan unpack 3 nilai)
         if args.filter_vuln:
             total_vuln = 0
             for q in batch_results:
@@ -441,7 +472,6 @@ def cli_mode(args):
                 batch_results[q] = vuln
             console.print(f"[bold red]🔴 {total_vuln} hasil berpotensi rentan ({args.filter_vuln}).[/bold red]")
 
-        # Simpan ke database
         if db:
             for q, results in batch_results.items():
                 qid = db.add_query(q, "completed")
@@ -450,7 +480,22 @@ def cli_mode(args):
         total_hits = sum(len(v) for v in batch_results.values())
         console.print(f"\n[green]Batch selesai. Total {total_hits} hasil.[/green]")
 
-        # Output file
+        # Post-processing (batch)
+        if args.exec or args.exec_on_vuln:
+            command = args.exec or args.exec_on_vuln
+            all_urls = []
+            for q, res in batch_results.items():
+                all_urls.extend(extract_urls(res))
+            if all_urls:
+                processor = PostProcessor(
+                    command=command,
+                    parallel=args.exec_parallel,
+                    timeout=args.exec_timeout,
+                )
+                console.print(f"[bold cyan]🔧 Post-Processing {len(all_urls)} URLs...[/bold cyan]")
+                processor.process(all_urls)
+                console.print(f"[dim]{processor.summary()}[/dim]")
+
         if args.output:
             with open(args.output, "w", encoding="utf-8") as f:
                 json.dump(batch_results, f, indent=2, ensure_ascii=False)
@@ -478,57 +523,62 @@ def cli_mode(args):
                             f.write(f"[{i}] {r.get('title','')}\n{r.get('href','')}\n{r.get('body','')}\n\n")
             console.print(f"[green]✅ Batch disimpan di folder: {args.output_dir}[/green]")
 
-        # Rate limiter recommendations
-        if rate_limiter:
+        if case_modules.get("adaptive_delay"):
             console.print("\n[bold cyan]Rate Limiter Recommendations:[/bold cyan]")
-            for backend, rec in rate_limiter.all_recommendations().items():
+            for backend, rec in case_modules["adaptive_delay"].all_recommendations().items():
                 console.print(f"  [yellow]{backend}[/yellow]: {rec}")
 
     else:
-        # ── Single query ──────────────────────────────────────────────
         q = queries[0]
         console.print(f"[bold cyan]🔍 Searching for:[/bold cyan] {q}")
 
         backend_for_rate = scanner_kwargs.get("backend", "auto")
-        if rate_limiter:
-            rate_limiter.wait(backend_for_rate)
+        if case_modules.get("adaptive_delay"):
+            case_modules["adaptive_delay"].wait(backend_for_rate)
 
         try:
-            if resilience_handler:
-                results, err = resilience_handler.execute(q, **scanner_kwargs)
-                if err:
-                    raise SearchError(err)
+            if cache and not args.cache_only:
+                results = cache.get_or_set(
+                    q, backend_for_rate,
+                    search_dork,
+                    params=cache_params,
+                    ttl_hours=args.cache_ttl,
+                    query=q, **scanner_kwargs
+                )
+            elif cache and args.cache_only:
+                results = cache.get(q, backend_for_rate, cache_params)
+                if results is None:
+                    console.print("[yellow]Cache MISS — dan --cache-only aktif. Tidak ada hasil.[/yellow]")
+                    if db: db.close()
+                    if cache: cache.close()
+                    return
             else:
                 results = search_dork(query=q, **scanner_kwargs)
 
-            if rate_limiter:
-                rate_limiter.report_response(backend_for_rate, 200, len(results) > 0)
+            if case_modules.get("adaptive_delay"):
+                case_modules["adaptive_delay"].report(backend_for_rate, 200, len(results) > 0)
         except Exception as e:
-            if rate_limiter:
+            if case_modules.get("adaptive_delay"):
                 if "429" in str(e):
-                    rate_limiter.report_response(backend_for_rate, 429, False)
+                    case_modules["adaptive_delay"].report(backend_for_rate, 429, False)
                 else:
-                    rate_limiter.report_response(backend_for_rate, 500, False)
+                    case_modules["adaptive_delay"].report(backend_for_rate, 500, False)
             console.print(f"[red]Search failed: {e}[/red]")
             sys.exit(1)
 
-        # Tampilkan hasil (single query selalu tampil)
         display_results(results, q, no_snippet=args.no_snippet)
 
-        # Filter validasi
         original = len(results)
         results = filter_results(results, **val_kwargs)
         stats = get_filter_stats(original, len(results))
         if stats["removed"]:
             console.print(f"[dim]Filter: {stats['removed']} hasil dihapus.[/dim]")
 
-        # Filter kerentanan (v1.3.3: gunakan parameter baru dan unpack 3 nilai)
         if args.filter_vuln:
             vuln, safe, _ = _apply_vulnerability_filter(results, args.filter_vuln)
             console.print(f"[bold red]🔴 Rentan: {len(vuln)}[/bold red] | [green]🟢 Aman: {len(safe)}[/green]")
             results = vuln
 
-        # Database insert
         if db and not args.no_dedup:
             original_len = len(results)
             unique_results = []
@@ -543,6 +593,20 @@ def cli_mode(args):
             qid = db.add_query(q, "completed")
             db.add_results_batch(qid, results)
 
+        # Post-processing (single query)
+        if args.exec or args.exec_on_vuln:
+            command = args.exec or args.exec_on_vuln
+            urls = extract_urls(results)
+            if urls:
+                processor = PostProcessor(
+                    command=command,
+                    parallel=args.exec_parallel,
+                    timeout=args.exec_timeout,
+                )
+                console.print(f"[bold cyan]🔧 Post-Processing {len(urls)} URLs...[/bold cyan]")
+                processor.process(urls)
+                console.print(f"[dim]{processor.summary()}[/dim]")
+
         if args.output:
             save_results(results, q, output_path=args.output, output_format=args.format)
             console.print(f"[green]✅ Disimpan ke: {args.output}[/green]")
@@ -551,13 +615,15 @@ def cli_mode(args):
             path = save_results(results, q, output_dir=args.output_dir, output_format=args.format)
             console.print(f"[green]✅ Disimpan ke: {path}[/green]")
 
-        if rate_limiter:
+        if case_modules.get("adaptive_delay"):
             console.print("\n[bold cyan]Rate Limiter Recommendations:[/bold cyan]")
-            for backend, rec in rate_limiter.all_recommendations().items():
+            for backend, rec in case_modules["adaptive_delay"].all_recommendations().items():
                 console.print(f"  [yellow]{backend}[/yellow]: {rec}")
 
     if db:
         db.close()
+    if cache:
+        cache.close()
 
 
 def main():
