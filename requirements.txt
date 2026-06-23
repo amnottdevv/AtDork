@@ -2,3 +2,4 @@ ddgs>=7.0
 rich>=13.0
 pyfiglet>=0.8
 pyyaml>=6.0
+requests>=2.28
