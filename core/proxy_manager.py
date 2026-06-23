@@ -113,7 +113,7 @@ class ProxyManager:
         with self._lock:
             if proxy not in self._proxies:
                 self._proxies.append(proxy)
-                logger.info(f"Proxy ditambahkan: {proxy}")
+                logger.debug(f"Proxy {redact_proxy_url(proxy)} cooldown sampai {until:.0f}")
 
     def remove_proxy(self, proxy: str):
         """Hapus proxy dari pool secara manual."""
@@ -165,14 +165,14 @@ class ProxyManager:
             # Cooldown
             until = time.time() + self._cooldown
             self._banned_until[proxy] = until
-            logger.debug(f"Proxy {proxy} cooldown sampai {until:.0f}")
+            logger.info(f"Proxy ditambahkan: {redact_proxy_url(proxy)}")
 
             # Cek apakah harus dihapus permanen
             if self._max_failures > 0 and self._stats[proxy]['consecutive_fails'] >= self._max_failures:
                 self._proxies.remove(proxy)
                 self._banned_until.pop(proxy, None)
                 del self._stats[proxy]
-                logger.warning(f"Proxy {proxy} dihapus permanen setelah {self._max_failures} kegagalan berturut-turut.")
+                logger.info(f"Proxy dihapus: {redact_proxy_url(proxy)}")
 
     def report_success(self, proxy: str):
         """Catat keberhasilan, reset cooldown & consecutive fails."""
