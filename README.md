@@ -1,14 +1,12 @@
-
+```markdown
 # AtDork – Professional OSINT Dorking Tool
 
-![Version](https://img.shields.io/badge/version-1.3.3-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.8-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-linux%20%7C%20macos%20%7C%20windows-lightgrey)
 ![Tests](https://img.shields.io/badge/tests-114%20passed-brightgreen)
-![Lines](https://img.shields.io/badge/total%20lines-9%2C383-orange)
-![Visitors](https://img.shields.io/badge/visitors-519%2F14d-brightgreen)
-![Clones](https://img.shields.io/badge/clones-985%2F14d-blue)
+![Lines](https://img.shields.io/badge/total%20lines-11%2C000%2B-orange)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/atdork?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=BLUE&left_text=pypi+downloads)](https://pepy.tech/projects/atdork)
 
 **AtDork** is a powerful, ethical OSINT tool that performs advanced search queries (Google Dorks) across multiple search engines simultaneously. Designed for security researchers, penetration testers, and bug bounty hunters, it automates the discovery of exposed documents, vulnerable parameters, misconfigured servers, and other sensitive information available on the public web.
@@ -19,12 +17,15 @@
 
 - 🚀 **Blazing fast** – Multi‑threaded batch processing with configurable concurrency.
 - 🔍 **Multi‑engine** – Queries DuckDuckGo, Google, Bing, Startpage, Yandex, Yahoo, and more.
-- 🛡️ **Anonymous** – Built‑in proxy rotation, Tor integration, strict mode to prevent IP leaks.
+- 🛡️ **Anonymous** – Built‑in proxy rotation, Tor integration, strict mode to prevent IP leaks. **NEW: IP leak detection (`--ip-guard`)** stops the scan immediately if your real IP is exposed.
 - 🧹 **Clean results** – Automatic spam filtering, URL validation, and deduplication.
-- 📊 **Professional output** – Export to JSON, CSV, TXT; SQLite database for history and resume.
+- 📊 **Professional output** – Export to JSON, CSV, TXT; SQLite database for history and resume. **CSV exports are now protected against formula injection.**
 - 🎯 **Smart filtering** – Vulnerability signature detection for WordPress, Joomla, SQLi, and more.
 - 📝 **Template system** – Curated YAML‑based dork collections for instant productivity.
-- ⚙️ **Highly configurable** – 47 CLI flags to control every aspect of your search.
+- ⚙️ **Highly configurable** – **50+ CLI flags** to control every aspect of your search.
+- 🔧 **Post‑processing** – Execute external commands on discovered URLs (`--exec`).
+- 💾 **Caching** – Cache search results locally to avoid redundant requests and enable offline access.
+- 🔒 **Safe logging** – Proxy credentials are automatically redacted from log files to prevent accidental leaks.
 
 ---
 
@@ -45,7 +46,7 @@ pip install .
 ### Verify Installation
 ```bash
 atdork --version
-# Output: atdork 1.3.3
+# Output: atdork 1.3.8
 ```
 
 ---
@@ -236,25 +237,31 @@ atdork --export-db all_results.json
 atdork -q "test" --no-dedup
 ```
 
-### Advanced Options
+### IP Leak Detection (NEW)
 ```bash
-# Custom User‑Agent
-atdork -q "test" --user-agent "MyBot/1.0"
+# Halt immediately if your real IP is exposed while using proxies
+atdork --batch-file dorks.txt --proxy-file proxies.txt --strict --ip-guard
+```
 
-# Disable SSL verification (not recommended)
-atdork -q "test" --no-verify
+### Post‑Processing (NEW)
+```bash
+# Run a command for every discovered URL
+atdork -q "inurl:admin" -r 10 --exec "curl -I {} | grep Server"
 
-# Disable backend fallback
-atdork -q "test" --no-fallback-backends
+# Run a command only on URLs flagged as vulnerable
+atdork -q "inurl:wp-content" -r 30 --filter-vuln wordpress --exec-on-vuln "wpscan --url {}"
+```
 
-# Debug mode (verbose logging)
-atdork -q "test" --debug
+### Cache Results (NEW)
+```bash
+# Cache search results for 24 hours (default)
+atdork -q "site:gov filetype:pdf" -r 20 --cache
 
-# Custom log file
-atdork -q "test" --log-file my_scan.log
+# Use cached results only (offline mode)
+atdork -q "site:gov filetype:pdf" -r 20 --cache-only
 
-# Show results during batch
-atdork --batch-file dorks.txt -v
+# Clear all cached data
+atdork --clear-cache
 ```
 
 ---
@@ -295,6 +302,16 @@ atdork --batch-file dorks.txt -v
 | `--concurrency` | Parallel threads for batch | 1 |
 | `--resilient` | Enable circuit breaker & fallback | |
 | `--adaptive-delay` | Enable adaptive rate limiting | |
+| `--ip-guard` | Enable IP leak detection | |
+| `--exec` | Execute command on each result URL | |
+| `--exec-on-vuln` | Execute command on vulnerable results | |
+| `--exec-parallel` | Parallel `--exec` processes | 1 |
+| `--exec-timeout` | Timeout per `--exec` command (seconds) | 30 |
+| `--cache` | Enable result caching | |
+| `--cache-db` | Cache database path | `atdork_cache.db` |
+| `--cache-ttl` | Cache TTL in hours | 24 |
+| `--cache-only` | Use cache only, no network requests | |
+| `--clear-cache` | Delete all cache before starting | |
 | `--no-validate` | Disable spam filtering | |
 | `--strict-filter` | Strict validation | |
 | `--validate-url` | URL validation mode | `all` |
@@ -319,9 +336,11 @@ atdork --batch-file dorks.txt -v
 
 ## Real‑World Use Cases
 
-### Bug Bounty Reconnaissance
+### Bug Bounty Reconnaissance with Full Protection
 ```bash
-atdork --template sqli,xss,lfi --target target.com --proxy-file proxies.txt --strict --format json -o recon.json
+atdork --template sqli,xss,lfi --target target.com \
+  --proxy-file proxies.txt --strict --resilient --ip-guard \
+  --format json -o recon.json
 ```
 
 ### Exposed Database Credentials
@@ -334,9 +353,12 @@ atdork -q 'filetype:env "DB_PASSWORD"' -r 50 --no-validate -v
 atdork -q 'intitle:"admin panel" inurl:login' -r 30 --backend google --region uk-en
 ```
 
-### WordPress Vulnerability Scanning
+### WordPress Vulnerability Scanning with Post‑Processing
 ```bash
-atdork -q "inurl:wp-content site:example.com" -r 40 --filter-vuln wordpress -v
+atdork -q "inurl:wp-content site:example.com" -r 40 \
+  --filter-vuln wordpress \
+  --exec-on-vuln "wpscan --url {} --enumerate p" \
+  --exec-parallel 2 --exec-timeout 60
 ```
 
 ### Automated Weekly Monitoring
@@ -371,8 +393,12 @@ AtDork automatically loads this file from the current directory. CLI flags overr
 | **Rate limited (429)** | Add `--delay 3`, use `--proxy-file`, or enable `--adaptive-delay` |
 | **No results** | Try different `--backend` (e.g., `startpage`, `yandex`) or `--region` |
 | **Proxy fails** | Check format: `scheme://user:pass@host:port` |
-| **Batch stuck** | Reduce `--concurrency`, add `--timeout 15` |
+| **Batch stuck** | Reduce `--concurrency`, add `--timeout 15`, enable `--resilient` |
 | **Install error** | Use `pip install -e .` for development mode |
+| **IP leak with --strict** | Enable `--ip-guard` to detect leaks early; use SOCKS5h proxies |
+| **All backends exhausted** | Enable `--resilient` to activate backend fallback chain |
+| **CSV opens with formulas** | Update to v1.3.8+ (CSV injection fixed) |
+| **Proxy credentials in logs** | Update to v1.3.8+ (credentials are now redacted) |
 
 ---
 
@@ -383,22 +409,31 @@ atdork/
 ├── atdork.py                    # CLI entry point
 ├── core/
 │   ├── scanner.py               # Search engine integration
-│   ├── batch_runner.py          # Sequential & parallel batch execution
+│   ├── batch_runner.py          # Batch execution (seq/parallel, resilience)
 │   ├── proxy_manager.py         # Proxy pool management
 │   ├── filter_vuln.py           # Vulnerability signature filtering
 │   ├── template_dork.py         # YAML template loader
+│   ├── post_processor.py        # External command execution on results
+│   ├── manage_cache.py          # SQLite-based result caching
 │   ├── database.py              # SQLite storage & export
 │   ├── config.py                # YAML configuration loader
 │   ├── logger.py                # Rotating file logger
 │   └── case/
-│       ├── resilience.py        # Circuit breaker & fallback
-│       └── rate_limiter.py      # Adaptive rate limiting
+│       ├── circuit_breaker.py   # Prevent hammering dead backends
+│       ├── ip_guard.py          # Real IP leak detection
+│       ├── error_classifier.py  # Categorize exceptions
+│       ├── fallback_manager.py  # Intelligent backend/proxy switching
+│       ├── retry_handler.py     # Exponential backoff with jitter
+│       ├── adaptive_delay.py    # Per‑backend dynamic delay
+│       ├── recovery_strategy.py # Map errors to recovery actions
+│       └── stats.py             # Runtime statistics collector
 ├── lib/
 │   ├── display.py               # Terminal output formatting
 │   ├── storage.py               # File export (TXT/JSON/CSV)
-│   └── validator.py             # Spam/invalid result filtering
+│   ├── validator.py             # Spam/invalid result filtering
+│   └── redactor.py              # Proxy credential redaction
 ├── wordlists/                   # Vulnerability signatures & templates
-├── tests/                       # 114 unit tests (pytest)
+├── tests/                       # Unit tests (pytest)
 ├── pyproject.toml               # Package configuration
 └── README.md
 ```
@@ -422,6 +457,13 @@ The developer assumes no liability for misuse of this software.
 ## License
 
 Distributed under the MIT License. See `LICENSE` for details.
+
+---
+
+## Acknowledgements
+
+- **tg12** – for responsibly disclosing critical security vulnerabilities (CSV injection and proxy credential leakage) and helping make AtDork safer for everyone.
+- **Peter7896** – for the excellent pull request that fixed packaged wordlist resources, ensuring seamless functionality for `pip install` users.
 
 ---
 
