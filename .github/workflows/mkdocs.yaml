@@ -1,0 +1,46 @@
+name: Deploy MkDocs Documentation
+
+on:
+  push:
+    branches:
+      - master          # atau main, sesuaikan dengan branch utama kamu
+    paths:
+      - 'docs/**'       # jalan jika ada perubahan di folder docs/
+      - 'mkdocs.yml'    # jalan jika file konfigurasi berubah
+      - '.github/workflows/mkdocs.yml'  # jalan jika workflow ini berubah
+  workflow_dispatch:    # memungkinkan kamu menjalankan manual dari tab Actions
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install mkdocs mkdocs-material
+
+      - name: Build documentation
+        run: mkdocs build --site-dir site
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          publish_branch: gh-pages
+          force_orphan: true
+          commit_message: "📚 Deploy documentation for ${{ github.sha }}"
