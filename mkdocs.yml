@@ -2,7 +2,7 @@ site_name: AtDork Documentation
 site_url: https://amnottdevv.github.io/atdork/
 repo_url: https://github.com/amnottdevv/atdork
 repo_name: amnottdevv/atdork
-edit_uri: edit/main/docs/
+edit_uri: edit/master/docs/
 
 theme:
   name: material
