@@ -107,14 +107,13 @@ class ProxyManager:
             return dict(self._stats)
 
     def add_proxy(self, proxy: str):
-        """Tambah proxy ke pool secara dinamis (jika valid dan belum ada)."""
-        if not is_valid_proxy(proxy):
-            logger.warning(f"Proxy tidak valid, diabaikan: {proxy}")
-            return
-        with self._lock:
-            if proxy not in self._proxies:
-                self._proxies.append(proxy)
-                logger.debug(f"Proxy {redact_proxy_url(proxy)} cooldown sampai {until:.0f}")
+    if not is_valid_proxy(proxy):
+        logger.warning(f"Proxy tidak valid, diabaikan: {proxy}")
+        return
+    with self._lock:
+        if proxy not in self._proxies:
+            self._proxies.append(proxy)
+            logger.info(f"Proxy ditambahkan: {redact_proxy_url(proxy)}")
 
     def remove_proxy(self, proxy: str):
         """Hapus proxy dari pool secara manual."""
