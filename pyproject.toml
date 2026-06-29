@@ -54,4 +54,4 @@ wordlists = ["*.txt"]
 "wordlists.templates" = ["*.yaml", "*.yml"]
 
 [project.scripts]
-atdork = "AtDork:main"
+atdork = "atdork:main"
