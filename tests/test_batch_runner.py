@@ -135,7 +135,7 @@ def test_run_batch_with_circuit_breaker(mock_search):
         backends=["duckduckgo", "startpage"],
         circuit_breaker=circuit_breaker,
     )
-    retry_handler = RetryHandler(max_retries=1, base_delay=0.1)
+    retry_handler = RetryHandler(max_retries=2, base_delay=0.1)
     case_modules = {
         "circuit_breaker": circuit_breaker,
         "fallback_manager": fallback_manager,
@@ -144,7 +144,7 @@ def test_run_batch_with_circuit_breaker(mock_search):
     results = run_batch(["q1"], case_modules=case_modules, max_results=5)
     # Should return empty list (all retries exhausted)
     assert results["q1"] == []
-    # Circuit breaker should be OPEN for duckduckgo
+    # Circuit breaker should be OPEN for duckduckgo (threshold=2, retries=2 → 2 failures)
     assert circuit_breaker.status("duckduckgo") == "OPEN"
 
 
@@ -152,11 +152,17 @@ def test_run_batch_with_circuit_breaker(mock_search):
 def test_run_batch_with_adaptive_delay(mock_search):
     """Adaptive delay should adjust delay based on response."""
     mock_search.return_value = [{"title": "OK", "href": "http://a.com"}]
-    adaptive_delay = AdaptiveDelay(base_delay=0.1)
+    adaptive_delay = AdaptiveDelay(
+        base_delay=0.1,
+        max_delay=60.0,
+        backoff_factor=2.0,
+        recovery_factor=0.9,
+        min_delay=0.01,  # lower than 0.1 * 0.9 = 0.09
+    )
     case_modules = {"adaptive_delay": adaptive_delay}
     results = run_batch(["q1"], case_modules=case_modules, max_results=5)
     assert len(results["q1"]) == 1
-    # Delay should have decreased slightly after success
+    # Delay should have decreased after success
     assert adaptive_delay.get_delay("auto") < 0.1
 
 
