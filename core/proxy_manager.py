@@ -107,13 +107,14 @@ class ProxyManager:
             return dict(self._stats)
 
     def add_proxy(self, proxy: str):
-    if not is_valid_proxy(proxy):
-        logger.warning(f"Proxy tidak valid, diabaikan: {proxy}")
-        return
-    with self._lock:
-        if proxy not in self._proxies:
-            self._proxies.append(proxy)
-            logger.info(f"Proxy ditambahkan: {redact_proxy_url(proxy)}")
+        """Tambah proxy ke pool secara dinamis (jika valid dan belum ada)."""
+        if not is_valid_proxy(proxy):
+            logger.warning(f"Proxy tidak valid, diabaikan: {proxy}")
+            return
+        with self._lock:
+            if proxy not in self._proxies:
+                self._proxies.append(proxy)
+                logger.info(f"Proxy ditambahkan: {redact_proxy_url(proxy)}")
 
     def remove_proxy(self, proxy: str):
         """Hapus proxy dari pool secara manual."""
@@ -122,7 +123,7 @@ class ProxyManager:
                 self._proxies.remove(proxy)
                 self._banned_until.pop(proxy, None)
                 self._stats.pop(proxy, None)
-                logger.info(f"Proxy dihapus: {proxy}")
+                logger.info(f"Proxy dihapus: {redact_proxy_url(proxy)}")
 
     def _init_stats(self, proxy: str):
         if proxy and proxy not in self._stats:
@@ -165,14 +166,14 @@ class ProxyManager:
             # Cooldown
             until = time.time() + self._cooldown
             self._banned_until[proxy] = until
-            logger.info(f"Proxy ditambahkan: {redact_proxy_url(proxy)}")
+            logger.debug(f"Proxy {redact_proxy_url(proxy)} cooldown sampai {until:.0f}")
 
             # Cek apakah harus dihapus permanen
             if self._max_failures > 0 and self._stats[proxy]['consecutive_fails'] >= self._max_failures:
                 self._proxies.remove(proxy)
                 self._banned_until.pop(proxy, None)
                 del self._stats[proxy]
-                logger.info(f"Proxy dihapus: {redact_proxy_url(proxy)}")
+                logger.warning(f"Proxy {redact_proxy_url(proxy)} dihapus permanen setelah {self._max_failures} kegagalan berturut-turut.")
 
     def report_success(self, proxy: str):
         """Catat keberhasilan, reset cooldown & consecutive fails."""
