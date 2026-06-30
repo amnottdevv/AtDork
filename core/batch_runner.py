@@ -149,6 +149,13 @@ def run_batch(
 
             logger.debug("Retry attempt %d setelah error %s: %s", attempt, category, exception)
 
+            # Selalu catat kegagalan ke circuit breaker untuk backend saat ini
+            if circuit_breaker:
+                try:
+                    circuit_breaker.record_failure(current_backend)
+                except Exception as e:
+                    logger.debug("CircuitBreaker.record_failure gagal: %s", e)
+
             # Fallback manager
             if fallback_manager and circuit_breaker:
                 try:
