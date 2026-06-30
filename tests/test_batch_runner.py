@@ -141,7 +141,7 @@ def test_run_batch_with_circuit_breaker(mock_search):
         "fallback_manager": fallback_manager,
         "retry_handler": retry_handler,
     }
-    results = run_batch(["q1"], case_modules=case_modules, max_results=5)
+    results = run_batch(["q1"], case_modules=case_modules, max_results=5, backend="duckduckgo")
     # Should return empty list (all retries exhausted)
     assert results["q1"] == []
     # Circuit breaker should be OPEN for duckduckgo (threshold=2, retries=2 → 2 failures)
