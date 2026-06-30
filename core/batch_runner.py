@@ -1,7 +1,8 @@
 """
 Atdork - Batch Query Runner (Robust with Case Modules)
 Menjalankan banyak dork sekaligus dengan progress bar, retry cerdas,
-adaptive delay, fallback manager, circuit breaker, dan concurrency.
+adaptive delay, fallback manager, circuit breaker, recovery strategy,
+stats collector, dan concurrency.
 
 Semua interaksi dengan modul case/ dilindungi try-except agar
 kegagalan di satu modul tidak merusak seluruh batch.
@@ -64,7 +65,8 @@ def run_batch(
 
     Args:
         queries: Daftar query.
-        case_modules: Dictionary berisi instance modul case (circuit_breaker, fallback_manager, retry_handler, adaptive_delay).
+        case_modules: Dictionary berisi instance modul case (circuit_breaker, fallback_manager,
+                     retry_handler, adaptive_delay, recovery_strategy, stats_collector).
         concurrency: Jumlah thread paralel (1 = sekuensial).
         **search_kwargs: Parameter untuk search_dork (max_results, timeout, proxy_manager, dll).
 
@@ -81,6 +83,8 @@ def run_batch(
     fallback_manager = None
     retry_handler = None
     adaptive_delay = None
+    recovery_strategy = None
+    stats_collector = None
 
     if case_modules and isinstance(case_modules, dict):
         try:
@@ -88,6 +92,8 @@ def run_batch(
             fallback_manager = case_modules.get("fallback_manager")
             retry_handler = case_modules.get("retry_handler")
             adaptive_delay = case_modules.get("adaptive_delay")
+            recovery_strategy = case_modules.get("recovery_strategy")
+            stats_collector = case_modules.get("stats_collector")
         except Exception as e:
             logger.warning("Gagal mengambil modul case: %s. Melanjutkan tanpa modul case.", e)
 
@@ -141,7 +147,7 @@ def run_batch(
 
         # ── Callback saat retry ──────────────────────────────────────
         def _on_retry(attempt, exception):
-            nonlocal current_backend
+            nonlocal current_backend, current_proxy
             try:
                 category = classify_error(exception)
             except Exception:
@@ -153,8 +159,23 @@ def run_batch(
             if circuit_breaker:
                 try:
                     circuit_breaker.record_failure(current_backend)
+                    if stats_collector:
+                        stats_collector.record_circuit_breaker(opened=circuit_breaker.status(current_backend) == "OPEN")
                 except Exception as e:
                     logger.debug("CircuitBreaker.record_failure gagal: %s", e)
+
+            # Recovery strategy (jika tersedia) – memberikan saran tindakan
+            recovery_action = None
+            if recovery_strategy:
+                try:
+                    recovery_action = recovery_strategy.get_action(
+                        error_category=category,
+                        backend=current_backend,
+                        proxy=current_proxy,
+                    )
+                    logger.debug("Recovery strategy suggests: %s", recovery_action.get("action"))
+                except Exception as e:
+                    logger.warning("RecoveryStrategy.get_action gagal: %s", e)
 
             # Fallback manager
             if fallback_manager and circuit_breaker:
@@ -188,6 +209,13 @@ def run_batch(
                 except Exception as e:
                     logger.debug("AdaptiveDelay.report gagal: %s", e)
 
+            # Catat retry ke stats collector
+            if stats_collector:
+                try:
+                    stats_collector.record_retry(success=False)
+                except Exception as e:
+                    logger.debug("StatsCollector.record_retry gagal: %s", e)
+
         # ── Callback saat menyerah ───────────────────────────────────
         def _on_giveup(exception):
             if adaptive_delay:
@@ -195,6 +223,11 @@ def run_batch(
                     adaptive_delay.report(current_backend, 500, False)
                 except Exception as e:
                     logger.debug("AdaptiveDelay.report gagal: %s", e)
+            if stats_collector:
+                try:
+                    stats_collector.record_fallback(success=False)
+                except Exception as e:
+                    logger.debug("StatsCollector.record_fallback gagal: %s", e)
 
         # ── Jalankan dengan atau tanpa retry handler ─────────────────
         if retry_handler:
@@ -206,9 +239,14 @@ def run_batch(
                 )
                 if final_error:
                     logger.error("'%s' gagal setelah retry: %s", q[:60], final_error)
+                    if stats_collector:
+                        try:
+                            stats_collector.record_backend(current_backend, 500, False)
+                        except Exception as e:
+                            logger.debug("StatsCollector.record_backend gagal: %s", e)
                     return []
 
-                # Sukses → catat ke circuit breaker & adaptive delay
+                # Sukses → catat ke circuit breaker, adaptive delay, stats collector
                 if circuit_breaker:
                     try:
                         circuit_breaker.record_success(current_backend)
@@ -221,9 +259,20 @@ def run_batch(
                         adaptive_delay.report(current_backend, 200, len(result) > 0)
                     except Exception as e:
                         logger.debug("AdaptiveDelay.report gagal: %s", e)
+                if stats_collector:
+                    try:
+                        stats_collector.record_backend(current_backend, 200, len(result) > 0)
+                        stats_collector.record_retry(success=True)
+                    except Exception as e:
+                        logger.debug("StatsCollector.record_backend/retry gagal: %s", e)
                 return result
             except Exception as e:
                 logger.error("'%s' gagal tak terduga: %s", q[:60], e)
+                if stats_collector:
+                    try:
+                        stats_collector.record_backend(current_backend, 500, False)
+                    except Exception:
+                        pass
                 return []
         else:
             # Tanpa retry handler → langsung panggil search_dork
@@ -242,9 +291,19 @@ def run_batch(
                             circuit_breaker.record_success(current_proxy)
                     except Exception:
                         pass
+                if stats_collector:
+                    try:
+                        stats_collector.record_backend(current_backend, 200, len(result) > 0)
+                    except Exception:
+                        pass
                 return result
             except Exception as e:
                 logger.error("'%s' gagal: %s", q[:60], e)
+                if stats_collector:
+                    try:
+                        stats_collector.record_backend(current_backend, 500, False)
+                    except Exception:
+                        pass
                 return []
 
     # ── Progress bar & eksekusi ──────────────────────────────────────
@@ -282,5 +341,18 @@ def run_batch(
                     res = []
                 results[q] = res
                 progress.advance(task)
+
+    # ── Tampilkan statistik jika stats collector tersedia ────────────
+    if stats_collector:
+        try:
+            summary = stats_collector.summary()
+            # Gunakan console dari rich jika tersedia, jika tidak gunakan logger
+            try:
+                from rich.console import Console
+                Console().print(summary)
+            except ImportError:
+                logger.info(summary)
+        except Exception as e:
+            logger.warning("Gagal menampilkan statistik: %s", e)
 
     return results
