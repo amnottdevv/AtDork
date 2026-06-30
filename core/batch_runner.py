@@ -141,7 +141,7 @@ def run_batch(
 
         # ── Callback saat retry ──────────────────────────────────────
         def _on_retry(attempt, exception):
-            nonlocal current_backend, current_proxy
+            nonlocal current_backend
             try:
                 category = classify_error(exception)
             except Exception:
