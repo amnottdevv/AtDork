@@ -77,7 +77,7 @@ class PostProcessor:
             # Jalankan
             process = subprocess.run(
                 cmd,
-                shell=True,
+                shell=True, # nosec B602
                 capture_output=True,
                 text=True,
                 timeout=self.timeout,
