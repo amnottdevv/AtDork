@@ -135,7 +135,9 @@ def run_batch(
 
         # ── Fungsi pencarian yang akan di-retry ──────────────────────
         def _do_search():
-            return search_dork(q, backend=current_backend, **search_kwargs)
+            # Hapus 'backend' dari kwargs agar tidak bentrok dengan argumen eksplisit
+            kwargs = {k: v for k, v in search_kwargs.items() if k != 'backend'}
+            return search_dork(q, backend=current_backend, **kwargs)
 
         # ── Callback saat retry ──────────────────────────────────────
         def _on_retry(attempt, exception):
@@ -219,7 +221,8 @@ def run_batch(
         else:
             # Tanpa retry handler → langsung panggil search_dork
             try:
-                result = search_dork(q, backend=current_backend, **search_kwargs)
+                kwargs = {k: v for k, v in search_kwargs.items() if k != 'backend'}
+                result = search_dork(q, backend=current_backend, **kwargs)
                 if adaptive_delay:
                     try:
                         adaptive_delay.report(current_backend, 200, len(result) > 0)
