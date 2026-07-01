@@ -1,0 +1,19 @@
+name: "SQL Injection Finder"
+description: "Common dorks to identify SQL injection vulnerabilities"
+category: "web-vuln"
+version: "1.0"
+author: "AtDork Community"
+
+targeted:
+  - 'site:{target} inurl:"product-details.php?id="'
+  - 'site:{target} inurl:"page.php?id="'
+  - 'site:{target} inurl:"index.php?catid="'
+  - 'site:{target} inurl:"news.php?id="'
+  - 'site:{target} inurl:"article.php?ID="'
+
+generic:
+  - 'inurl:"product-details.php?id="'
+  - 'inurl:"page.php?id="'
+  - 'inurl:"index.php?catid="'
+  - 'inurl:"news.php?id="'
+  - 'inurl:"article.php?ID="'

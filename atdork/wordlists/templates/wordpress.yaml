@@ -1,0 +1,17 @@
+name: "WordPress Vulnerability Finder"
+description: "Dorks to discover WordPress installations and potential vulnerabilities"
+category: "cms"
+version: "1.0"
+author: "AtDork Community"
+
+targeted:
+  - 'site:{target} inurl:"wp-content"'
+  - 'site:{target} inurl:"wp-admin"'
+  - 'site:{target} inurl:"wp-login.php"'
+  - 'site:{target} inurl:"wp-config.php"'
+
+generic:
+  - 'inurl:"wp-content"'
+  - 'inurl:"wp-admin"'
+  - 'inurl:"wp-login.php"'
+  - 'inurl:"wp-config.php"'
