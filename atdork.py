@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Atdork - Professional OSINT Tool
-Version : 1.3.8
+Version : 1.3.9
 Author  : alzzmarket
 GitHub  : github.com/amnottdevv/atdork
 """
@@ -31,15 +31,20 @@ from lib.validator import filter_results, get_filter_stats
 from core.database import Database
 from core.logger import setup_logging
 
-# ── Case modules ──────────────────────────────────────────────────────
+# Case modules
 from core.case.circuit_breaker import CircuitBreaker
 from core.case.ip_guard import IPGuard
 from core.case.fallback_manager import FallbackManager
 from core.case.retry_handler import RetryHandler
 from core.case.adaptive_delay import AdaptiveDelay
+from core.case.recovery_strategy import RecoveryStrategy
+from core.case.stats import StatsCollector
 
-# ── Cache Manager ─────────────────────────────────────────────────────
+# Cache Manager
 from core.manage_cache import SearchCache
+
+# Notification
+from core.notification import send_batch_summary
 
 console = Console()
 
@@ -50,7 +55,7 @@ def _show_ascii_banner():
     banner = f.renderText('Atdork')
     console.print(f"[bold green]{banner}[/bold green]")
     console.print("[bold cyan]Professional OSINT Tool[/bold cyan]")
-    console.print(f"[dim]v1.3.8 - {datetime.now().strftime('%Y-%m-%d %H:%M')}[/dim]")
+    console.print(f"[dim]v1.3.9 - {datetime.now().strftime('%Y-%m-%d %H:%M')}[/dim]")
     console.print()
 
 
@@ -162,6 +167,10 @@ def build_parser():
     parser.add_argument("--cache-only", action="store_true", help="Hanya gunakan cache, jangan lakukan pencarian baru.")
     parser.add_argument("--clear-cache", action="store_true", help="Hapus semua cache sebelum memulai.")
 
+    # Notifications (v1.3.9)
+    parser.add_argument("--notify", type=str, help="Kirim notifikasi ke platform:webhook (discord:, slack:, telegram:).")
+    parser.add_argument("--notify-if-vuln", action="store_true", help="Hanya kirim notifikasi jika ada hasil rentan.")
+
     # Template Dork
     parser.add_argument("--template", type=str, help="Nama template dork.")
     parser.add_argument("--target", type=str, help="Target domain untuk substitusi {target} di template.")
@@ -171,7 +180,7 @@ def build_parser():
     parser.add_argument("--preview", action="store_true", help="Pratinjau isi template tanpa menjalankannya.")
 
     parser.add_argument("--debug", action="store_true")
-    parser.add_argument("--version", action="version", version="%(prog)s 1.3.8")
+    parser.add_argument("--version", action="version", version="%(prog)s 1.3.9")
     return parser
 
 
@@ -201,6 +210,8 @@ def _setup_case_modules(args, proxy_manager) -> dict:
         "fallback_manager": None,
         "retry_handler": None,
         "adaptive_delay": None,
+        "recovery_strategy": None,
+        "stats_collector": None,
     }
 
     if args.resilient:
@@ -211,6 +222,8 @@ def _setup_case_modules(args, proxy_manager) -> dict:
             proxy_manager=proxy_manager,
         )
         modules["retry_handler"] = RetryHandler(max_retries=args.retries, base_delay=2.0)
+        modules["recovery_strategy"] = RecoveryStrategy(circuit_breaker=modules["circuit_breaker"])
+        modules["stats_collector"] = StatsCollector()
 
     if args.adaptive_delay:
         modules["adaptive_delay"] = AdaptiveDelay(
@@ -444,12 +457,18 @@ def cli_mode(args):
     # Jalankan batch atau single query
     if len(queries) > 1 or args.resume:
         console.print(f"[bold cyan]Batch mode: {len(queries)} query[/bold cyan]")
-        batch_results = run_batch(
-            queries=queries,
-            case_modules=case_modules,
-            concurrency=args.concurrency,
-            **scanner_kwargs
-        )
+        try:
+            batch_results = run_batch(
+                queries=queries,
+                case_modules=case_modules,
+                concurrency=args.concurrency,
+                **scanner_kwargs
+            )
+        except Exception as e:
+            console.print(f"[red]Batch error: {e}[/red]")
+            if db: db.close()
+            if cache: cache.close()
+            return
 
         if args.verbose:
             for q, res in batch_results.items():
@@ -495,6 +514,18 @@ def cli_mode(args):
                 console.print(f"[bold cyan]🔧 Post-Processing {len(all_urls)} URLs...[/bold cyan]")
                 processor.process(all_urls)
                 console.print(f"[dim]{processor.summary()}[/dim]")
+
+        # Notifications (v1.3.9)
+        if args.notify:
+            vuln_only = args.notify_if_vuln
+            if not vuln_only or (args.filter_vuln and total_hits > 0):
+                send_batch_summary(
+                    batch_results=batch_results,
+                    target=args.notify,
+                    vulnerable_only=vuln_only,
+                    total_hits=total_hits,
+                    query_count=len(queries),
+                )
 
         if args.output:
             with open(args.output, "w", encoding="utf-8") as f:
@@ -606,6 +637,19 @@ def cli_mode(args):
                 console.print(f"[bold cyan]🔧 Post-Processing {len(urls)} URLs...[/bold cyan]")
                 processor.process(urls)
                 console.print(f"[dim]{processor.summary()}[/dim]")
+
+        # Notifications for single query (if --notify is set)
+        if args.notify and results:
+            vuln_only = args.notify_if_vuln
+            if not vuln_only or (args.filter_vuln and len(results) > 0):
+                batch_summary = {q: results}
+                send_batch_summary(
+                    batch_results=batch_summary,
+                    target=args.notify,
+                    vulnerable_only=vuln_only,
+                    total_hits=len(results),
+                    query_count=1,
+                )
 
         if args.output:
             save_results(results, q, output_path=args.output, output_format=args.format)
