@@ -74,7 +74,7 @@ nav:
           - Output Formats: features/output-formats.md
           - post processing : features/post-processing.md
           - database and history : features/database-history.md
-          - cache system :features/cache-system.md
+          - cache system : features/cache-system.md
   - Reference:
       - CLI Reference: cli-reference.md
       - Configuration: configuration.md
