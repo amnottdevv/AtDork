@@ -9,7 +9,7 @@
 ![Lines](https://img.shields.io/badge/total%20lines-11%2C000%2B-orange)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/atdork?period=total&units=NONE&left_color=BLACK&right_color=BLUE&left_text=pypi+dowonloads)](https://pepy.tech/projects/atdork)
 
-**AtDork** is a powerful, ethical OSINT tool that performs advanced search queries (Google Dorks) across multiple search engines simultaneously. Designed for security researchers, penetration testers, and bug bounty hunters, it automates the discovery of exposed documents, vulnerable parameters, misconfigured servers, and other sensitive information available on the public web.
+**AtDork** is a powerful, ethical OSINT tool that performs advanced search queries (Google Dorks) across multiple search engines simultaneously. Designed for security researchers, penetration testers, and bug bounty hunters.
 
 ---
 
@@ -26,6 +26,7 @@
 - 🔧 **Post‑processing** – Execute external commands on discovered URLs (`--exec`).
 - 💾 **Caching** – Cache search results locally to avoid redundant requests and enable offline access.
 - 🔒 **Safe logging** – Proxy credentials are automatically redacted from log files to prevent accidental leaks.
+- 🔔 **Notifications** – Send batch summaries to Discord, Slack, or Telegram webhooks.
 
 ---
 
@@ -237,13 +238,13 @@ atdork --export-db all_results.json
 atdork -q "test" --no-dedup
 ```
 
-### IP Leak Detection (NEW)
+### IP Leak Detection
 ```bash
 # Halt immediately if your real IP is exposed while using proxies
 atdork --batch-file dorks.txt --proxy-file proxies.txt --strict --ip-guard
 ```
 
-### Post‑Processing (NEW)
+### Post‑Processing
 ```bash
 # Run a command for every discovered URL
 atdork -q "inurl:admin" -r 10 --exec "curl -I {} | grep Server"
@@ -252,7 +253,7 @@ atdork -q "inurl:admin" -r 10 --exec "curl -I {} | grep Server"
 atdork -q "inurl:wp-content" -r 30 --filter-vuln wordpress --exec-on-vuln "wpscan --url {}"
 ```
 
-### Cache Results (NEW)
+### Cache Results
 ```bash
 # Cache search results for 24 hours (default)
 atdork -q "site:gov filetype:pdf" -r 20 --cache
@@ -263,6 +264,44 @@ atdork -q "site:gov filetype:pdf" -r 20 --cache-only
 # Clear all cached data
 atdork --clear-cache
 ```
+
+### Notifications (NEW)
+
+Send batch summaries to Discord, Slack, or Telegram after searches complete.
+
+#### Discord Webhook
+```bash
+atdork --batch-file dorks.txt -r 20 \
+  --notify "discord:https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN"
+```
+
+#### Slack Webhook
+```bash
+atdork --batch-file dorks.txt -r 20 \
+  --notify "slack:https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+```
+
+#### Telegram Bot
+```bash
+# Format: telegram:<bot_token>/<chat_id>
+atdork --batch-file dorks.txt -r 20 \
+  --notify "telegram:123456789:ABCDefGHIjklmnoPQRstUVwxyz/987654321"
+```
+
+#### Notification Options
+```bash
+# Send notification with vulnerable results only
+atdork --batch-file dorks.txt --notify "discord:..." --notify-vuln-only
+
+# Custom notification message
+atdork --batch-file dorks.txt --notify "slack:..." --notify-message "Scan finished!"
+```
+
+**Setup Instructions:**
+
+1. **Discord**: Create a webhook in your server's channel settings > Integrations > Webhooks
+2. **Slack**: Create an incoming webhook at api.slack.com/apps > Create New App > Incoming Webhooks
+3. **Telegram**: Get your bot token from @BotFather and chat ID by messaging your bot and visiting `https://api.telegram.org/bot<TOKEN>/getUpdates`
 
 ---
 
@@ -312,6 +351,9 @@ atdork --clear-cache
 | `--cache-ttl` | Cache TTL in hours | 24 |
 | `--cache-only` | Use cache only, no network requests | |
 | `--clear-cache` | Delete all cache before starting | |
+| `--notify` | Send notification to webhook (format: `<platform>:<url>`) | |
+| `--notify-vuln-only` | Only notify if vulnerable results found | |
+| `--notify-message` | Custom notification message prefix | |
 | `--no-validate` | Disable spam filtering | |
 | `--strict-filter` | Strict validation | |
 | `--validate-url` | URL validation mode | `all` |
@@ -361,10 +403,10 @@ atdork -q "inurl:wp-content site:example.com" -r 40 \
   --exec-parallel 2 --exec-timeout 60
 ```
 
-### Automated Weekly Monitoring
+### Automated Weekly Monitoring with Notifications
 ```bash
 # Add to crontab (Linux/macOS)
-0 6 * * 1 cd /path/to/atdork && atdork --batch-file weekly_dorks.txt --format csv --output-dir /reports/$(date +\%Y-\%W)/
+0 6 * * 1 cd /path/to/atdork && atdork --batch-file weekly_dorks.txt --format csv --output-dir /reports/$(date +\%Y-\%W)/ --notify "slack:https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
 ```
 
 ---
@@ -380,6 +422,7 @@ delay: 1.0
 format: "json"
 output_dir: "./results"
 proxy_file: "proxies.txt"
+notify: "discord:https://discord.com/api/webhooks/YOUR_ID/YOUR_TOKEN"
 ```
 
 AtDork automatically loads this file from the current directory. CLI flags override YAML values.
@@ -399,6 +442,7 @@ AtDork automatically loads this file from the current directory. CLI flags overr
 | **All backends exhausted** | Enable `--resilient` to activate backend fallback chain |
 | **CSV opens with formulas** | Update to v1.3.8+ (CSV injection fixed) |
 | **Proxy credentials in logs** | Update to v1.3.8+ (credentials are now redacted) |
+| **Notification not sent** | Check webhook format and URL; ensure no trailing spaces; verify platform credentials |
 
 ---
 
@@ -415,6 +459,7 @@ atdork/
 │   ├── template_dork.py         # YAML template loader
 │   ├── post_processor.py        # External command execution on results
 │   ├── manage_cache.py          # SQLite-based result caching
+│   ├── notification.py          # Discord, Slack, Telegram webhooks
 │   ├── database.py              # SQLite storage & export
 │   ├── config.py                # YAML configuration loader
 │   ├── logger.py                # Rotating file logger
@@ -474,4 +519,3 @@ Distributed under the MIT License. See `LICENSE` for details.
 - **PyPI:** [pypi.org/project/atdork](https://pypi.org/project/atdork/)
 
 If you find this tool useful, consider leaving a ⭐ on GitHub!
-
