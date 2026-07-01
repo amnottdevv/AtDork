@@ -24,7 +24,7 @@ from core.batch_runner import load_queries_from_file, parse_query_string, run_ba
 from core.proxy_manager import create_proxy_manager
 from core.filter_vuln import filter_vulnerable
 from core.template_dork import load_template_dorks, list_available_templates
-from core.post_processor import PostProcessor, extract_urls
+from core.post_processor import PostProcessor, extract_urls, extract_vulnerable_urls
 from lib.display import show_banner, display_results
 from lib.storage import save_results
 from lib.validator import filter_results, get_filter_stats
@@ -156,7 +156,7 @@ def build_parser():
 
     # Post-Processor (v1.3.6)
     parser.add_argument("--exec", type=str, help="Jalankan command untuk setiap URL hasil (gunakan {} untuk URL).")
-    parser.add_argument("--exec-on-vuln", type=str, help="Seperti --exec, tapi hanya untuk hasil rentan.")
+    parser.add_argument("--exec-on-vuln", type=str, help="Jalankan command hanya pada URL rentan (wajib --filter-vuln).")
     parser.add_argument("--exec-parallel", type=int, default=1, help="Jumlah proses paralel untuk --exec.")
     parser.add_argument("--exec-timeout", type=int, default=30, help="Timeout per command dalam detik.")
 
@@ -499,21 +499,44 @@ def cli_mode(args):
         total_hits = sum(len(v) for v in batch_results.values())
         console.print(f"\n[green]Batch selesai. Total {total_hits} hasil.[/green]")
 
-        # Post-processing (batch)
-        if args.exec or args.exec_on_vuln:
-            command = args.exec or args.exec_on_vuln
+        # Post-processing: --exec (semua URL)
+        if args.exec:
             all_urls = []
             for q, res in batch_results.items():
                 all_urls.extend(extract_urls(res))
             if all_urls:
                 processor = PostProcessor(
-                    command=command,
+                    command=args.exec,
                     parallel=args.exec_parallel,
                     timeout=args.exec_timeout,
                 )
                 console.print(f"[bold cyan]🔧 Post-Processing {len(all_urls)} URLs...[/bold cyan]")
                 processor.process(all_urls)
                 console.print(f"[dim]{processor.summary()}[/dim]")
+
+        # Post-processing: --exec-on-vuln (hanya URL rentan)
+        if args.exec_on_vuln:
+            if not args.filter_vuln:
+                console.print(
+                    "[red]Error: --exec-on-vuln requires --filter-vuln to be set.[/red]\n"
+                    "[yellow]Example: --exec-on-vuln 'wpscan --url {}' --filter-vuln wordpress[/yellow]"
+                )
+                sys.exit(1)
+
+            vuln_urls = []
+            for q, res in batch_results.items():
+                vuln_urls.extend(extract_vulnerable_urls(res, filter_arg=args.filter_vuln))
+            if vuln_urls:
+                processor = PostProcessor(
+                    command=args.exec_on_vuln,
+                    parallel=args.exec_parallel,
+                    timeout=args.exec_timeout,
+                )
+                console.print(f"[bold red]🔴 Post-Processing {len(vuln_urls)} VULNERABLE URLs...[/bold red]")
+                processor.process(vuln_urls)
+                console.print(f"[dim]{processor.summary()}[/dim]")
+            else:
+                console.print("[yellow]No vulnerable URLs found for post-processing.[/yellow]")
 
         # Notifications (v1.3.9)
         if args.notify:
@@ -624,13 +647,12 @@ def cli_mode(args):
             qid = db.add_query(q, "completed")
             db.add_results_batch(qid, results)
 
-        # Post-processing (single query)
-        if args.exec or args.exec_on_vuln:
-            command = args.exec or args.exec_on_vuln
+        # Post-processing: --exec (semua URL)
+        if args.exec:
             urls = extract_urls(results)
             if urls:
                 processor = PostProcessor(
-                    command=command,
+                    command=args.exec,
                     parallel=args.exec_parallel,
                     timeout=args.exec_timeout,
                 )
@@ -638,7 +660,29 @@ def cli_mode(args):
                 processor.process(urls)
                 console.print(f"[dim]{processor.summary()}[/dim]")
 
-        # Notifications for single query (if --notify is set)
+        # Post-processing: --exec-on-vuln (hanya URL rentan)
+        if args.exec_on_vuln:
+            if not args.filter_vuln:
+                console.print(
+                    "[red]Error: --exec-on-vuln requires --filter-vuln to be set.[/red]\n"
+                    "[yellow]Example: --exec-on-vuln 'wpscan --url {}' --filter-vuln wordpress[/yellow]"
+                )
+                sys.exit(1)
+
+            vuln_urls = extract_vulnerable_urls(results, filter_arg=args.filter_vuln)
+            if vuln_urls:
+                processor = PostProcessor(
+                    command=args.exec_on_vuln,
+                    parallel=args.exec_parallel,
+                    timeout=args.exec_timeout,
+                )
+                console.print(f"[bold red]🔴 Post-Processing {len(vuln_urls)} VULNERABLE URLs...[/bold red]")
+                processor.process(vuln_urls)
+                console.print(f"[dim]{processor.summary()}[/dim]")
+            else:
+                console.print("[yellow]No vulnerable URLs found for post-processing.[/yellow]")
+
+        # Notifications for single query
         if args.notify and results:
             vuln_only = args.notify_if_vuln
             if not vuln_only or (args.filter_vuln and len(results) > 0):
@@ -671,11 +715,20 @@ def cli_mode(args):
 
 
 def main():
+    # 1. Parser minimal khusus untuk --config
+    config_parser = argparse.ArgumentParser(add_help=False)
+    config_parser.add_argument("--config", type=str, default=None)
+    config_args, remaining = config_parser.parse_known_args()
+
+    # 2. Muat konfigurasi
+    config = load_config(config_args.config)
+
+    # 3. Bangun parser penuh, lalu suntikkan nilai dari config sebagai default
     parser = build_parser()
-    args, remaining = parser.parse_known_args()
-    config = load_config(args.config)
     parser.set_defaults(**config)
-    args = parser.parse_args(remaining, namespace=args)
+
+    # 4. Parse seluruh command line sekaligus
+    args = parser.parse_args(remaining)
 
     setup_logging(debug=args.debug, log_file=args.log_file)
 
