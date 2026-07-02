@@ -48,7 +48,7 @@ pip install .
 ### Verify Installation
 ```bash
 atdork --version
-# Output: atdork 1.3.8
+# Output: atdork 1.3.x.x
 ```
 
 ---
