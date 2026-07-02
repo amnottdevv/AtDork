@@ -720,14 +720,35 @@ def main():
     config_parser.add_argument("--config", type=str, default=None)
     config_args, remaining = config_parser.parse_known_args()
 
-    # 2. Muat konfigurasi
-    config = load_config(config_args.config)
+    # 2. Muat konfigurasi dengan penanganan error
+    raw_config = {}
+    if config_args.config:
+        try:
+            loaded = load_config(config_args.config)
+            if isinstance(loaded, dict):
+                raw_config = loaded
+            elif loaded is not None:
+                console.print("[yellow]Warning: Config file tidak menghasilkan dictionary, menggunakan default.[/yellow]")
+        except Exception as e:
+            console.print(f"[red]Error loading config file: {e}[/red]")
+            console.print("[yellow]Melanjutkan dengan nilai default...[/yellow]")
 
-    # 3. Bangun parser penuh, lalu suntikkan nilai dari config sebagai default
+    # Normalisasi kunci: ganti tanda '-' menjadi '_' agar cocok dengan argparse dest
+    config = {k.replace('-', '_'): v for k, v in raw_config.items()}
+
+    # 3. Bangun parser penuh
     parser = build_parser()
-    parser.set_defaults(**config)
 
-    # 4. Parse seluruh command line sekaligus
+    # 4. Hanya terapkan kunci yang valid (dikenali oleh parser)
+    valid_dests = {action.dest for action in parser._actions if action.dest != 'help'}
+    filtered_config = {k: v for k, v in config.items() if k in valid_dests}
+    if len(filtered_config) < len(config):
+        ignored = set(config.keys()) - set(filtered_config.keys())
+        console.print(f"[dim]Kunci config tidak dikenal diabaikan: {', '.join(ignored)}[/dim]")
+
+    parser.set_defaults(**filtered_config)
+
+    # 5. Parse seluruh command line
     args = parser.parse_args(remaining)
 
     setup_logging(debug=args.debug, log_file=args.log_file)
