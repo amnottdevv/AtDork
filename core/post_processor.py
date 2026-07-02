@@ -60,6 +60,8 @@ class PostProcessor:
         """
         Jalankan perintah untuk satu URL.
         Returns dict dengan: url, success, stdout, stderr, returncode, error
+        
+        FIX HIGH: Improved security with input validation and safe command construction
         """
         result = {
             "url": url,
@@ -71,13 +73,31 @@ class PostProcessor:
         }
 
         try:
-            # Bangun perintah
-            cmd = self.command.replace("{}", shlex.quote(url))
+            # FIX HIGH: Validate URL to prevent injection
+            if not isinstance(url, str) or not url.strip():
+                result["error"] = "Invalid URL (empty or not string)"
+                self.stats["failed"] += 1
+                return result
+            
+            # FIX HIGH: Check for suspicious patterns that could bypass shlex.quote
+            suspicious_chars = ['$', '`', '\n', '\r', '\0']
+            if any(char in url for char in suspicious_chars):
+                logger.warning(f"URL contains suspicious characters, skipping: {url[:50]}")
+                result["error"] = "URL contains suspicious characters"
+                self.stats["failed"] += 1
+                return result
 
-            # Jalankan
+            # Bangun perintah dengan proper escaping
+            url_escaped = shlex.quote(url)
+            cmd = self.command.replace("{}", url_escaped)
+            
+            # FIX HIGH: Log command without exposing sensitive data
+            logger.debug(f"Executing command with URL placeholder (URL length: {len(url)} chars)")
+
+            # Jalankan dengan strict safety settings
             process = subprocess.run(
                 cmd,
-                shell=True, # nosec B602
+                shell=True,  # Required for command templates, but URL is properly escaped
                 capture_output=True,
                 text=True,
                 timeout=self.timeout,
@@ -116,7 +136,7 @@ class PostProcessor:
         except Exception as e:
             self.stats["failed"] += 1
             result["error"] = str(e)
-            logger.error("Error menjalankan command untuk %s: %s", url, e)
+            logger.error("Error menjalankan command untuk %s: %s", url[:50], e)
             if self.on_error:
                 try:
                     self.on_error(url, result)
@@ -152,7 +172,7 @@ class PostProcessor:
                         result = future.result(timeout=self.timeout + 5)
                         results.append(result)
                     except TimeoutError:
-                        logger.error("Timeout menunggu hasil untuk %s", url)
+                        logger.error("Timeout menunggu hasil untuk %s", url[:50])
                         results.append({
                             "url": url,
                             "success": False,
@@ -160,7 +180,7 @@ class PostProcessor:
                         })
                         self.stats["timeout"] += 1
                     except Exception as e:
-                        logger.error("Error mengambil hasil untuk %s: %s", url, e)
+                        logger.error("Error mengambil hasil untuk %s: %s", url[:50], e)
                         results.append({
                             "url": url,
                             "success": False,
@@ -201,8 +221,13 @@ class PostProcessor:
 # ── Convenience functions ──────────────────────────────────────────────
 
 def extract_urls(results: List[Dict], field: str = "href") -> List[str]:
-    """Ekstrak URL dari hasil pencarian."""
-    return [r.get(field, "") for r in results if r.get(field)]
+    """Ekstrak URL dari hasil pencarian dengan validasi."""
+    urls = []
+    for r in results:
+        url = r.get(field, "")
+        if isinstance(url, str) and url.strip():
+            urls.append(url)
+    return urls
 
 
 def extract_vulnerable_urls(
@@ -214,7 +239,12 @@ def extract_vulnerable_urls(
     try:
         from core.filter_vuln import filter_vulnerable
         vuln, safe, _ = filter_vulnerable(results, filter_arg=filter_arg, wordlist_dir=wordlist_dir)
-        return [r.get("href", "") for r in vuln if r.get("href")]
+        urls = []
+        for r in vuln:
+            href = r.get("href", "")
+            if isinstance(href, str) and href.strip():
+                urls.append(href)
+        return urls
     except ImportError:
         logger.warning("core.filter_vuln tidak tersedia, mengembalikan semua URL")
         return extract_urls(results)
