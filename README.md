@@ -7,7 +7,8 @@
 ![Platform](https://img.shields.io/badge/platform-linux%20%7C%20macos%20%7C%20windows-lightgrey)
 ![Tests](https://img.shields.io/badge/tests-114%20passed-brightgreen)
 ![Lines](https://img.shields.io/badge/total%20lines-11%2C000%2B-orange)
-[![PyPI Downloads](https://static.pepy.tech/personalized-badge/atdork?period=total&units=NONE&left_color=BLACK&right_color=BLUE&left_text=pypi+dowonloads)](https://pepy.tech/projects/atdork)
+[![PyPI Downloads](https://static.pepy.tech/personalized-badge/atdork?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=pypi+downloads)](https://pepy.tech/projects/atdork)
+[![Welcome New Contributor](https://github.com/amnottdevv/AtDork/actions/workflows/welcome_new_contributor.yml/badge.svg)](https://github.com/amnottdevv/AtDork/actions/workflows/welcome_new_contributor.yml)
 
 **AtDork** is a powerful, ethical OSINT tool that performs advanced search queries (Google Dorks) across multiple search engines simultaneously. Designed for security researchers, penetration testers, and bug bounty hunters.
 
