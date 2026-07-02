@@ -185,12 +185,25 @@ def build_parser():
 
 
 def _parse_validation_args(args) -> dict:
+    """Parse validation arguments dengan safe type conversion."""
     if args.no_validate:
         return {"strict": False}
     if args.strict_filter:
         return {"strict": True}
-    min_title = None if args.validate_title == "false" else int(args.validate_title)
-    min_desc = None if args.validate_desc == "false" else int(args.validate_desc)
+    
+    # FIX HIGH: Safe type conversion untuk validate_title dan validate_desc
+    try:
+        min_title = None if args.validate_title == "false" else int(args.validate_title)
+    except (ValueError, TypeError):
+        console.print("[yellow]⚠️ Warning: Invalid --validate-title value, using default (5)[/yellow]")
+        min_title = 5
+    
+    try:
+        min_desc = None if args.validate_desc == "false" else int(args.validate_desc)
+    except (ValueError, TypeError):
+        console.print("[yellow]⚠️ Warning: Invalid --validate-desc value, using default (10)[/yellow]")
+        min_desc = 10
+    
     check_spam = args.validate_spam == "true"
     url_mode = args.validate_url
     return {
@@ -720,19 +733,49 @@ def main():
     config_parser.add_argument("--config", type=str, default=None)
     config_args, remaining = config_parser.parse_known_args()
 
-    # 2. Muat konfigurasi
-    config = load_config(config_args.config)
+    # 2. Muat konfigurasi dengan penanganan error
+    raw_config = {}
+    if config_args.config:
+        try:
+            loaded = load_config(config_args.config)
+            if isinstance(loaded, dict):
+                raw_config = loaded
+            elif loaded is not None:
+                console.print("[yellow]Warning: Config file tidak menghasilkan dictionary, menggunakan default.[/yellow]")
+        except Exception as e:
+            console.print(f"[red]Error loading config file: {e}[/red]")
+            console.print("[yellow]Melanjutkan dengan nilai default...[/yellow]")
 
-    # 3. Bangun parser penuh, lalu suntikkan nilai dari config sebagai default
+    # Normalisasi kunci: ganti tanda '-' menjadi '_' agar cocok dengan argparse dest
+    config = {k.replace('-', '_'): v for k, v in raw_config.items()}
+
+    # 3. Bangun parser penuh
     parser = build_parser()
-    parser.set_defaults(**config)
 
-    # 4. Parse seluruh command line sekaligus
+    # 4. Hanya terapkan kunci yang valid (dikenali oleh parser)
+    valid_dests = {action.dest for action in parser._actions if action.dest != 'help'}
+    filtered_config = {k: v for k, v in config.items() if k in valid_dests}
+    if len(filtered_config) < len(config):
+        ignored = set(config.keys()) - set(filtered_config.keys())
+        console.print(f"[dim]Kunci config tidak dikenal diabaikan: {', '.join(ignored)}[/dim]")
+
+    parser.set_defaults(**filtered_config)
+
+    # 5. Parse seluruh command line
     args = parser.parse_args(remaining)
 
     setup_logging(debug=args.debug, log_file=args.log_file)
 
-    if args.interactive or (not args.query and not args.batch_file and not args.resume and not args.history and not args.export_db and not args.template and not args.list_templates and not args.preview):
+    # FIX URGENT: Complete the incomplete if statement from line 756
+    # Check if interactive mode or no action parameters provided
+    should_interactive = (
+        args.interactive or 
+        (not args.query and not args.batch_file and not args.resume and 
+         not args.history and not args.export_db and not args.template and 
+         not args.list_templates and not args.preview)
+    )
+    
+    if should_interactive:
         db = Database(args.db_path)
         interactive_mode(db)
         db.close()

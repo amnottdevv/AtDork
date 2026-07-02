@@ -26,6 +26,44 @@ from core.scanner import search_dork
 logger = logging.getLogger(__name__)
 
 
+# FIX HIGH: Define error classification fallback as a proper class
+class ErrorCategory:
+    """Error category constants for fallback when error_classifier unavailable."""
+    FATAL = "fatal"
+    TRANSIENT = "transient"
+    RATE_LIMIT = "rate_limit"
+    BLOCKED = "blocked"
+    PROXY_FAIL = "proxy_fail"
+
+
+def _get_error_classifier():
+    """
+    FIX HIGH: Safely import error classifier with fallback.
+    Returns (classify_error function, ErrorCategory class)
+    """
+    try:
+        from core.case.error_classifier import classify_error, ErrorCategory as EC
+        logger.debug("Imported error_classifier from core.case")
+        return classify_error, EC
+    except ImportError:
+        logger.warning("core.case.error_classifier tidak tersedia, menggunakan fallback")
+        # Fallback: classify all errors as FATAL for safety
+        def fallback_classify(e):
+            error_str = str(e).lower()
+            if "429" in error_str or "rate" in error_str:
+                return ErrorCategory.RATE_LIMIT
+            elif "403" in error_str or "blocked" in error_str:
+                return ErrorCategory.BLOCKED
+            elif "proxy" in error_str:
+                return ErrorCategory.PROXY_FAIL
+            elif "timeout" in error_str or "transient" in error_str:
+                return ErrorCategory.TRANSIENT
+            else:
+                return ErrorCategory.FATAL
+        
+        return fallback_classify, ErrorCategory
+
+
 def load_queries_from_file(filepath: str) -> List[str]:
     """Baca file teks, satu query per baris. Abaikan baris kosong dan komentar."""
     queries = []
@@ -102,6 +140,7 @@ def run_batch(
         try:
             from core.case.retry_handler import RetryHandler
             retry_handler = RetryHandler(max_retries=2, base_delay=1.0)
+            logger.info("RetryHandler berhasil dibuat sebagai fallback")
         except ImportError:
             logger.warning("core.case.retry_handler tidak tersedia. Retry dinonaktifkan.")
             retry_handler = None
@@ -109,12 +148,8 @@ def run_batch(
             logger.warning("Gagal membuat RetryHandler default: %s", e)
             retry_handler = None
 
-    # ── Import classifier (fallback) ──────────────────────────────────
-    try:
-        from core.case.error_classifier import classify_error, ErrorCategory
-    except ImportError:
-        classify_error = lambda e: "fatal"  # noqa
-        ErrorCategory = type('ErrorCategory', (), {'FATAL': 'fatal', 'TRANSIENT': 'transient', 'RATE_LIMIT': 'rate_limit', 'BLOCKED': 'blocked', 'PROXY_FAIL': 'proxy_fail'})
+    # ── FIX HIGH: Import classifier dengan fallback yang lebih robust ──
+    classify_error, ErrorCategory = _get_error_classifier()
 
     # ── Fungsi eksekusi per query ────────────────────────────────────
     def _execute_single(q: str) -> list:
@@ -150,7 +185,8 @@ def run_batch(
             nonlocal current_backend
             try:
                 category = classify_error(exception)
-            except Exception:
+            except Exception as e:
+                logger.debug("Error saat classify_error: %s, menggunakan FATAL", e)
                 category = ErrorCategory.FATAL
 
             logger.debug("Retry attempt %d setelah error %s: %s", attempt, category, exception)
@@ -160,7 +196,10 @@ def run_batch(
                 try:
                     circuit_breaker.record_failure(current_backend)
                     if stats_collector:
-                        stats_collector.record_circuit_breaker(opened=circuit_breaker.status(current_backend) == "OPEN")
+                        try:
+                            stats_collector.record_circuit_breaker(opened=circuit_breaker.status(current_backend) == "OPEN")
+                        except Exception as e:
+                            logger.debug("StatsCollector.record_circuit_breaker gagal: %s", e)
                 except Exception as e:
                     logger.debug("CircuitBreaker.record_failure gagal: %s", e)
 

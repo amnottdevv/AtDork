@@ -1,7 +1,11 @@
 import os
 import json
 import csv
+import logging
 from datetime import datetime
+from typing import Optional
+
+logger = logging.getLogger(__name__)
 
 
 def save_results(
@@ -20,6 +24,10 @@ def save_results(
     - Format: 'txt', 'json', 'csv'
 
     Mengembalikan path file yang disimpan.
+    
+    Raises:
+        OSError: Jika permission denied, disk penuh, atau path invalid
+        ValueError: Jika format tidak didukung
     """
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
@@ -39,13 +47,48 @@ def save_results(
             fmt = output_format
     else:
         if output_dir:
-            os.makedirs(output_dir, exist_ok=True)
+            try:
+                os.makedirs(output_dir, exist_ok=True)
+            except OSError as e:
+                logger.error(f"Gagal membuat direktori {output_dir}: {e}")
+                raise
         filename = f"dork_{timestamp}.{output_format}"
         path = os.path.join(output_dir or ".", filename)
         fmt = output_format
 
-    # Tulis file
-    if fmt == "txt":
+    # FIX HIGH: Add comprehensive file I/O error handling
+    try:
+        if fmt == "txt":
+            _save_txt(path, results, query)
+        elif fmt == "json":
+            _save_json(path, results)
+        elif fmt == "csv":
+            _save_csv(path, results)
+        else:
+            raise ValueError(f"Format tidak didukung: {fmt}")
+        
+        logger.info(f"Hasil disimpan ke {path}")
+        return path
+        
+    except IOError as e:
+        logger.error(f"IO error saat menyimpan file {path}: {e}")
+        raise
+    except OSError as e:
+        logger.error(f"OS error saat menyimpan file {path}: {e}")
+        raise
+    except Exception as e:
+        logger.error(f"Error tidak terduga saat menyimpan file {path}: {e}")
+        raise
+
+
+def _save_txt(path: str, results: list, query: str) -> None:
+    """Simpan hasil ke format TXT dengan error handling."""
+    try:
+        # Pastikan direktori ada
+        output_dir = os.path.dirname(path)
+        if output_dir and not os.path.exists(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
+        
         with open(path, "w", encoding="utf-8") as f:
             f.write(
                 f"Dork Scanner Results\n"
@@ -58,22 +101,59 @@ def save_results(
                 f.write(f"    URL: {res.get('href', 'N/A')}\n")
                 f.write(f"    SNIPPET: {res.get('body', 'N/A')}\n")
                 f.write("-" * 80 + "\n")
+    except IOError as e:
+        logger.error(f"IO error saat menyimpan TXT {path}: {e}")
+        raise
+    except Exception as e:
+        logger.error(f"Error saat menyimpan TXT {path}: {e}")
+        raise
 
-    elif fmt == "json":
+
+def _save_json(path: str, results: list) -> None:
+    """Simpan hasil ke format JSON dengan error handling."""
+    try:
+        # Pastikan direktori ada
+        output_dir = os.path.dirname(path)
+        if output_dir and not os.path.exists(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
+        
         with open(path, "w", encoding="utf-8") as f:
             json.dump(results, f, indent=2, ensure_ascii=False)
+    except IOError as e:
+        logger.error(f"IO error saat menyimpan JSON {path}: {e}")
+        raise
+    except (TypeError, ValueError) as e:
+        logger.error(f"JSON serialization error saat menyimpan {path}: {e}")
+        raise
+    except Exception as e:
+        logger.error(f"Error saat menyimpan JSON {path}: {e}")
+        raise
 
-    elif fmt == "csv":
+
+def _save_csv(path: str, results: list) -> None:
+    """Simpan hasil ke format CSV dengan error handling."""
+    try:
+        # Pastikan direktori ada
+        output_dir = os.path.dirname(path)
+        if output_dir and not os.path.exists(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
+        
         with open(path, "w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=["title", "href", "body"])
             writer.writeheader()
             for res in results:
-                writer.writerow({
-                    "title": res.get("title", ""),
-                    "href": res.get("href", ""),
-                    "body": res.get("body", ""),
-                })
-    else:
-        raise ValueError(f"Format tidak didukung: {fmt}")
-
-    return path
+                try:
+                    writer.writerow({
+                        "title": res.get("title", ""),
+                        "href": res.get("href", ""),
+                        "body": res.get("body", ""),
+                    })
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"Error menulis row ke CSV: {e}")
+                    continue
+    except IOError as e:
+        logger.error(f"IO error saat menyimpan CSV {path}: {e}")
+        raise
+    except Exception as e:
+        logger.error(f"Error saat menyimpan CSV {path}: {e}")
+        raise
