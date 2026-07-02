@@ -1,0 +1,68 @@
+name: Auto-Release from raw/
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'raw/**'
+  workflow_dispatch:   # memungkinkan menjalankan secara manual
+
+permissions:
+  contents: write      # diperlukan untuk membuat release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Process raw folders
+        run: |
+          set -e
+          # Iterasi setiap subfolder di dalam raw/
+          for folder in raw/*/; do
+            # Ambil nama folder tanpa path dan akhiran slash
+            version=$(basename "$folder")
+            echo "::group::Processing version $version"
+
+            # Cek apakah release dengan tag ini sudah ada
+            if gh release view "$version" &>/dev/null; then
+              echo "Release $version already exists, skipping."
+              echo "::endgroup::"
+              continue
+            fi
+
+            # Cek keberadaan file aset
+            wheel=$(find "$folder" -maxdepth 1 -name "*.whl" | head -n1)
+            tarball=$(find "$folder" -maxdepth 1 -name "*.tar.gz" | head -n1)
+
+            if [ -z "$wheel" ] && [ -z "$tarball" ]; then
+              echo "No .whl or .tar.gz found in $folder, skipping."
+              echo "::endgroup::"
+              continue
+            fi
+
+            # Baca body dari info.txt jika ada
+            if [ -f "$folder/info.txt" ]; then
+              body=$(cat "$folder/info.txt")
+            else
+              body="Release $version"
+            fi
+
+            # Buat daftar aset
+            assets=()
+            [ -n "$wheel" ] && assets+=("$wheel")
+            [ -n "$tarball" ] && assets+=("$tarball")
+
+            echo "Creating release $version"
+            gh release create "$version" \
+              --title "$version" \
+              --notes "$body" \
+              --target "$GITHUB_SHA" \
+              "${assets[@]}"
+
+            echo "::endgroup::"
+          done
+        env:
+          GH_TOKEN: ${{ github.token }}
