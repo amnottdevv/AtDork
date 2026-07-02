@@ -8,6 +8,7 @@ import time
 import threading
 import socket
 import logging
+from typing import List, Optional
 from urllib.parse import urlparse
 from lib.redactor import redact_proxy_url
 
@@ -129,7 +130,7 @@ class ProxyManager:
         if proxy and proxy not in self._stats:
             self._stats[proxy] = {'success': 0, 'failure': 0, 'consecutive_fails': 0}
 
-    def get_proxy(self) -> str | None:
+    def get_proxy(self) -> Optional[str]:
         """
         Ambil proxy berikutnya yang tidak sedang cooldown.
         Mengembalikan None jika semua proxy down (strict=False) atau raise jika strict=True.
@@ -202,7 +203,7 @@ class ProxyManager:
 
 # ========== Helper untuk CLI ==========
 
-def load_proxies_from_file(path: str) -> list[str]:
+def load_proxies_from_file(path: str) -> List[str]:
     """Baca file proxy (satu URL per baris), skip komentar '#' dan baris kosong."""
     proxies = []
     with open(path, "r", encoding="utf-8") as f:
@@ -214,7 +215,7 @@ def load_proxies_from_file(path: str) -> list[str]:
     return proxies
 
 
-def load_proxies_from_string(proxies_str: str, separator: str = ",") -> list[str]:
+def load_proxies_from_string(proxies_str: str, separator: str = ",") -> List[str]:
     """Parse string proxy yang dipisahkan oleh separator (default koma)."""
     return [p.strip() for p in proxies_str.split(separator) if p.strip()]
 
@@ -229,8 +230,8 @@ def _check_tor_socks_port(host="127.0.0.1", port=9050, timeout=1.0) -> bool:
 
 
 def create_proxy_manager(
-    proxy_arg: str | None = None,
-    proxy_file: str | None = None,
+    proxy_arg: Optional[str] = None,
+    proxy_file: Optional[str] = None,
     enable_tor: bool = False,
     cooldown: int = 60,
     strict: bool = False,
