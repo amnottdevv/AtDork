@@ -185,12 +185,25 @@ def build_parser():
 
 
 def _parse_validation_args(args) -> dict:
+    """Parse validation arguments dengan safe type conversion."""
     if args.no_validate:
         return {"strict": False}
     if args.strict_filter:
         return {"strict": True}
-    min_title = None if args.validate_title == "false" else int(args.validate_title)
-    min_desc = None if args.validate_desc == "false" else int(args.validate_desc)
+    
+    # FIX HIGH: Safe type conversion untuk validate_title dan validate_desc
+    try:
+        min_title = None if args.validate_title == "false" else int(args.validate_title)
+    except (ValueError, TypeError):
+        console.print("[yellow]⚠️ Warning: Invalid --validate-title value, using default (5)[/yellow]")
+        min_title = 5
+    
+    try:
+        min_desc = None if args.validate_desc == "false" else int(args.validate_desc)
+    except (ValueError, TypeError):
+        console.print("[yellow]⚠️ Warning: Invalid --validate-desc value, using default (10)[/yellow]")
+        min_desc = 10
+    
     check_spam = args.validate_spam == "true"
     url_mode = args.validate_url
     return {
@@ -753,7 +766,16 @@ def main():
 
     setup_logging(debug=args.debug, log_file=args.log_file)
 
-    if args.interactive or (not args.query and not args.batch_file and not args.resume and not args.history and not args.export_db and not args.template and not args.list_templates and not args.preview):
+    # FIX URGENT: Complete the incomplete if statement from line 756
+    # Check if interactive mode or no action parameters provided
+    should_interactive = (
+        args.interactive or 
+        (not args.query and not args.batch_file and not args.resume and 
+         not args.history and not args.export_db and not args.template and 
+         not args.list_templates and not args.preview)
+    )
+    
+    if should_interactive:
         db = Database(args.db_path)
         interactive_mode(db)
         db.close()
