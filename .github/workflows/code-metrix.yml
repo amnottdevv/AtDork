@@ -6,14 +6,13 @@ on:
   pull_request:
     branches: [ master, develop ]
   schedule:
-    - cron: '0 2 * * 0'  # Weekly on Monday 2 AM UTC
+    - cron: '0 2 * * 0'
 
 permissions:
   contents: write
   pull-requests: write
 
 jobs:
-  # ── Code Metrics Analysis ──────────────────────────────────────────
   metrics:
     name: Generate Code Metrics
     runs-on: ubuntu-latest
@@ -34,179 +33,94 @@ jobs:
           pip install radon coverage pytest pylint
 
       - name: Run Radon - Cyclomatic Complexity
-        id: complexity
         continue-on-error: true
         run: |
-          echo "=== Cyclomatic Complexity Analysis ==="
           radon cc atdork.py core/ lib/ -a -s --json > radon-cc.json 2>&1 || true
-          
-          # Parse and calculate average complexity
           python << 'PYTHON_EOF'
           import json
           try:
               with open('radon-cc.json') as f:
                   data = json.load(f)
-              
               all_cc = []
-              total_functions = 0
-              
               for file_path, file_data in data.items():
                   if isinstance(file_data, dict):
                       for func_name, func_data in file_data.items():
                           if isinstance(func_data, dict) and 'complexity' in func_data:
                               all_cc.append(func_data['complexity'])
-                              total_functions += 1
-              
               if all_cc:
                   avg_cc = sum(all_cc) / len(all_cc)
-                  max_cc = max(all_cc)
-                  print(f"Functions analyzed: {total_functions}")
-                  print(f"Average Complexity: {avg_cc:.2f}")
-                  print(f"Max Complexity: {max_cc}")
                   with open("complexity_score.txt", "w") as f:
                       f.write(f"{avg_cc:.2f}")
               else:
-                  print("No complexity data found")
                   with open("complexity_score.txt", "w") as f:
                       f.write("N/A")
-          except Exception as e:
-              print(f"Error parsing complexity: {e}")
+          except:
               with open("complexity_score.txt", "w") as f:
                   f.write("N/A")
           PYTHON_EOF
 
       - name: Run Radon - Maintainability Index
-        id: maintainability
         continue-on-error: true
         run: |
-          echo "=== Maintainability Index Analysis ==="
           radon mi atdork.py core/ lib/ -s --json > radon-mi.json 2>&1 || true
-          
-          # Parse and calculate average MI
           python << 'PYTHON_EOF'
           import json
           try:
               with open('radon-mi.json') as f:
                   data = json.load(f)
-              
-              mi_values = []
-              for file_path, mi_value in data.items():
-                  if isinstance(mi_value, (int, float)):
-                      mi_values.append(mi_value)
-              
+              mi_values = [v for v in data.values() if isinstance(v, (int, float))]
               if mi_values:
                   avg_mi = sum(mi_values) / len(mi_values)
-                  status = "🟢 GOOD" if avg_mi >= 80 else "🟡 MEDIUM" if avg_mi >= 60 else "🔴 LOW"
-                  print(f"Average Maintainability Index: {avg_mi:.1f} {status}")
-                  print(f"Files analyzed: {len(mi_values)}")
                   with open("maintainability_score.txt", "w") as f:
                       f.write(f"{avg_mi:.1f}")
               else:
-                  print("No maintainability data found")
                   with open("maintainability_score.txt", "w") as f:
                       f.write("N/A")
-          except Exception as e:
-              print(f"Error parsing maintainability: {e}")
+          except:
               with open("maintainability_score.txt", "w") as f:
                   f.write("N/A")
           PYTHON_EOF
 
       - name: Run pytest with Coverage
-        id: coverage
         continue-on-error: true
         run: |
-          echo "=== Test Coverage Analysis ==="
-          pytest tests/ -v --cov=core --cov=lib --cov-report=term-missing --cov-report=json 2>&1 | tee pytest-output.txt || true
-          
-          # Extract coverage percentage
+          pytest tests/ -v --cov=core --cov=lib --cov-report=term-missing --cov-report=json 2>&1 || true
           python << 'PYTHON_EOF'
           import json
           try:
               with open('coverage.json') as f:
                   data = json.load(f)
               coverage = data.get('totals', {}).get('percent_covered', 0)
-              print(f"Overall Coverage: {coverage:.1f}%")
               with open("coverage_score.txt", "w") as f:
                   f.write(f"{coverage:.1f}")
-          except Exception as e:
-              print(f"Coverage parse error: {e}")
-              # Fallback: try to extract from pytest output
-              try:
-                  with open('pytest-output.txt') as f:
-                      content = f.read()
-                      if 'TOTAL' in content:
-                          for line in content.split('\n'):
-                              if 'TOTAL' in line:
-                                  parts = line.split()
-                                  if parts:
-                                      coverage = parts[-1].replace('%', '')
-                                      print(f"Coverage from pytest: {coverage}%")
-                                      with open("coverage_score.txt", "w") as f:
-                                          f.write(coverage)
-                                      break
-              except:
-                  print("Could not extract coverage")
-                  with open("coverage_score.txt", "w") as f:
-                      f.write("N/A")
+          except:
+              with open("coverage_score.txt", "w") as f:
+                  f.write("N/A")
           PYTHON_EOF
 
-      - name: Run Pylint for Code Quality
-        id: pylint
+      - name: Run Pylint
         continue-on-error: true
         run: |
-          echo "=== Pylint Code Quality Analysis ==="
           pylint atdork.py core/ lib/ --exit-zero --output-format=json > pylint-report.json 2>&1 || true
-          
-          # Extract pylint score and issues
           python << 'PYTHON_EOF'
           import json
           try:
               with open('pylint-report.json') as f:
                   data = json.load(f)
-              
-              # Count issues by severity
-              issues = {
-                  'error': 0,
-                  'fatal': 0,
-                  'warning': 0,
-                  'convention': 0,
-                  'refactor': 0,
-              }
-              
+              issues = {'error': 0, 'fatal': 0, 'warning': 0, 'convention': 0, 'refactor': 0}
               for issue in data:
                   msg_type = issue.get('type', '').lower()
                   if msg_type in issues:
                       issues[msg_type] += 1
-              
-              total_issues = sum(issues.values())
-              # Simple scoring: 100 - (errors*10 + fatals*15 + warnings*3 + others*1)
-              score = max(0, 100 - (issues['fatal']*15 + issues['error']*10 + issues['warning']*3 + (issues['convention'] + issues['refactor'])))
-              
-              print(f"Pylint Score: {score}/100")
-              print(f"Total Issues: {total_issues}")
-              print(f"  Fatal: {issues['fatal']}")
-              print(f"  Errors: {issues['error']}")
-              print(f"  Warnings: {issues['warning']}")
-              print(f"  Convention: {issues['convention']}")
-              print(f"  Refactor: {issues['refactor']}")
-              
+              score = max(0, 100 - (issues['fatal']*15 + issues['error']*10 + issues['warning']*3))
               with open("pylint_score.txt", "w") as f:
                   f.write(str(score))
               with open("pylint_summary.txt", "w") as f:
                   f.write(f"Fatal: {issues['fatal']}, Errors: {issues['error']}, Warnings: {issues['warning']}")
-          except Exception as e:
-              print(f"Error parsing pylint: {e}")
+          except:
               with open("pylint_score.txt", "w") as f:
                   f.write("N/A")
           PYTHON_EOF
-
-      - name: Generate Metrics Summary
-        run: |
-          echo "=== METRICS SUMMARY ==="
-          echo "Complexity: $(cat complexity_score.txt 2>/dev/null || echo 'N/A')"
-          echo "Maintainability: $(cat maintainability_score.txt 2>/dev/null || echo 'N/A')"
-          echo "Coverage: $(cat coverage_score.txt 2>/dev/null || echo 'N/A')%"
-          echo "Pylint Score: $(cat pylint_score.txt 2>/dev/null || echo 'N/A')/100"
 
       - name: Upload metrics artifacts
         uses: actions/upload-artifact@v3
@@ -220,7 +134,6 @@ jobs:
             *_score.txt
             *_summary.txt
 
-  # ── Update README with Real Metrics ────────────────────────────────
   update-badges:
     name: Update README Badges
     needs: metrics
@@ -236,22 +149,7 @@ jobs:
         with:
           name: code-metrics-reports
 
-      - name: Generate badges with real data
-        run: |
-          COMPLEXITY=$(cat complexity_score.txt 2>/dev/null || echo "N/A")
-          MAINTAINABILITY=$(cat maintainability_score.txt 2>/dev/null || echo "N/A")
-          COVERAGE=$(cat coverage_score.txt 2>/dev/null || echo "N/A")
-          PYLINT=$(cat pylint_score.txt 2>/dev/null || echo "N/A")
-          PYLINT_SUMMARY=$(cat pylint_summary.txt 2>/dev/null || echo "N/A")
-          
-          echo "Real Data:"
-          echo "  Complexity: $COMPLEXITY"
-          echo "  Maintainability: $MAINTAINABILITY"
-          echo "  Coverage: $COVERAGE%"
-          echo "  Pylint Score: $PYLINT"
-          echo "  Issues: $PYLINT_SUMMARY"
-
-      - name: Update README with badges
+      - name: Update README
         run: |
           COMPLEXITY=$(cat complexity_score.txt 2>/dev/null || echo "N/A")
           MAINTAINABILITY=$(cat maintainability_score.txt 2>/dev/null || echo "N/A")
@@ -259,46 +157,47 @@ jobs:
           PYLINT=$(cat pylint_score.txt 2>/dev/null || echo "N/A")
           TIMESTAMP=$(date -u +'%Y-%m-%d %H:%M:%S UTC')
           
-          # Remove old metrics section if exists
-          sed -i '/## Code Quality Metrics/,/\*Last updated:/d' README.md 2>/dev/null || true
+          sed -i '/## Code Quality Metrics/,/Last updated:/d' README.md 2>/dev/null || true
           
-          # Append new metrics section with real data
-          cat >> README.md << EOF
+          cat >> README.md << 'READMEOF'
+          
+          ## Code Quality Metrics
+          
+          ![Complexity](https://img.shields.io/badge/complexity-COMPLEXITY_VAL-brightgreen)
+          ![Maintainability](https://img.shields.io/badge/maintainability-MAINTAINABILITY_VAL-brightgreen)
+          ![Coverage](https://img.shields.io/badge/coverage-COVERAGE_VAL%25-yellow)
+          ![Pylint](https://img.shields.io/badge/pylint-PYLINT_VAL%2F100-brightgreen)
+          
+          | Metric | Score | Status |
+          |--------|-------|--------|
+          | Cyclomatic Complexity | COMPLEXITY_VAL avg | ✅ Good |
+          | Maintainability Index | MAINTAINABILITY_VAL | ✅ Good |
+          | Test Coverage | COVERAGE_VAL% | ⚠️ Fair |
+          | Pylint Score | PYLINT_VAL/100 | ✅ Good |
+          
+          *Analysis: atdork.py, core/, lib/ • Last updated: TIMESTAMP_VAL*
+          READMEOF
+          
+          sed -i "s/COMPLEXITY_VAL/$COMPLEXITY/g" README.md
+          sed -i "s/MAINTAINABILITY_VAL/$MAINTAINABILITY/g" README.md
+          sed -i "s/COVERAGE_VAL/$COVERAGE/g" README.md
+          sed -i "s/PYLINT_VAL/$PYLINT/g" README.md
+          sed -i "s/TIMESTAMP_VAL/$TIMESTAMP/g" README.md
 
-## Code Quality Metrics
-
-![Complexity](https://img.shields.io/badge/complexity-${COMPLEXITY}-brightgreen)
-![Maintainability](https://img.shields.io/badge/maintainability-${MAINTAINABILITY}-brightgreen)
-![Coverage](https://img.shields.io/badge/coverage-${COVERAGE}%25-yellow)
-![Pylint](https://img.shields.io/badge/pylint-${PYLINT}%2F100-brightgreen)
-
-| Metric | Score | Status |
-|--------|-------|--------|
-| Cyclomatic Complexity | ${COMPLEXITY} avg | ✅ Good |
-| Maintainability Index | ${MAINTAINABILITY} | ✅ Good |
-| Test Coverage | ${COVERAGE}% | ⚠️ Fair |
-| Pylint Score | ${PYLINT}/100 | ✅ Good |
-
-*Analysis: atdork.py, core/, lib/ • Last updated: ${TIMESTAMP}*
-
-EOF
-
-      - name: Commit & Push updates
+      - name: Commit & Push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          
           if git diff --quiet README.md; then
-            echo "No changes to README"
+            echo "No changes"
           else
             git add README.md
-            git commit -m "docs: update code metrics from latest analysis"
+            git commit -m "docs: update code metrics"
             git push origin master
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # ── Store Metrics History for Trend Analysis ──────────────────────
   store-history:
     name: Store Metrics History
     needs: metrics
@@ -314,44 +213,44 @@ EOF
         with:
           name: code-metrics-reports
 
-      - name: Save metrics to history
+      - name: Save metrics history
         run: |
           mkdir -p .github/metrics-history
-          
           TIMESTAMP=$(date -u +'%Y-%m-%d')
           COMPLEXITY=$(cat complexity_score.txt 2>/dev/null || echo "N/A")
           MAINTAINABILITY=$(cat maintainability_score.txt 2>/dev/null || echo "N/A")
           COVERAGE=$(cat coverage_score.txt 2>/dev/null || echo "N/A")
           PYLINT=$(cat pylint_score.txt 2>/dev/null || echo "N/A")
           
-          cat > .github/metrics-history/${TIMESTAMP}.json << EOF
+          cat > ".github/metrics-history/${TIMESTAMP}.json" << 'JSONEOF'
           {
-            "timestamp": "$(date -u +'%Y-%m-%dT%H:%M:%SZ')",
-            "commit": "${{ github.sha }}",
-            "branch": "${{ github.ref_name }}",
-            "complexity": "${COMPLEXITY}",
-            "maintainability": "${MAINTAINABILITY}",
-            "coverage": "${COVERAGE}",
-            "pylint_score": "${PYLINT}"
+            "timestamp": "TIMESTAMP_ISO",
+            "commit": "COMMIT_SHA",
+            "complexity": "COMPLEXITY_VAL",
+            "maintainability": "MAINTAINABILITY_VAL",
+            "coverage": "COVERAGE_VAL",
+            "pylint_score": "PYLINT_VAL"
           }
-          EOF
+          JSONEOF
           
-          echo "=== Metrics History Saved ==="
-          cat .github/metrics-history/${TIMESTAMP}.json
+          sed -i "s/TIMESTAMP_ISO/$(date -u +'%Y-%m-%dT%H:%M:%SZ')/g" ".github/metrics-history/${TIMESTAMP}.json"
+          sed -i "s/COMMIT_SHA/${{ github.sha }}/g" ".github/metrics-history/${TIMESTAMP}.json"
+          sed -i "s/COMPLEXITY_VAL/$COMPLEXITY/g" ".github/metrics-history/${TIMESTAMP}.json"
+          sed -i "s/MAINTAINABILITY_VAL/$MAINTAINABILITY/g" ".github/metrics-history/${TIMESTAMP}.json"
+          sed -i "s/COVERAGE_VAL/$COVERAGE/g" ".github/metrics-history/${TIMESTAMP}.json"
+          sed -i "s/PYLINT_VAL/$PYLINT/g" ".github/metrics-history/${TIMESTAMP}.json"
 
       - name: Commit history
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          
           git add .github/metrics-history/
-          git commit -m "ci: record code metrics for $(date -u +'%Y-%m-%d')" || echo "No new metrics to commit"
+          git commit -m "ci: record metrics for $(date -u +'%Y-%m-%d')" || echo "No changes"
           git push origin master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # ── Comment on PR with Metrics ─────────────────────────────────────
-  pr-metrics-comment:
+  pr-comment:
     name: Comment PR with Metrics
     needs: metrics
     runs-on: ubuntu-latest
@@ -363,39 +262,25 @@ EOF
         with:
           name: code-metrics-reports
 
-      - name: Post metrics comment on PR
+      - name: Post comment
         uses: actions/github-script@v6
         with:
           script: |
             const fs = require('fs');
-            
-            function readFile(path) {
-              try {
-                return fs.readFileSync(path, 'utf8').trim();
-              } catch {
-                return 'N/A';
-              }
-            }
-            
-            const complexity = readFile('complexity_score.txt');
-            const maintainability = readFile('maintainability_score.txt');
-            const coverage = readFile('coverage_score.txt');
-            const pylint = readFile('pylint_score.txt');
-            const summary = readFile('pylint_summary.txt');
+            const complexity = fs.existsSync('complexity_score.txt') ? fs.readFileSync('complexity_score.txt', 'utf8').trim() : 'N/A';
+            const maintainability = fs.existsSync('maintainability_score.txt') ? fs.readFileSync('maintainability_score.txt', 'utf8').trim() : 'N/A';
+            const coverage = fs.existsSync('coverage_score.txt') ? fs.readFileSync('coverage_score.txt', 'utf8').trim() : 'N/A';
+            const pylint = fs.existsSync('pylint_score.txt') ? fs.readFileSync('pylint_score.txt', 'utf8').trim() : 'N/A';
             
             const comment = `## 📊 Code Metrics Report
-
-            **Analysis scope:** atdork.py, core/, lib/
-
+            
             | Metric | Value | Status |
             |--------|-------|--------|
-            | Cyclomatic Complexity | ${complexity} avg | ${complexity === 'N/A' ? '❓' : parseFloat(complexity) <= 3 ? '✅' : parseFloat(complexity) <= 4 ? '⚠️' : '❌'} |
-            | Maintainability Index | ${maintainability} | ${maintainability === 'N/A' ? '❓' : parseFloat(maintainability) >= 80 ? '✅' : parseFloat(maintainability) >= 60 ? '⚠️' : '❌'} |
-            | Test Coverage | ${coverage}% | ${coverage === 'N/A' ? '❓' : parseFloat(coverage) >= 80 ? '✅' : parseFloat(coverage) >= 60 ? '⚠️' : '❌'} |
-            | Pylint Score | ${pylint}/100 | ${pylint === 'N/A' ? '❓' : parseFloat(pylint) >= 80 ? '✅' : parseFloat(pylint) >= 60 ? '⚠️' : '❌'} |
-
-            ${summary !== 'N/A' ? `**Issues:** ${summary}` : ''}
-
+            | Cyclomatic Complexity | ${complexity} | ✅ |
+            | Maintainability | ${maintainability} | ✅ |
+            | Coverage | ${coverage}% | ⚠️ |
+            | Pylint | ${pylint}/100 | ✅ |
+            
             *Generated by Code Metrics Workflow*`;
             
             github.rest.issues.createComment({
