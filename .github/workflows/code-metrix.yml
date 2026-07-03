@@ -36,8 +36,7 @@ jobs:
       - name: Run Radon - Cyclomatic Complexity
         continue-on-error: true
         run: |
-          radon cc atdork.py core/ lib/ -a -s --json > radon-cc.json 2>&1 || true
-          # Ensure file exists and is non-empty
+          radon cc atdork/ -a -s --json > radon-cc.json 2>&1 || true
           if [ ! -s radon-cc.json ]; then echo '{"error":"no output"}' > radon-cc.json; fi
           python << 'PYTHON_EOF'
           import json
@@ -66,7 +65,7 @@ jobs:
       - name: Run Radon - Maintainability Index
         continue-on-error: true
         run: |
-          radon mi atdork.py core/ lib/ -s --json > radon-mi.json 2>&1 || true
+          radon mi atdork/ -s --json > radon-mi.json 2>&1 || true
           if [ ! -s radon-mi.json ]; then echo '{"error":"no output"}' > radon-mi.json; fi
           python << 'PYTHON_EOF'
           import json
@@ -90,7 +89,7 @@ jobs:
       - name: Run pytest with Coverage
         continue-on-error: true
         run: |
-          pytest tests/ -v --cov=core --cov=lib --cov=atdork --cov-report=term-missing --cov-report=json 2>&1 || true
+          pytest tests/ -v --cov=atdork --cov-report=term-missing --cov-report=json 2>&1 || true
           if [ ! -s coverage.json ]; then echo '{"totals":{"percent_covered":0}}' > coverage.json; fi
           python << 'PYTHON_EOF'
           import json
@@ -109,7 +108,7 @@ jobs:
       - name: Run Pylint
         continue-on-error: true
         run: |
-          pylint atdork.py core/ lib/ --exit-zero > pylint-output.txt 2>&1 || true
+          pylint atdork/ --exit-zero > pylint-output.txt 2>&1 || true
           python << 'PYTHON_EOF'
           import re
           try:
@@ -187,7 +186,7 @@ jobs:
           | Test Coverage | COVERAGE_VAL% | ⚠️ Fair |
           | Pylint Score | PYLINT_VAL/100 | ✅ Good |
 
-          *Analysis: atdork.py, core/, lib/ • Last updated: TIMESTAMP_VAL*
+          *Analysis: atdork/ • Last updated: TIMESTAMP_VAL*
           READMEOF
 
           sed -i "s|COMPLEXITY_VAL|$COMPLEXITY|g" README.md
@@ -202,12 +201,16 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if git diff --quiet README.md; then
             echo "No changes to README"
-          else
-            git add README.md
-            git commit -m "docs: update code metrics"
-            git pull --rebase origin master || true
-            git push origin master
+            exit 0
           fi
+          git add README.md
+          git commit -m "docs: update code metrics"
+          # Retry loop untuk menghindari konflik reference
+          for i in 1 2 3; do
+            echo "Push attempt $i"
+            git pull --rebase origin master && break || sleep $((RANDOM % 10 + 5))
+          done
+          git push origin master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -266,7 +269,11 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .github/metrics-history/
           git commit -m "ci: record metrics for $(date -u +'%Y-%m-%d')" || echo "No changes to commit"
-          git pull --rebase origin master || true
+          # Retry loop untuk menghindari konflik reference
+          for i in 1 2 3; do
+            echo "Push attempt $i"
+            git pull --rebase origin master && break || sleep $((RANDOM % 10 + 5))
+          done
           git push origin master
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -298,7 +305,7 @@ jobs:
 
             const comment = `## 📊 Code Metrics Report
 
-            **Analysis Scope:** atdork.py, core/, lib/
+            **Analysis Scope:** atdork/
 
             | Metric | Value | Status |
             |--------|-------|--------|
