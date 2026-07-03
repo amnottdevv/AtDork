@@ -38,7 +38,7 @@ jobs:
         run: |
           set -x
           radon cc atdork.py core/ lib/ -a -s --json > radon-cc.json 2>&1 || true
-          if [ ! -s radon-cc.json ]; then echo '{"error":"no output"}' > radon-cc.json; fi
+          if [ ! -s radon-cc.json ]; then echo '{}' > radon-cc.json; fi
           echo "radon-cc.json contents:"
           cat radon-cc.json
           python << 'PYTHON_EOF'
@@ -47,11 +47,13 @@ jobs:
               with open('radon-cc.json') as f:
                   data = json.load(f)
               all_cc = []
-              for file_path, file_data in data.items():
-                  if isinstance(file_data, dict):
-                      for func_name, func_data in file_data.items():
-                          if isinstance(func_data, dict) and 'complexity' in func_data:
-                              all_cc.append(func_data['complexity'])
+              # Radon menghasilkan dict { "filepath": [ { "complexity": ... }, ... ] }
+              if isinstance(data, dict):
+                  for file_path, file_data in data.items():
+                      if isinstance(file_data, list):
+                          for func in file_data:
+                              if isinstance(func, dict) and 'complexity' in func:
+                                  all_cc.append(func['complexity'])
               if all_cc:
                   avg_cc = sum(all_cc) / len(all_cc)
                   with open("complexity_score.txt", "w") as f:
@@ -70,7 +72,7 @@ jobs:
         continue-on-error: true
         run: |
           radon mi atdork.py core/ lib/ -s --json > radon-mi.json 2>&1 || true
-          if [ ! -s radon-mi.json ]; then echo '{"error":"no output"}' > radon-mi.json; fi
+          if [ ! -s radon-mi.json ]; then echo '{}' > radon-mi.json; fi
           echo "radon-mi.json contents:"
           cat radon-mi.json
           python << 'PYTHON_EOF'
@@ -78,7 +80,14 @@ jobs:
           try:
               with open('radon-mi.json') as f:
                   data = json.load(f)
-              mi_values = [v for v in data.values() if isinstance(v, (int, float))]
+              mi_values = []
+              # Radon MI menghasilkan dict { "filepath": { "mi": value } }
+              if isinstance(data, dict):
+                  for file_path, file_data in data.items():
+                      if isinstance(file_data, (int, float)):
+                          mi_values.append(file_data)
+                      elif isinstance(file_data, dict) and 'mi' in file_data:
+                          mi_values.append(file_data['mi'])
               if mi_values:
                   avg_mi = sum(mi_values) / len(mi_values)
                   with open("maintainability_score.txt", "w") as f:
@@ -96,7 +105,6 @@ jobs:
       - name: Run pytest with Coverage
         continue-on-error: true
         run: |
-          set -x
           pytest tests/ -v --cov=core --cov=lib --cov=atdork --cov-report=term-missing --cov-report=json 2>&1 || true
           if [ ! -s coverage.json ]; then echo '{"totals":{"percent_covered":0}}' > coverage.json; fi
           echo "coverage.json contents:"
