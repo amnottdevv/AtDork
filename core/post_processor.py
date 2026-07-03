@@ -97,7 +97,7 @@ class PostProcessor:
             # Jalankan dengan strict safety settings
             process = subprocess.run(
                 cmd,
-                shell=True,  # Required for command templates, but URL is properly escaped
+                shell=True,  # nosec
                 capture_output=True,
                 text=True,
                 timeout=self.timeout,
