@@ -522,18 +522,19 @@ Distributed under the MIT License. See `LICENSE` for details.
 If you find this tool useful, consider leaving a ⭐ on GitHub!
 
 
+
 ## Code Quality Metrics
 
 ![Complexity](https://img.shields.io/badge/complexity-N/A-brightgreen)
 ![Maintainability](https://img.shields.io/badge/maintainability-N/A-brightgreen)
 ![Coverage](https://img.shields.io/badge/coverage-0.0%25-yellow)
-![Pylint](https://img.shields.io/badge/pylint-8.64%2F100-brightgreen)
+![Pylint](https://img.shields.io/badge/pylint-N/A%2F100-brightgreen)
 
 | Metric | Score | Status |
 |--------|-------|--------|
 | Cyclomatic Complexity | N/A avg | ✅ Good |
 | Maintainability Index | N/A | ✅ Good |
 | Test Coverage | 0.0% | ⚠️ Fair |
-| Pylint Score | 8.64/100 | ✅ Good |
+| Pylint Score | N/A/100 | ✅ Good |
 
-*Analysis: atdork.py, core/, lib/ • Last updated: 2026-07-03 14:34:03 UTC*
+*Analysis: atdork/ • Last updated: 2026-07-03 15:20:35 UTC*
