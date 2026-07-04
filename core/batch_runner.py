@@ -110,11 +110,28 @@ def run_batch(
 
     Returns:
         Dictionary {query: [list of result dicts]}. Query yang gagal bernilai list kosong.
+
+    Catatan:
+        Jika `queries` mengandung duplikat (baris yang sama persis muncul lebih
+        dari sekali), duplikat tersebut hanya akan dieksekusi SEKALI. Ini untuk
+        menghindari pemborosan request/rate-limit karena mencari dork yang identik
+        berkali-kali — hasilnya akan tetap sama untuk query yang sama persis.
     """
     results: Dict[str, list] = {}
-    total = len(queries)
-    if total == 0:
+    if not queries:
         return results
+
+    
+    # kemunculan pertama sekaligus membuang duplikat.
+    unique_queries = list(dict.fromkeys(queries))
+    duplicate_count = len(queries) - len(unique_queries)
+    if duplicate_count > 0:
+        logger.warning(
+            "%d query duplikat terdeteksi di batch, hanya dijalankan sekali per query unik.",
+            duplicate_count,
+        )
+
+    total = len(unique_queries)
 
     # ── Ambil modul case dengan aman ─────────────────────────────────
     circuit_breaker = None
@@ -358,7 +375,7 @@ def run_batch(
         if concurrency > 1:
             with ThreadPoolExecutor(max_workers=concurrency) as executor:
                 future_to_query = {
-                    executor.submit(_execute_single, q): q for q in queries
+                    executor.submit(_execute_single, q): q for q in unique_queries
                 }
                 for future in as_completed(future_to_query):
                     q = future_to_query[future]
@@ -370,7 +387,7 @@ def run_batch(
                     results[q] = res
                     progress.update(task, advance=1)
         else:
-            for idx, q in enumerate(queries, 1):
+            for idx, q in enumerate(unique_queries, 1):
                 desc = q if len(q) <= 60 else q[:57] + "..."
                 progress.update(task, description=f"[{idx}/{total}] {desc}")
                 try:
