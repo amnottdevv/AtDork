@@ -13,10 +13,14 @@ import subprocess
 import threading
 import logging
 import shlex
+import platform
 from typing import List, Dict, Optional, Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
 
 logger = logging.getLogger(__name__)
+
+
+_WINDOWS_SHELL_RISK_CHARS = ['&', '|', '>', '<', '^', '%']
 
 
 class PostProcessor:
@@ -47,6 +51,28 @@ class PostProcessor:
         self.timeout = timeout
         self.on_success = on_success
         self.on_error = on_error
+
+        # FIX: Peringatan sekali di awal jika berjalan di Windows dan command
+        # template memakai shell metacharacter (pipe, redirect, dll). Di
+        # Windows, shlex.quote() TIDAK memberi jaminan keamanan yang sama
+        # seperti di Linux/macOS karena cmd.exe mem-parsing karakter ini
+        # sendiri sebelum program tujuan menerimanya sebagai argumen biasa.
+        self._is_windows = platform.system() == "Windows"
+        if self._is_windows:
+            template_risk = [c for c in _WINDOWS_SHELL_RISK_CHARS if c in self.command]
+            logger.warning(
+                "PostProcessor berjalan di Windows dengan shell=True. "
+                "shlex.quote() hanya menjamin escaping aman untuk shell POSIX "
+                "(bash/sh) — di Windows, karakter seperti & | > < ^ %% pada URL "
+                "hasil scan bisa lolos dan diinterpretasikan langsung oleh cmd.exe "
+                "meskipun sudah 'di-quote'. %s"
+                "Gunakan command template sederhana tanpa pipe/redirect di Windows, "
+                "atau jalankan AtDork via WSL untuk jaminan escaping yang lebih kuat.",
+                (
+                    f"Command template Anda sendiri mengandung karakter shell ({', '.join(template_risk)}). "
+                    if template_risk else ""
+                ),
+            )
 
         # Statistik
         self.stats = {
@@ -90,7 +116,21 @@ class PostProcessor:
             # Bangun perintah dengan proper escaping
             url_escaped = shlex.quote(url)
             cmd = self.command.replace("{}", url_escaped)
-            
+
+            # FIX: Peringatan per-URL di Windows — shlex.quote() tidak
+            # menjamin karakter ini aman diteruskan ke cmd.exe walau URL
+            # sudah "di-quote". Tetap dijalankan (sesuai konfigurasi), tapi
+            # operator perlu tahu ini titik rawan yang tidak sepenuhnya
+            # tertutup oleh escaping saat ini.
+            if self._is_windows:
+                risky_found = [c for c in _WINDOWS_SHELL_RISK_CHARS if c in url]
+                if risky_found:
+                    logger.warning(
+                        "URL mengandung karakter shell Windows (%s), escaping "
+                        "shlex.quote() mungkin tidak cukup melindungi di cmd.exe: %s",
+                        ", ".join(risky_found), url[:80],
+                    )
+
             # FIX HIGH: Log command without exposing sensitive data
             logger.debug(f"Executing command with URL placeholder (URL length: {len(url)} chars)")
 
