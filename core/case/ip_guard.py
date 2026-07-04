@@ -3,11 +3,21 @@ Atdork – IP Leak Guard (core/case/ip_guard.py)
 Mendeteksi kebocoran IP asli saat menggunakan proxy/Tor.
 
 Dilengkapi try‑except di semua method kritis agar error terlihat jelas.
+
+FIX (v2):
+- get_public_ip() sekarang mencoba beberapa provider IP-check secara
+  berurutan (bukan cuma httpbin.org). Fitur --ip-guard adalah lapisan
+  keamanan utama; satu provider eksternal yang down/rate-limit tidak
+  boleh membuat seluruh deteksi kebocoran gagal (false "leak").
+- Semua method yang membaca/menulis state (leak_detected, leak_details,
+  baseline_proxy_ip) sekarang dilindungi threading.Lock(), karena
+  IPGuard bisa dipakai bersamaan oleh banyak thread saat --concurrency > 1.
 """
 
 import requests
 import logging
-from typing import Optional, List, Tuple
+import threading
+from typing import Optional, List, Tuple, Callable
 
 logger = logging.getLogger(__name__)
 
@@ -24,6 +34,39 @@ SUSPICIOUS_HEADERS = [
     "True-Client-IP",
     "Forwarded",
     "Via",
+]
+
+
+def _parse_httpbin(data: str) -> Optional[str]:
+    """Parser untuk https://httpbin.org/ip -> {"origin": "1.2.3.4"}"""
+    import json
+    obj = json.loads(data)
+    if not isinstance(obj, dict) or "origin" not in obj:
+        return None
+    return obj["origin"].split(",")[0].strip()
+
+
+def _parse_ipify(data: str) -> Optional[str]:
+    """Parser untuk https://api.ipify.org?format=json -> {"ip": "1.2.3.4"}"""
+    import json
+    obj = json.loads(data)
+    if not isinstance(obj, dict) or "ip" not in obj:
+        return None
+    return str(obj["ip"]).strip()
+
+
+def _parse_plaintext(data: str) -> Optional[str]:
+    """Parser untuk endpoint yang mengembalikan IP polos (icanhazip.com, ident.me, dll)."""
+    ip = data.strip().split(",")[0].strip()
+    return ip or None
+
+
+
+_IP_CHECK_PROVIDERS: List[Tuple[str, Callable[[str], Optional[str]]]] = [
+    ("https://httpbin.org/ip", _parse_httpbin),
+    ("https://api.ipify.org?format=json", _parse_ipify),
+    ("https://icanhazip.com", _parse_plaintext),
+    ("https://ident.me", _parse_plaintext),
 ]
 
 
@@ -49,33 +92,49 @@ class IPGuard:
         self.baseline_proxy_ip: Optional[str] = None
         self.leak_detected: bool = False
         self.leak_details: List[str] = []
+        # FIX: lock untuk melindungi state di atas dari race condition
+        # saat IPGuard dipakai dari banyak thread (--concurrency > 1).
+        self._lock = threading.Lock()
 
     # ── Helper ──────────────────────────────────────────────────────────
     @staticmethod
     def get_public_ip(proxies: Optional[dict] = None, timeout: int = 5) -> Optional[str]:
         """
         Ambil IP publik yang terlihat oleh internet.
+
+        FIX: Mencoba beberapa provider secara berurutan (httpbin.org, ipify,
+        icanhazip.com, ident.me). Kembalikan hasil provider pertama yang
+        berhasil. Kalau semua provider gagal, baru kembalikan None.
         """
-        try:
-            resp = requests.get(
-                "https://httpbin.org/ip",
-                proxies=proxies,
-                timeout=timeout,
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            if not isinstance(data, dict) or "origin" not in data:
-                logger.warning("Respons httpbin.org tidak valid: %s", data)
-                return None
-            return data["origin"].split(",")[0].strip()
-        except requests.exceptions.Timeout:
-            logger.error("Timeout saat mengambil IP publik (timeout=%ds)", timeout)
-        except requests.exceptions.ConnectionError as e:
-            logger.error("Gagal koneksi ke httpbin.org: %s", e)
-        except requests.exceptions.HTTPError as e:
-            logger.error("HTTP error dari httpbin.org: %s", e)
-        except Exception as e:
-            logger.error("Error tidak terduga saat mengambil IP publik: %s", e)
+        last_error: Optional[str] = None
+        for url, parser in _IP_CHECK_PROVIDERS:
+            try:
+                resp = requests.get(url, proxies=proxies, timeout=timeout)
+                resp.raise_for_status()
+                ip = parser(resp.text)
+                if ip:
+                    logger.debug("IP publik berhasil didapat dari %s", url)
+                    return ip
+                logger.warning("Respons tidak valid dari %s: %s", url, resp.text[:100])
+                last_error = f"Respons tidak valid dari {url}"
+            except requests.exceptions.Timeout:
+                logger.debug("Timeout saat menghubungi %s (timeout=%ds)", url, timeout)
+                last_error = f"Timeout dari {url}"
+            except requests.exceptions.ConnectionError as e:
+                logger.debug("Gagal koneksi ke %s: %s", url, e)
+                last_error = f"Gagal koneksi ke {url}: {e}"
+            except requests.exceptions.HTTPError as e:
+                logger.debug("HTTP error dari %s: %s", url, e)
+                last_error = f"HTTP error dari {url}: {e}"
+            except Exception as e:
+                logger.debug("Error tidak terduga dari %s: %s", url, e)
+                last_error = f"Error tidak terduga dari {url}: {e}"
+            # Provider ini gagal, lanjut coba provider berikutnya
+
+        logger.error(
+            "Semua provider IP-check gagal (%d dicoba). Terakhir: %s",
+            len(_IP_CHECK_PROVIDERS), last_error,
+        )
         return None
 
     @staticmethod
@@ -108,14 +167,15 @@ class IPGuard:
         try:
             ip = self.get_public_ip(proxies)
             if ip:
-                self.baseline_proxy_ip = ip
-                logger.info("IP baseline (via proxy): %s", ip)
-                if ip == self.real_ip:
-                    logger.warning("IP via proxy SAMA dengan IP asli – kemungkinan proxy tidak berfungsi!")
-                    self.leak_detected = True
-                    self.leak_details.append("Proxy returned same IP as real IP (proxy not working)")
+                with self._lock:
+                    self.baseline_proxy_ip = ip
+                    logger.info("IP baseline (via proxy): %s", ip)
+                    if ip == self.real_ip:
+                        logger.warning("IP via proxy SAMA dengan IP asli – kemungkinan proxy tidak berfungsi!")
+                        self.leak_detected = True
+                        self.leak_details.append("Proxy returned same IP as real IP (proxy not working)")
             else:
-                logger.warning("Tidak dapat menetapkan IP baseline – proxy mungkin mati")
+                logger.warning("Tidak dapat menetapkan IP baseline – semua provider IP-check gagal atau proxy mati")
             return ip
         except Exception as e:
             logger.error("Error di establish_baseline: %s", e)
@@ -135,29 +195,30 @@ class IPGuard:
             current_ip = self.get_public_ip(proxies)
 
             if current_ip is None:
-                warnings.append("Tidak dapat memeriksa IP (network error)")
+                warnings.append("Tidak dapat memeriksa IP (semua provider IP-check gagal / network error)")
                 return False, warnings
 
-            # Bandingkan dengan baseline
-            if self.baseline_proxy_ip and current_ip != self.baseline_proxy_ip:
+            with self._lock:
+                # Bandingkan dengan baseline
+                if self.baseline_proxy_ip and current_ip != self.baseline_proxy_ip:
+                    if current_ip == self.real_ip:
+                        self.leak_detected = True
+                        msg = f"IP bocor! Terlihat: {current_ip} (IP asli), seharusnya: {self.baseline_proxy_ip}"
+                        self.leak_details.append(msg)
+                        warnings.append(msg)
+                        return False, warnings
+                    else:
+                        warnings.append(f"IP berubah dari baseline: {current_ip} (mungkin proxy berbeda)")
+
+                # Bandingkan langsung dengan IP asli
                 if current_ip == self.real_ip:
                     self.leak_detected = True
-                    msg = f"IP bocor! Terlihat: {current_ip} (IP asli), seharusnya: {self.baseline_proxy_ip}"
+                    msg = f"IP asli terlihat oleh publik: {current_ip}"
                     self.leak_details.append(msg)
                     warnings.append(msg)
                     return False, warnings
-                else:
-                    warnings.append(f"IP berubah dari baseline: {current_ip} (mungkin proxy berbeda)")
 
-            # Bandingkan langsung dengan IP asli
-            if current_ip == self.real_ip:
-                self.leak_detected = True
-                msg = f"IP asli terlihat oleh publik: {current_ip}"
-                self.leak_details.append(msg)
-                warnings.append(msg)
-                return False, warnings
-
-            return True, warnings
+                return True, warnings
 
         except Exception as e:
             logger.error("Error di check(): %s", e)
@@ -167,6 +228,9 @@ class IPGuard:
     def panic_message(self) -> str:
         """Pesan error lengkap saat kebocoran terdeteksi."""
         try:
+            with self._lock:
+                baseline = self.baseline_proxy_ip or "N/A"
+                detail = self.leak_details[0] if self.leak_details else "Unknown"
             return f"""
 {'='*60}
   ❌  IP LEAK DETECTED – PROGRAM STOPPED
@@ -176,8 +240,8 @@ class IPGuard:
 
   ┌─────────────────────────────────────────────────────────┐
   │  Your IP (real):    {self.real_ip:<40} │
-  │  Expected IP:       {self.baseline_proxy_ip or 'N/A':<40} │
-  │  Details:           {self.leak_details[0] if self.leak_details else 'Unknown':<40} │
+  │  Expected IP:       {baseline:<40} │
+  │  Details:           {detail:<40} │
   └─────────────────────────────────────────────────────────┘
 
   What happened:
