@@ -1,0 +1,41 @@
+name: Update GHDB Database
+
+on:
+  schedule:
+    # Setiap Senin jam 03:00 UTC (= 10:00 WIB)
+    - cron: "0 3 * * 1"
+  workflow_dispatch: {}   # bisa juga di-trigger manual dari tab Actions di GitHub
+
+permissions:
+  contents: write   # perlu supaya job bisa commit & push balik ke repo
+
+jobs:
+  update-ghdb:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install minimal dependencies
+        run: pip install requests beautifulsoup4
+
+      - name: Run GHDB export
+        run: python scripts/update_ghdb_database.py
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add database/
+          if git diff --cached --quiet; then
+            echo "Tidak ada perubahan dork, skip commit."
+          else
+            git commit -m "chore: update GHDB dork database ($(date -u +%Y-%m-%d))"
+            git push
+          fi
