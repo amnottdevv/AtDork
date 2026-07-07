@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Atdork - Professional OSINT Tool
-Version : 1.3.9
+Version : 1.3.9.4
 Author  : alzzmarket
 GitHub  : github.com/amnottdevv/atdork
 """
@@ -31,6 +31,9 @@ from lib.validator import filter_results, get_filter_stats
 from core.database import Database
 from core.logger import setup_logging
 
+# GHDB Scraper (Exploit-DB Google Hacking Database)
+from core.ghdb_scraper import run_ghdb_scraper
+
 # Case modules
 from core.case.circuit_breaker import CircuitBreaker
 from core.case.ip_guard import IPGuard
@@ -55,7 +58,7 @@ def _show_ascii_banner():
     banner = f.renderText('Atdork')
     console.print(f"[bold green]{banner}[/bold green]")
     console.print("[bold cyan]Professional OSINT Tool[/bold cyan]")
-    console.print(f"[dim]v1.3.9 - {datetime.now().strftime('%Y-%m-%d %H:%M')}[/dim]")
+    console.print(f"[dim]v1.3.9.4 - {datetime.now().strftime('%Y-%m-%d %H:%M')}[/dim]")
     console.print()
 
 
@@ -179,8 +182,36 @@ def build_parser():
     parser.add_argument("--template-path", type=str, help="Path ke folder template.")
     parser.add_argument("--preview", action="store_true", help="Pratinjau isi template tanpa menjalankannya.")
 
+    # GHDB Scraper
+    ghdb_group = parser.add_argument_group("GHDB Scraper")
+    ghdb_group.add_argument(
+        "--ghdb-scraper", action="store_true",
+        help="Jalankan mode GHDB scraper (ambil dork dari Exploit-DB Google Hacking Database).",
+    )
+    ghdb_group.add_argument(
+        "--ghdb-file", type=str, default=None,
+        help="Simpan hasil dork GHDB ke file. Format auto-detect dari ekstensi (.json atau .txt).",
+    )
+    ghdb_group.add_argument(
+        "--ghdb-categories", type=str, default=None,
+        help="Filter kategori GHDB, pisahkan dengan koma. Bisa nama (partial match, mis. 'password') "
+             "atau ID numerik (mis. '9,12').",
+    )
+    ghdb_group.add_argument(
+        "--ghdb-years", type=str, default=None,
+        help="Filter tahun publikasi dork GHDB. Contoh: '2024' atau '2020-2023,2024'.",
+    )
+    ghdb_group.add_argument(
+        "--ghdb-r", type=int, default=None,
+        help="Batasi jumlah total dork GHDB yang diambil/disimpan (setelah filter kategori/tahun).",
+    )
+    ghdb_group.add_argument(
+        "--ghdb-list-categories", action="store_true",
+        help="Tampilkan daftar kategori GHDB beserta jumlah dork per kategori, lalu keluar.",
+    )
+
     parser.add_argument("--debug", action="store_true")
-    parser.add_argument("--version", action="version", version="%(prog)s 1.3.9")
+    parser.add_argument("--version", action="version", version="%(prog)s 1.3.9.4")
     return parser
 
 
@@ -765,6 +796,19 @@ def main():
     args = parser.parse_args(remaining)
 
     setup_logging(debug=args.debug, log_file=args.log_file)
+
+    # --- GHDB Scraper mode ---
+    # Mode ini berdiri sendiri: kalau dipakai, tidak masuk ke alur pencarian/interaktif biasa.
+    if args.ghdb_scraper or args.ghdb_list_categories:
+        success = run_ghdb_scraper(
+            output_file=args.ghdb_file,
+            categories=args.ghdb_categories,
+            years=args.ghdb_years,
+            max_results=args.ghdb_r,
+            list_categories=args.ghdb_list_categories,
+            console=console,
+        )
+        sys.exit(0 if success else 1)
 
     # FIX URGENT: Complete the incomplete if statement from line 756
     # Check if interactive mode or no action parameters provided
