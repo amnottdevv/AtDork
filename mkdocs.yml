@@ -76,6 +76,8 @@ nav:
           - database and history : features/database-history.md
           - cache system : features/cache-system.md
           - notification : features/notification.md
+          - database dork : features/database-scrapper.md
+          - ghdb scrapper : features/ghdb-scrapper.md
   - Reference:
       - CLI Reference: cli-reference.md
       - Configuration: configuration.md
