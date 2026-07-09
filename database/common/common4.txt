@@ -1,0 +1,398 @@
+# ============================================
+# COMMON DORKS - FILE UPLOAD, RCE, SSRF
+# ============================================
+
+# ============================================
+# PARAMETER / FILE UPLOAD
+# ============================================
+
+inurl:upload.php
+inurl:uploads.php
+inurl:file-upload.php
+inurl:upload-file.php
+inurl:image-upload.php
+inurl:photo-upload.php
+inurl:avatar.php
+inurl:profile-pic.php
+inurl:gallery-upload.php
+inurl:media-upload.php
+inurl:attachment.php
+inurl:import.php
+inurl:import-file.php
+inurl:csv-upload.php
+inurl:excel-upload.php
+inurl:document-upload.php
+inurl:resume-upload.php
+inurl:cv-upload.php
+inurl:file.php?upload=
+inurl:index.php?upload=
+inurl:admin/upload.php
+inurl:admin/uploads.php
+inurl:panel/upload.php
+
+# ============================================
+# MENCARI UPLOAD FILE YANG TERINDEKS (Directory Listing)
+# ============================================
+
+# Folder upload yang terbuka
+intitle:"index of" "uploads"
+intitle:"index of" "files"
+intitle:"index of" "images"
+intitle:"index of" "media"
+intitle:"index of" "attachments"
+intitle:"index of" "temp"
+intitle:"index of" "tmp"
+intitle:"index of" "cache"
+intitle:"index of" "backup"
+intitle:"index of" "downloads"
+
+# Cari file gambar yang diupload (indikasi lokasi upload)
+inurl:uploads/ inurl:.jpg
+inurl:uploads/ inurl:.png
+inurl:uploads/ inurl:.gif
+inurl:files/ inurl:.pdf
+inurl:media/ inurl:.mp4
+inurl:attachments/ inurl:.doc
+
+# ============================================
+# PARAMETER UNTUK RCE / COMMAND INJECTION
+# ============================================
+
+inurl:?cmd=
+inurl:?command=
+inurl:?exec=
+inurl:?execute=
+inurl:?run=
+inurl:?system=
+inurl:?shell=
+inurl:?terminal=
+inurl:?bash=
+inurl:?sh=
+inurl:?ping=
+inurl:?nslookup=
+inurl:?traceroute=
+inurl:?dig=
+inurl:?host=
+inurl:?curl=
+inurl:?wget=
+inurl:?ftp=
+inurl:?telnet=
+inurl:?ssh=
+inurl:?scp=
+inurl:?rsync=
+
+# ============================================
+# PARAMETER UNTUK PHP CODE EVALUATION (eval)
+# ============================================
+
+inurl:?code=
+inurl:?eval=
+inurl:?function=
+inurl:?call=
+inurl:?callback=
+inurl:?method=
+inurl:?action=
+inurl:?do=
+inurl:?route=
+inurl:?handler=
+
+# ============================================
+# PHPINFO & DEBUG PAGE (Sering bocor info untuk RCE)
+# ============================================
+
+inurl:phpinfo.php
+inurl:info.php
+inurl:phpinfo
+inurl:test.php
+inurl:debug.php
+inurl:debug-info.php
+inurl:status.php
+inurl:server-status
+inurl:php-status
+inurl:sysinfo.php
+inurl:system-info.php
+inurl:environment.php
+inurl:env.php
+inurl:.env (file .env terbaca)
+inurl:config.php?debug=
+
+# ============================================
+# PARAMETER UNTUK SSRF (Server Side Request Forgery)
+# ============================================
+
+inurl:?url=
+inurl:?uri=
+inurl:?link=
+inurl:?src=
+inurl:?source=
+inurl:?target=
+inurl:?dest=
+inurl:?destination=
+inurl:?redirect=
+inurl:?return=
+inurl:?next=
+inurl:?goto=
+inurl:?fetch=
+inurl:?get=
+inurl:?download=
+inurl:?proxy=
+inurl:?path=
+inurl:?file=
+inurl:?load=
+inurl:?include=
+inurl:?import=
+inurl:?read=
+inurl:?open=
+inurl:?show=
+inurl:?display=
+
+# ============================================
+# DORK UNTUK FILE UPLOAD + PARAMETER (Bypass)
+# ============================================
+
+inurl:upload.php?type=
+inurl:upload.php?dir=
+inurl:upload.php?folder=
+inurl:upload.php?path=
+inurl:upload.php?file=
+inurl:upload.php?name=
+inurl:image.php?upload=
+inurl:photo.php?upload=
+inurl:file.php?action=upload
+
+# Cari error upload (indikasi celah)
+inurl:upload.php intext:"failed to move"
+inurl:upload.php intext:"error" 
+inurl:upload.php intext:"permission denied"
+inurl:upload.php intext:"file size"
+inurl:upload.php intext:"extension not allowed"
+
+# ============================================
+# DORK UNTUK WEBSHELL / BACKDOOR YANG TERINDEKS
+# ============================================
+
+inurl:shell.php
+inurl:cmd.php
+inurl:c99.php
+inurl:r57.php
+inurl:webshell.php
+inurl:backdoor.php
+inurl:adminer.php
+inurl:phpmyadmin (bisa untuk RCE via SQL)
+inurl:mysql-admin
+inurl:sqladmin
+inurl:sqlmanager
+
+# ============================================
+# KOMBINASI DENGAN OPERATOR LAIN
+# ============================================
+
+# Filter domain Indonesia
+site:.go.id inurl:upload.php
+site:.go.id inurl:?cmd=
+site:.ac.id inurl:upload.php
+site:.sch.id inurl:?exec=
+site:.co.id inurl:?url=
+site:.id inurl:phpinfo.php
+
+# Cari RCE via error
+inurl:?cmd= intext:"Warning: system"
+inurl:?exec= intext:"exec"
+inurl:?command= intext:"shell_exec"
+inurl:?run= intext:"passthru"
+inurl:?cmd= intext:"root:" 
+
+# Cari file upload + parameter RCE
+inurl:upload.php inurl:?cmd=
+inurl:upload.php inurl:?exec=
+
+# Filter demo/test
+inurl:upload.php -inurl:demo -inurl:test -inurl:example -inurl:sample
+inurl:?cmd= -inurl:demo -inurl:test -inurl:example
+
+# ============================================
+# DORK UNTUK WEBSITE DENGAN UPLOAD FILE (E-COMMERCE)
+# ============================================
+
+inurl:product.php inurl:upload
+inurl:shop.php inurl:upload
+inurl:cart.php inurl:upload
+inurl:user.php inurl:avatar
+inurl:profile.php inurl:photo
+
+# ============================================
+# DORK UNTUK WEBSITE DENGAN UPLOAD (ADMIN PANEL)
+# ============================================
+
+inurl:admin/upload.php
+inurl:admin/uploads.php
+inurl:administrator/upload.php
+inurl:panel/upload.php
+inurl:dashboard/upload.php
+inurl:backend/upload.php
+inurl:manage/upload.php
+
+# ============================================
+# DORK UNTUK MENCARI FILE CONFIG YANG BOCOR (RCE via Config)
+# ============================================
+
+inurl:config.php intext:"database"
+inurl:config.php intext:"password"
+inurl:configuration.php intext:"db"
+inurl:wp-config.php intext:"DB_PASSWORD"
+inurl:.env intext:"APP_KEY"
+inurl:.env intext:"DB_PASSWORD"
+inurl:database.php intext:"password"
+inurl:db.php intext:"password"
+inurl:settings.php intext:"password"
+
+# ============================================
+# DORK UNTUK MENCARI FILE LOG (RCE via Log Injection)
+# ============================================
+
+inurl:access.log intext:"php"
+inurl:error.log intext:"php"
+inurl:debug.log intext:"sql"
+inurl:log.txt intext:"error"
+inurl:logs/ intext:"error"
+inurl:storage/logs/ intext:"laravel"
+
+# ============================================
+# DORK UNTUK SSRF DI API
+# ============================================
+
+inurl:api.php?url=
+inurl:api.php?fetch=
+inurl:api/v1?url=
+inurl:api/v2?url=
+inurl:rest.php?url=
+inurl:json.php?url=
+inurl:xml.php?url=
+inurl:proxy.php?url=
+inurl:fetch.php?url=
+inurl:download.php?url=
+
+# ============================================
+# DORK UNTUK SSRF + PARAMETER
+# ============================================
+
+inurl:?url=http
+inurl:?src=http
+inurl:?link=http
+inurl:?target=http
+inurl:?fetch=http
+inurl:?proxy=http
+
+# Cari SSRF di website Indonesia
+site:.id inurl:?url= 
+site:.id inurl:?fetch=
+site:.go.id inurl:?proxy=
+
+# ============================================
+# DORK UNTUK RCE VIA UPLOAD FILE (ImageMagick, FFmpeg, dll)
+# ============================================
+
+inurl:convert.php
+inurl:resize.php
+inurl:thumbnail.php
+inurl:image-resize.php
+inurl:image-process.php
+inurl:image-magick.php
+inurl:ffmpeg.php
+inurl:video-convert.php
+inurl:pdf-generate.php
+inurl:pdf-create.php
+
+# ============================================
+# DORK UNTUK MENCARI FILE COMPRESS / UNZIP (RCE via Zip Slip)
+# ============================================
+
+inurl:unzip.php
+inurl:extract.php
+inurl:zip.php
+inurl:archive.php
+inurl:compress.php
+inurl:decompress.php
+
+# ============================================
+# DORK UNTUK FILE EXECUTABLE / UPLOAD YANG RAWAN
+# ============================================
+
+inurl:upload.php inurl:.php
+inurl:upload.php inurl:.exe
+inurl:upload.php inurl:.sh
+inurl:upload.php inurl:.py
+inurl:upload.php inurl:.pl
+inurl:upload.php inurl:.jsp
+inurl:upload.php inurl:.asp
+inurl:upload.php inurl:.aspx
+
+# ============================================
+# DORK UNTUK MENCARI FILE UPLOAD DENGAN EXTENSION GANDA
+# ============================================
+
+inurl:.php.jpg
+inurl:.php.png
+inurl:.php.gif
+inurl:.php.pdf
+inurl:.php.txt
+inurl:.php.jpeg
+inurl:.php5
+inurl:.phtml
+inurl:.phar
+inurl:.shtml
+
+# ============================================
+# DORK UNTUK MENCARI REMOTE FILE INCLUSION (RFI) - RCE
+# ============================================
+
+inurl:?page=http://
+inurl:?file=http://
+inurl:?path=http://
+inurl:?template=http://
+inurl:?theme=http://
+inurl:?include=http://
+inurl:?load=http://
+inurl:?config=http://
+inurl:?view=http://
+inurl:?content=http://
+
+# ============================================
+# DORK UNTUK MENCARI PING / NETWORK COMMAND INJECTION
+# ============================================
+
+inurl:ping.php?ip=
+inurl:ping.php?host=
+inurl:ping.php?address=
+inurl:ping.php?target=
+inurl:ping.php?url=
+inurl:traceroute.php?ip=
+inurl:network.php?cmd=
+
+# Cari error ping (indikasi command injection)
+inurl:ping.php?ip= intext:"PING"
+inurl:ping.php?ip= intext:"TTL"
+inurl:ping.php?ip= intext:"bytes from"
+
+# ============================================
+# DORK UNTUK MENCARI NIK / DATA PRIBADI (biasa via file upload)
+# ============================================
+
+intitle:"index of" "ktp"
+intitle:"index of" "nik"
+intitle:"index of" "id_card"
+intitle:"index of" "passport"
+intitle:"index of" "kartu"
+intitle:"index of" "foto"
+intitle:"index of" "selfie"
+
+# ============================================
+# DORK UNTUK MENCARI WEBSHELL DI WEBSITE INDONESIA
+# ============================================
+
+site:.id inurl:shell.php
+site:.id inurl:c99.php
+site:.id inurl:cmd.php
+site:.go.id inurl:shell.php
+site:.go.id inurl:cmd.php
+site:.ac.id inurl:shell.php
