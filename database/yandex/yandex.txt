@@ -1,0 +1,10 @@
+site:github.com "пароль" "env"
+site:pastebin.com intext:пароль
+site:gitlab.com intitle:"пароль" "admin"
+site:bitbucket.org "переменные среды" пароль
+site:reddit.com "учётные данные" "протек"
+site:medium.com intitle:"учётные данные" filetype:txt
+site:stackoverflow.com intitle:"пароль" "конфиг"
+site:dockerhub.com intitle:"пароль" "секреты"
+site:quora.com "логин" "учётные данные"
+site:slack.com "аутентификация" "протек"
