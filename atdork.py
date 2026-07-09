@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 """
 Atdork - Professional OSINT Tool
-Version : 1.3.9.5
-Author  : alzzmarket
-GitHub  : github.com/amnottdevv/atdork
-
 Version : 1.3.9.6
 Author  : alzzmarket
 GitHub  : github.com/amnottdevv/atdork
@@ -84,7 +80,6 @@ from core.manage_cache import SearchCache
 # Notification
 from core.notification import send_batch_summary
 
-VERSION = "1.3.9.5"
 VERSION = "1.3.9.6"
 
 console = Console()
@@ -494,12 +489,23 @@ def _handle_list_database_dork(args) -> None:
     table.add_row("", "[bold]TOTAL[/bold]", f"[bold]{total_dorks}[/bold]", "")
     console.print(table)
 
-    console.print(
-        "\n[bold cyan]Usage examples:[/bold cyan]\n"
-        f"  [dim]atdork --database-dork {files[0]['relpath'][:-4] if files[0]['relpath'].lower().endswith('.txt') else files[0]['relpath']} --database-r 10[/dim]\n"
-        f"  [dim]atdork --database-dork {files[0]['relpath'][:-4] if files[0]['relpath'].lower().endswith('.txt') else files[0]['relpath']},{files[1]['relpath'][:-4] if files[1]['relpath'].lower().endswith('.txt') else files[1]['relpath'] if len(files) > 1 else '...'}[/dim]\n"
-        "  [dim]atdork --database-dork /subdir/file --database-preview[/dim]"
-    )
+    if files:
+        first_spec = files[0]["relpath"]
+        if first_spec.lower().endswith(".txt"):
+            first_spec = first_spec[:-4]
+        second_spec = ""
+        if len(files) > 1:
+            second_spec = files[1]["relpath"]
+            if second_spec.lower().endswith(".txt"):
+                second_spec = second_spec[:-4]
+            second_spec = f",{second_spec}"
+        
+        console.print(
+            "\n[bold cyan]Usage examples:[/bold cyan]\n"
+            f"  [dim]atdork --database-dork {first_spec} --database-r 10[/dim]\n"
+            f"  [dim]atdork --database-dork {first_spec}{second_spec}[/dim]\n"
+            "  [dim]atdork --database-dork /subdir/file --database-preview[/dim]"
+        )
 
 
 def _format_size(size_bytes: int) -> str:
@@ -535,7 +541,7 @@ def _handle_database_dork_preview(args) -> None:
     console.print(f"[bold cyan]📂 Database dorks loaded:[/bold cyan] {len(dorks)}")
     console.print(f"[dim]From: {', '.join(spec_parts)}[/dim]")
     if args.database_r:
-        console.print(f"[dim]Random selection: {args.database_r} of {len(dorks) if not args.database_r else '...'} dorks[/dim]")
+        console.print(f"[dim]Random selection: {args.database_r} dorks[/dim]")
     if args.database_seed is not None:
         console.print(f"[dim]RNG seed: {args.database_seed}[/dim]")
     console.print()
@@ -649,28 +655,21 @@ def cli_mode(args):
     # Database connection (SQLite history/dedup)
     db = Database(args.db_path) if (args.resume or args.history or args.export_db or not args.no_dedup) else None
 
-    # ----- Database Dork: --extract-database / --database-dork-extract (early exit) -----
-    # --database-dork-extract PATH is a shortcut for --extract-database --extract-database-to PATH
-    if args.database_dork_extract:
-        args.extract_database = True
-        args.extract_database_to = args.database_dork_extract
-    if args.extract_database:
+    # ----- Database Dork: Handle extraction triggers -----
     # Three equivalent ways to trigger extraction:
     #   1. --extract-database                          (extract to ./database)
     #   2. --extract-database --extract-database-to X  (extract to X)
     #   3. --database-dork-extract X                   (shortcut, extract to X)
     #   4. --extract-database-to X                     (implicit, extract to X)
-    # Use getattr() for safety in case the argument isn't registered (partial copy / older file)
-    _db_dork_extract = getattr(args, "database_dork_extract", None)
-    _extract_to = getattr(args, "extract_database_to", None)
-    if _db_dork_extract:
+    if args.database_dork_extract:
         # Shortcut form: --database-dork-extract PATH
         args.extract_database = True
-        args.extract_database_to = _db_dork_extract
-    elif _extract_to and not getattr(args, "extract_database", False):
+        args.extract_database_to = args.database_dork_extract
+    elif args.extract_database_to and not args.extract_database:
         # Implicit form: --extract-database-to PATH (without --extract-database)
         args.extract_database = True
-    if getattr(args, "extract_database", False):
+    
+    if args.extract_database:
         _handle_extract_database(args)
         if db: db.close()
         return
@@ -1134,31 +1133,22 @@ def main():
         )
         sys.exit(0 if success else 1)
 
-    # --- Database Dork mode (v1.3.9.5) ---
-    # --extract-database, --list-database-dork, and --database-dork --database-preview
-    # are handled inside cli_mode (they are NOT search operations but utility modes).
-    # They're still routed through cli_mode for consistent banner/logging setup.
-
     # Check if interactive mode or no action parameters provided
-    # Use getattr() for safety in case some args aren't registered (partial copy / older file)
     has_action = (
-        getattr(args, "query", None) or
-        getattr(args, "batch_file", None) or
-        getattr(args, "resume", False) or
-        getattr(args, "history", False) or
-        getattr(args, "export_db", None) or
-        getattr(args, "template", None) or
-        getattr(args, "list_templates", False) or
-        getattr(args, "preview", False) or
-        # NEW (v1.3.9.5)
-        getattr(args, "extract_database", False) or
-        getattr(args, "database_dork_extract", None) or
+        args.query or
+        args.batch_file or
+        args.resume or
+        args.history or
+        args.export_db or
+        args.template or
+        args.list_templates or
+        args.preview or
         # NEW (v1.3.9.5) — extraction triggers
-        getattr(args, "extract_database", False) or
-        getattr(args, "database_dork_extract", None) or
-        getattr(args, "extract_database_to", None) or  # implicit extraction
-        getattr(args, "list_database_dork", False) or
-        getattr(args, "database_dork", None)
+        args.extract_database or
+        args.database_dork_extract or
+        args.extract_database_to or
+        args.list_database_dork or
+        args.database_dork
     )
     should_interactive = args.interactive or (not has_action)
 
