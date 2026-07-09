@@ -1,0 +1,444 @@
+# ============================================
+# BING DORKS - OR & CONTAINS OPERATOR
+# ============================================
+# 
+# BING KEUNGGULAN:
+# 1. OR - Mencari salah satu dari banyak pilihan
+# 2. contains: - Mencari halaman yang berisi LINK ke tipe file tertentu
+# 3. Kombinasi OR + contains: sangat powerful di Bing
+#
+# ============================================
+
+# ============================================
+# 1. MENGGUNAKAN OR UNTUK PARAMETER SQL INJECTION
+# ============================================
+
+# Cari multiple parameter SQLi sekaligus
+inurl:(product.php?id= OR view.php?id= OR detail.php?id=)
+inurl:(?id= OR ?cat= OR ?pid= OR ?product_id=)
+inurl:(?page= OR ?p= OR ?pg= OR ?menu=)
+inurl:(news.php?id= OR article.php?id= OR post.php?id=)
+inurl:(item.php?id= OR blog.php?id= OR post.php?p=)
+
+# Cari parameter + error SQL
+inurl:(product.php?id= OR view.php?id= OR detail.php?id=) intitle:"error"
+inurl:(?id= OR ?cat= OR ?cid=) intext:"mysql" 
+inurl:(?id= OR ?cat= OR ?cate=) intext:"warning"
+inurl:(?page= OR ?p= OR ?pg=) intext:"syntax"
+
+# Cari multiple parameter numerik
+inurl:(?id=1 OR ?id=2 OR ?id=3)
+inurl:(?cat=1 OR ?cat=2 OR ?cat=3)
+inurl:(?pid=1 OR ?pid=2 OR ?pid=3)
+
+# Cari site tertentu dengan multiple parameter
+site:.go.id inurl:(product.php?id= OR view.php?id= OR ?id=)
+site:.ac.id inurl:(?id= OR ?cat= OR ?page=)
+site:.sch.id inurl:(news.php?id= OR article.php?id= OR ?id=)
+site:.co.id inurl:(?pid= OR ?product_id= OR ?cat=)
+
+# ============================================
+# 2. MENGGUNAKAN OR UNTUK LFI / FILE INCLUSION
+# ============================================
+
+# Cari multiple parameter LFI
+inurl:(?page= OR ?file= OR ?path=)
+inurl:(?include= OR ?load= OR ?view=)
+inurl:(?template= OR ?theme= OR ?lang=)
+inurl:(?module= OR ?controller= OR ?action=)
+inurl:(?config= OR ?content= OR ?layout=)
+
+# Cari LFI + file sensitif
+inurl:(?page= OR ?file= OR ?path=) inurl:(etc/passwd OR boot.ini)
+inurl:(?page= OR ?file= OR ?include=) intext:"root:x:0:0"
+inurl:(?page= OR ?path= OR ?dir=) intext:"failed to open stream"
+
+# Cari LFI di CMS
+inurl:(?page= OR ?file= OR ?template=) inurl:(wp-content OR components)
+inurl:(?page= OR ?view= OR ?layout=) inurl:(modules OR themes)
+
+# Cari site Indonesia + LFI
+site:.go.id inurl:(?page= OR ?file= OR ?path=)
+site:.ac.id inurl:(?page= OR ?include= OR ?load=)
+site:.id inurl:(?page= OR ?file= OR ?template=) intext:"error"
+
+# ============================================
+# 3. MENGGUNAKAN OR UNTUK XSS
+# ============================================
+
+# Cari multiple parameter XSS
+inurl:(?q= OR ?search= OR ?s=)
+inurl:(?keyword= OR ?query= OR ?term=)
+inurl:(?name= OR ?email= OR ?username=)
+inurl:(?comment= OR ?feedback= OR ?message=)
+inurl:(?cat= OR ?c= OR ?category=)
+
+# Cari XSS + payload
+inurl:(?q= OR ?search= OR ?s=) intext:"<script>"
+inurl:(?q= OR ?keyword= OR ?query=) intext:"alert"
+inurl:(?comment= OR ?feedback= OR ?message=) intext:"<img src=x"
+
+# Cari XSS di form komentar
+inurl:(comment.php OR guestbook.php OR feedback.php) intext:"<script>"
+inurl:(review.php OR testimonial.php OR rating.php) intext:"<img"
+
+# Cari site Indonesia + XSS
+site:.go.id inurl:(?q= OR ?search= OR ?cari=)
+site:.ac.id inurl:(?q= OR ?keyword= OR ?query=)
+site:.id inurl:(?q= OR ?search=) intext:"hasil"
+
+# ============================================
+# 4. MENGGUNAKAN OR UNTUK RCE / COMMAND INJECTION
+# ============================================
+
+# Cari multiple parameter RCE
+inurl:(?cmd= OR ?command= OR ?exec=)
+inurl:(?run= OR ?system= OR ?shell=)
+inurl:(?ping= OR ?nslookup= OR ?traceroute=)
+inurl:(?url= OR ?fetch= OR ?proxy=)
+
+# Cari RCE + error
+inurl:(?cmd= OR ?exec= OR ?run=) intext:"Warning: system"
+inurl:(?cmd= OR ?command= OR ?shell=) intext:"exec"
+inurl:(?ping= OR ?host= OR ?ip=) intext:"PING"
+
+# Cari upload + RCE
+inurl:(upload.php OR file-upload.php OR image-upload.php) inurl:(?cmd= OR ?exec=)
+
+# Cari site Indonesia + RCE
+site:.go.id inurl:(?cmd= OR ?exec= OR ?ping=)
+site:.ac.id inurl:(?cmd= OR ?command= OR ?run=)
+site:.id inurl:(?url= OR ?fetch= OR ?proxy=)
+
+# ============================================
+# 5. MENGGUNAKAN CONTAINS: (FITUR UNIK BING!)
+# ============================================
+# 
+# contains: = Mencari halaman yang memiliki LINK ke tipe file tertentu
+# Contoh: contains:pdf akan mencari halaman yang ada link PDF
+# 
+# KEGUNAAN:
+# - Menemukan file backup/config yang terlink di halaman
+# - Menemukan database dump
+# - Menemukan file sensitif yang terpapar
+# ============================================
+
+# Cari file PDF yang terlink
+contains:pdf inurl:product.php
+contains:pdf inurl:download
+contains:pdf site:.go.id
+contains:pdf site:.ac.id
+
+# Cari file Excel yang terlink (sering berisi data)
+contains:xlsx inurl:report
+contains:xls inurl:data
+contains:xlsx site:.go.id
+contains:xls site:.sch.id
+
+# Cari file Word yang terlink
+contains:doc inurl:download
+contains:docx inurl:file
+contains:doc site:.ac.id
+
+# Cari file SQL (database dump!) - KRITIS
+contains:sql inurl:backup
+contains:sql inurl:database
+contains:sql site:.go.id
+contains:sql inurl:dump
+
+# Cari file ZIP/RAR (backup source code)
+contains:zip inurl:backup
+contains:rar inurl:backup
+contains:tar.gz inurl:backup
+contains:7z inurl:backup
+
+# Cari file config yang terlink
+contains:conf inurl:config
+contains:ini inurl:config
+contains:env inurl:.env
+
+# Cari file log yang terlink
+contains:log inurl:debug
+contains:log inurl:error
+contains:log site:.go.id
+
+# ============================================
+# 6. KOMBINASI CONTAINS: + OR (POWERFUL!)
+# ============================================
+
+# Cari file backup (SQL, ZIP, TAR) yang terlink
+contains:(sql OR zip OR rar OR tar.gz) inurl:backup
+contains:(sql OR xlsx OR csv) inurl:data
+
+# Cari file config (env, conf, ini) yang terlink
+contains:(env OR conf OR ini) inurl:config
+contains:(env OR conf OR yml) site:.id
+
+# Cari file dokumentasi (pdf, doc, xls) di website pemerintah
+contains:(pdf OR doc OR xls) site:.go.id
+contains:(pdf OR docx OR xlsx) site:.ac.id
+
+# Cari file database di website pendidikan
+contains:(sql OR db OR backup) site:.sch.id
+
+# Cari file backup di website Indonesia
+contains:(zip OR rar OR 7z OR tar) site:.id inurl:backup
+
+# ============================================
+# 7. KOMBINASI COMPLEX (OR + contains: + site:)
+# ============================================
+
+# Cari LFI + file sensitif yang terlink
+site:.go.id contains:(passwd OR shadow OR hosts) inurl:(?page= OR ?file=)
+
+# Cari admin panel + config terlink
+site:.id contains:(config OR env OR .htaccess) inurl:(admin OR panel)
+
+# Cari database dump di e-commerce
+contains:(sql OR dump OR backup) inurl:(product OR shop OR store)
+
+# Cari log error yang terlink
+contains:(error.log OR debug.log OR access.log) inurl:log
+
+# Cari file backup di CMS tertentu
+contains:(wp-config OR configuration) inurl:wp-content
+contains:(configuration.php OR config) inurl:administrator
+
+# ============================================
+# 8. FILTER HASIL DENGAN - (BING SUPPORT)
+# ============================================
+
+# Cari file sensitif tapi exclude hasil demo/test
+contains:(sql OR zip) -demo -test -example -sample
+inurl:(?id= OR ?cat= OR ?page=) -demo -sample -test
+
+# Cari di site tertentu tapi exclude login/admin
+site:.go.id contains:(pdf OR doc) -login -register
+site:.id inurl:(?q= OR ?search=) -admin -dashboard
+
+# ============================================
+# 9. BING SPESIAL - FILE TIPE TERTENTU + CONTAINS
+# ============================================
+
+# Cari JSON API yang terlink
+contains:json inurl:api
+contains:json inurl:data
+contains:json site:.id
+
+# Cari XML (sering untuk sitemap/config)
+contains:xml inurl:sitemap
+contains:xml inurl:config
+contains:xml site:.go.id
+
+# Cari CSV (data tabel)
+contains:csv inurl:export
+contains:csv inurl:data
+contains:csv site:.ac.id
+
+# Cari file gambar yang terlink (meta data bisa bocor)
+contains:jpg inurl:photo
+contains:png inurl:gallery
+contains:jpg site:.id
+
+# ============================================
+# 10. BING UNTUK MENCARI DOCUMENT INTERNAL
+# ============================================
+
+# Cari dokumen internal di perusahaan
+contains:(doc OR docx OR xls) inurl:internal
+contains:(pdf OR doc) inurl:confidential
+contains:(xls OR xlsx) inurl:employee
+
+# Cari laporan tahunan (sering bocor data)
+contains:pdf inurl:laporan
+contains:pdf inurl:annual
+contains:pdf inurl:report site:.go.id
+
+# ============================================
+# 11. BING UNTUK MENCARI FILE DI SERVER INDONESIA
+# ============================================
+
+# Data pemerintah
+contains:(sql OR xlsx OR csv) site:.go.id
+contains:(pdf OR doc) site:.go.id inurl:data
+contains:env site:.go.id
+
+# Data pendidikan
+contains:(sql OR db) site:.ac.id
+contains:(pdf OR doc) site:.sch.id inurl:skripsi
+contains:xlsx site:.ac.id
+
+# Data perusahaan
+contains:(xls OR xlsx) site:.co.id inurl:keuangan
+contains:(pdf OR doc) site:.co.id inurl:laporan
+
+# ============================================
+# 12. BING UNTUK MENCARI SOURCE CODE BOCOR
+# ============================================
+
+contains:git inurl:repository
+contains:svn inurl:checkout
+contains:git site:.id
+contains:dockerfile inurl:deploy
+contains:yaml inurl:kubernetes
+
+# ============================================
+# 13. BING UNTUK MENCARI BACKUP OTOMATIS
+# ============================================
+
+contains:backup inurl:database
+contains:backup inurl:mysql
+contains:dump inurl:sql
+contains:backup site:.id
+
+# ============================================
+# 14. BING UNTUK MENCARI FILE .ENV (KRITICAL!)
+# ============================================
+
+contains:.env inurl:.env
+contains:env inurl:config
+contains:APP_KEY inurl:.env
+site:.id contains:env
+
+# ============================================
+# 15. BING UNTUK MENCARI FILE HTACCESS
+# ============================================
+
+contains:.htaccess inurl:.htaccess
+contains:htaccess inurl:config
+site:.id contains:htaccess
+site:.go.id contains:htaccess
+
+# ============================================
+# 16. BING UNTUK MENCARI FILE CONFIG JSON/YAML
+# ============================================
+
+contains:config.json inurl:config
+contains:settings.json inurl:settings
+contains:application.yml inurl:config
+contains:config.yaml inurl:deploy
+
+# ============================================
+# 17. BING UNTUK MENCARI PASSWORD ATAU CREDENTIAL
+# ============================================
+
+# HATI-HATI! Ini untuk testing keamanan saja
+contains:password inurl:config
+contains:username inurl:database
+contains:DB_PASSWORD inurl:.env
+contains:API_KEY inurl:config
+
+# ============================================
+# 18. BING SPESIAL - FILE DUMP DI FORUM/REPOSITORY
+# ============================================
+
+contains:sql inurl:forum
+contains:dump inurl:pastebin
+contains:backup inurl:github
+contains:sql inurl:gist
+
+# ============================================
+# 19. BING UNTUK MENCARI PHPINFO / DEBUG
+# ============================================
+
+inurl:(phpinfo.php OR info.php OR php-info) contains:php
+inurl:(test.php OR debug.php) contains:phpinfo
+site:.id inurl:phpinfo
+site:.go.id inurl:phpinfo
+
+# ============================================
+# 20. BING UNTUK MENCARI DIRECTORY LISTING
+# ============================================
+
+# Cari folder terbuka (index of) dengan OR
+intitle:("index of" OR "parent directory") contains:parent
+intitle:"index of" contains:(config OR backup OR database)
+intitle:"index of" site:.go.id
+intitle:"index of" site:.id inurl:uploads
+
+# ============================================
+# 21. BING UNTUK MENCARI SENSITIVE FILE DI GITHUB
+# ============================================
+
+# (Bing bisa index GitHub)
+contains:password inurl:github contains:sql
+contains:token inurl:github contains:api
+contains:key inurl:github contains:config
+
+# ============================================
+# 22. BING UNTUK MENCARI FILE DENGAN EXTENSION GANDA (UPLOAD BYPASS)
+# ============================================
+
+contains:.php.jpg inurl:uploads
+contains:.php.png inurl:files
+contains:.phtml inurl:images
+contains:.phar inurl:media
+
+# ============================================
+# 23. BING UNTUK MENCARI SITE DENGAN PARAMETER GANDA
+# ============================================
+
+inurl:(?page= AND ?id=) contains:page
+inurl:(?q= AND ?cat=) contains:search
+inurl:(?file= AND ?path=) contains:include
+inurl:(?id= AND ?lang=) contains:language
+
+# ============================================
+# 24. BING UNTUK MENCARI WEBSHELL TERINDEKS
+# ============================================
+
+inurl:(shell.php OR cmd.php OR c99.php) contains:shell
+inurl:(r57.php OR webshell.php OR backdoor.php) contains:upload
+site:.id inurl:shell.php
+site:.go.id inurl:cmd.php
+
+# ============================================
+# 25. BING UNTUK MENCARI CELAH DI PLATFORM E-COMMERCE
+# ============================================
+
+contains:sql inurl:(shop OR store OR product) inurl:backup
+contains:xlsx inurl:(order OR transaction) site:.id
+contains:zip inurl:(ecommerce OR toko) site:.co.id
+
+# ============================================
+# 26. BING UNTUK MENCARI DATABASE DUMP YANG TERINDEKS
+# ============================================
+
+contains:INSERT INTO inurl:sql
+contains:CREATE TABLE inurl:sql
+contains:VALUES inurl:sql
+contains:DUMP inurl:sql site:.id
+
+# ============================================
+# 27. BING UNTUK MENCARI FILE DENGAN METADATA SENSITIF
+# ============================================
+
+contains:metadata inurl:photo
+contains:exif inurl:image
+contains:metadata site:.id
+
+# ============================================
+# 28. BING UNTUK MENCARI SUBDOMAIN VIA FILE (VIRTUAL HOST)
+# ============================================
+
+contains:vhost inurl:config
+contains:virtualhost inurl:apache
+contains:server_name inurl:nginx
+
+# ============================================
+# 29. BING UNTUK MENCARI SSL CERTIFICATE BOCOR
+# ============================================
+
+contains:.key inurl:ssl
+contains:.pem inurl:cert
+contains:.crt inurl:certificate
+site:.id contains:.key
+
+# ============================================
+# 30. BING UNTUK MENCARI FILE DUMP DI CLOUD STORAGE
+# ============================================
+
+contains:amazonaws.com inurl:backup
+contains:storage.googleapis inurl:dump
+contains:azure.net inurl:database
+contains:s3 inurl:backup site:.id
