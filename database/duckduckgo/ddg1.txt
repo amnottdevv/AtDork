@@ -1,0 +1,467 @@
+# ============================================
+# DUCKDUCKGO DORKS - ERROR & SENSITIVE
+# ============================================
+#
+# KEUNGGULAN DUCKDUCKGO:
+# 1. !bang - Pencarian langsung ke situs target
+# 2. Operator dasar: site:, intitle:, inurl:, filetype:
+# 3. Privasi - Tidak ada tracking IP
+# 4. `\` - Langsung ke hasil pertama
+#
+# ============================================
+
+# ============================================
+# 1. ERROR MESSAGES - SQL / DATABASE
+# ============================================
+
+"Error in lines :"
+"Error in your SQL syntax"
+"supplied argument is not a valid MySQL"
+"You have an error in your SQL syntax"
+"Warning: mysql_fetch_array"
+"Warning: mysql_num_rows"
+"Warning: mysql_query"
+"Warning: mysql_connect"
+"Warning: pg_query"
+"Warning: mssql_query"
+"Warning: odbc_exec"
+"Fatal error: Call to undefined function"
+"Fatal error: Class not found"
+"Fatal error: Cannot redeclare"
+"Parse error: syntax error"
+"Notice: Undefined variable"
+"Notice: Undefined index"
+"Notice: Trying to get property"
+"Strict Standards: Only variables should be assigned"
+"Deprecated: Function mysql"
+"DB Error: connect failed"
+"Database connection failed"
+"Can't connect to local MySQL server"
+"Access denied for user"
+"Invalid query: You have an error"
+"Column count doesn't match value count"
+"Unknown column"
+"Table doesn't exist"
+"Duplicate entry"
+"Integrity constraint violation"
+
+# ============================================
+# 2. ERROR - FILE INCLUSION / LFI
+# ============================================
+
+"failed to open stream: No such file"
+"failed to open stream: Permission denied"
+"failed to open stream: File exists"
+"include_once(): Failed opening"
+"require_once(): Failed opening"
+"include(): Failed opening"
+"require(): Failed opening"
+"No such file or directory"
+"file_get_contents(): failed to open stream"
+"readfile(): failed to open stream"
+"fopen(): failed to open stream"
+"Cannot find file"
+"File not found"
+"Unable to load"
+"Could not load"
+"Warning: include"
+"Warning: require"
+"Warning: file"
+
+# ============================================
+# 3. ERROR - XSS / HTML INJECTION
+# ============================================
+
+"<script>alert" inurl:?q=
+"<script>prompt" inurl:?search=
+"<img src=x onerror=" inurl:?s=
+"<svg/onload=" inurl:?keyword=
+"onerror=alert" inurl:?query=
+"javascript:alert" inurl:?q=
+"<body onload=alert" inurl:?search=
+
+# ============================================
+# 4. ERROR - RCE / COMMAND INJECTION
+# ============================================
+
+"Warning: system()"
+"Warning: exec()"
+"Warning: shell_exec()"
+"Warning: passthru()"
+"Warning: popen()"
+"Warning: proc_open()"
+"sh: command not found"
+"Command not found"
+"Permission denied" inurl:?cmd=
+"No such file" inurl:?exec=
+"cannot execute" inurl:?run=
+
+# ============================================
+# 5. ERROR - FILE UPLOAD
+# ============================================
+
+"failed to move uploaded file"
+"File upload error"
+"Unable to save file"
+"Could not upload"
+"Invalid file extension" inurl:upload.php
+"File type not allowed" inurl:upload.php
+"File size exceeds" inurl:upload.php
+"upload_tmp_dir" inurl:phpinfo.php
+
+# ============================================
+# 6. PHPINFO / DEBUG (SENSITIVE INFO)
+# ============================================
+
+"PHP Version" inurl:phpinfo.php
+"System" inurl:phpinfo.php
+"Server API" inurl:phpinfo.php
+"Virtual Directory Support" inurl:phpinfo.php
+"Configuration File (php.ini) Path" inurl:phpinfo.php
+"Loaded Configuration File" inurl:phpinfo.php
+"Scan this dir for additional .ini files" inurl:phpinfo.php
+"Registered PHP Streams" inurl:phpinfo.php
+"allow_url_fopen" inurl:phpinfo.php
+"allow_url_include" inurl:phpinfo.php
+"disable_functions" inurl:phpinfo.php
+"open_basedir" inurl:phpinfo.php
+"upload_max_filesize" inurl:phpinfo.php
+"post_max_size" inurl:phpinfo.php
+"max_execution_time" inurl:phpinfo.php
+"memory_limit" inurl:phpinfo.php
+
+# ============================================
+# 7. DATABASE DUMP / SQL FILES
+# ============================================
+
+"INSERT INTO" filetype:sql
+"CREATE TABLE" filetype:sql
+"VALUES" filetype:sql
+"DUMP" filetype:sql
+"phpMyAdmin SQL Dump" filetype:sql
+"CREATE DATABASE" filetype:sql
+"GRANT ALL PRIVILEGES" filetype:sql
+
+# ============================================
+# 8. CONFIGURATION FILES
+# ============================================
+
+"DB_PASSWORD" filetype:env
+"DB_USERNAME" filetype:env
+"APP_KEY" filetype:env
+"API_KEY" filetype:env
+"SECRET_KEY" filetype:env
+"database" filetype:conf
+"password" filetype:conf
+"username" filetype:conf
+
+# ============================================
+# 9. SOURCE CODE / BACKUP FILES
+# ============================================
+
+"<?php" filetype:backup
+"<?php" filetype:old
+"<?php" filetype:bak
+"<?php" filetype:swp
+"<?php" filetype:~ 
+"<?php" filetype:orig
+
+# ============================================
+# 10. SENSITIVE FILES
+# ============================================
+
+"etc/passwd" inurl:?page=
+"etc/shadow" inurl:?file=
+"boot.ini" inurl:?path=
+"win.ini" inurl:?dir=
+"wp-config.php" filetype:php
+"config.php" filetype:php
+".htaccess" filetype:htaccess
+
+# ============================================
+# 11. COMBINED WITH !BANG (DDG UNIQUE)
+# ============================================
+
+# Cari di target tertentu dengan !bang
+!github "Error in lines :" "mysql"
+!github "Warning: mysql_fetch_array"
+!github "DB_PASSWORD" filetype:env
+!github "phpmyadmin SQL Dump"
+
+!pastebin "Error in your SQL syntax"
+!pastebin "Warning: mysql"
+!pastebin "DB_PASSWORD"
+!pastebin "etc/passwd"
+
+!stackoverflow "Error in lines :" "php"
+!stackoverflow "Warning: mysql_fetch_array"
+!stackoverflow "Failed to open stream"
+
+!sourceforge "Error in lines :"
+!sourceforge "Warning: mysql"
+
+# ============================================
+# 12. SITE FILTERS WITH DDG
+# ============================================
+
+# Pemerintah Indonesia
+site:.go.id "Error in lines :" "mysql"
+site:.go.id "Warning: mysql_fetch_array"
+site:.go.id "Failed to open stream"
+site:.go.id "DB_PASSWORD" filetype:env
+site:.go.id "INSERT INTO" filetype:sql
+
+# Pendidikan Indonesia
+site:.ac.id "Error in your SQL syntax"
+site:.ac.id "Warning: mysql_query"
+site:.ac.id "include_once(): Failed opening"
+site:.ac.id "PHP Version" inurl:phpinfo.php
+site:.ac.id "DB_PASSWORD" filetype:env
+
+# Sekolah Indonesia
+site:.sch.id "Error in lines :"
+site:.sch.id "Warning: mysql"
+site:.sch.id "Failed to open stream"
+site:.sch.id "File not found"
+
+# Perusahaan Indonesia
+site:.co.id "Error in your SQL syntax"
+site:.co.id "Warning: mysql_fetch_array"
+site:.co.id "Database connection failed"
+site:.co.id "Config File" filetype:conf
+
+# Semua Indonesia
+site:.id "Error in lines :"
+site:.id "Warning: mysql_fetch_array"
+site:.id "Failed to open stream"
+site:.id "phpinfo.php" inurl:phpinfo.php
+
+# ============================================
+# 13. MULTIPLE ERRORS (DDG OR using " " )
+# ============================================
+
+"Error in your SQL syntax" OR "Warning: mysql_fetch_array" site:.go.id
+"Failed to open stream" OR "No such file" site:.ac.id
+"Warning: system()" OR "Warning: exec()" site:.id
+"DB_PASSWORD" OR "API_KEY" filetype:env site:.id
+
+# ============================================
+# 14. DIRECTORY LISTING (DDG)
+# ============================================
+
+intitle:"Index of" "parent directory"
+intitle:"Index of" "backup"
+intitle:"Index of" "config"
+intitle:"Index of" "database"
+intitle:"Index of" "password"
+intitle:"Index of" "admin"
+intitle:"Index of" "uploads"
+intitle:"Index of" "files"
+intitle:"Index of" "logs"
+intitle:"Index of" "tmp"
+intitle:"Index of" "cache"
+
+# ============================================
+# 15. DDG WITH \ (DIRECT TO FIRST RESULT)
+# ============================================
+
+# Langsung ke hasil pertama (fitur unik DDG)
+\ site:.go.id "Error in lines :"
+\ site:.ac.id "Warning: mysql"
+\ "phpinfo.php" inurl:phpinfo.php
+\ "DB_PASSWORD" filetype:env
+
+# ============================================
+# 16. XSS INDICATORS (DDG)
+# ============================================
+
+# Cari yang sudah terinfeksi XSS
+"<script>alert" site:.id
+"<script>prompt" site:.go.id
+"<img src=x onerror=" site:.ac.id
+"onerror=alert" site:.co.id
+"javascript:alert" site:.sch.id
+
+# ============================================
+# 17. SQL INJECTION INDICATORS (DDG)
+# ============================================
+
+"Error in lines :" "mysql"
+"Warning: mysql_fetch_array" "select"
+"Warning: mysql_query" "from"
+"Invalid query: You have an error"
+"Column count doesn't match value count"
+"Unknown column" inurl:?id=
+"Table doesn't exist" inurl:?cat=
+
+# ============================================
+# 18. LFI INDICATORS (DDG)
+# ============================================
+
+"failed to open stream: No such file" inurl:?page=
+"failed to open stream: Permission denied" inurl:?file=
+"include_once(): Failed opening" inurl:?path=
+"require_once(): Failed opening" inurl:?dir=
+"No such file or directory" inurl:?include=
+
+# ============================================
+# 19. RCE INDICATORS (DDG)
+# ============================================
+
+"Warning: system()" inurl:?cmd=
+"Warning: exec()" inurl:?command=
+"Warning: shell_exec()" inurl:?run=
+"sh: command not found" inurl:?ping=
+"Command not found" inurl:?exec=
+
+# ============================================
+# 20. DDG UNIQUE - !bang + ERROR
+# ============================================
+
+# Cari error di GitHub
+!github "Error in lines :" "sql"
+!github "Warning: mysql_fetch_array"
+!github "DB_PASSWORD" filetype:env
+!github "Config file" "password"
+!github "Failed to open stream" "php"
+
+# Cari error di Pastebin
+!pastebin "Error in your SQL syntax"
+!pastebin "Warning: mysql" 
+!pastebin "etc/passwd"
+!pastebin "DB_PASSWORD"
+!pastebin "API_KEY"
+
+# Cari error di Stack Overflow
+!stackoverflow "Error in lines :"
+!stackoverflow "Warning: mysql_fetch_array"
+!stackoverflow "Failed to open stream"
+!stackoverflow "Database connection failed"
+
+# ============================================
+# 21. DDG UNIQUE - !bang + FILE TYPE
+# ============================================
+
+!github filetype:env "DB_PASSWORD"
+!github filetype:sql "INSERT INTO"
+!github filetype:conf "password"
+!github filetype:php "config"
+
+!pastebin filetype:txt "mysql"
+!pastebin filetype:txt "password"
+!pastebin filetype:txt "api key"
+
+# ============================================
+# 22. DDG - PRIVACY GRADE (invisible but useful)
+# ============================================
+
+# DDG menampilkan privacy grade di setiap hasil
+# Bisa digunakan untuk menilai keamanan cookie/security
+# Cari website dengan privacy grade rendah + error
+
+site:.id "Error in lines :" 
+site:.id "Warning: mysql" 
+
+# ============================================
+# 23. DDG - SPECIAL CHARACTERS
+# ============================================
+
+# DDG support special chars untuk presisi
+"Error in lines :" -demo -test
+"Warning: mysql" -demo -sample
+"Failed to open stream" -test -example
+"DB_PASSWORD" -git -github
+
+# ============================================
+# 24. DDG - PATH DISCLOSURE
+# ============================================
+
+"root path" inurl:?page=
+"document root" inurl:?file=
+"absolute path" inurl:?path=
+"full path" inurl:?dir=
+"Server at" inurl:?include=
+"Directory" inurl:?load=
+
+# ============================================
+# 25. DDG - SENSITIVE DATA LEAK
+# ============================================
+
+"email" filetype:txt site:.go.id
+"password" filetype:txt site:.ac.id
+"username" filetype:txt site:.co.id
+"phone" filetype:txt site:.sch.id
+"NIK" filetype:txt site:.id
+"KTP" filetype:pdf site:.go.id
+
+# ============================================
+# 26. DDG - BACKUP FILES
+# ============================================
+
+"backup.sql" site:.id
+"database.sql" site:.go.id
+"dump.sql" site:.ac.id
+"db.sql" site:.co.id
+"backup" filetype:zip site:.id
+"backup" filetype:rar site:.go.id
+"backup" filetype:tar site:.ac.id
+
+# ============================================
+# 27. DDG - ADMIN PANEL
+# ============================================
+
+site:.id "admin" "login"
+site:.go.id "administrator" "panel"
+site:.ac.id "dashboard" "username"
+site:.co.id "admin" "password"
+site:.sch.id "login" "admin"
+
+# ============================================
+# 28. DDG - ERROR IN SPECIFIC CMS
+# ============================================
+
+# WordPress
+"Fatal error" "wp-content" site:.id
+"Warning" "wp-includes" site:.go.id
+"DB_PASSWORD" "wp-config" site:.ac.id
+
+# Joomla
+"Error" "components" site:.id
+"Warning" "modules" site:.go.id
+"DB_PASSWORD" "configuration.php" site:.ac.id
+
+# Laravel
+"Error" "storage/logs" site:.id
+"Warning" "vendor" site:.go.id
+"APP_KEY" ".env" site:.ac.id
+
+# CodeIgniter
+"Error" "application/config" site:.id
+"Warning" "system/core" site:.go.id
+
+# ============================================
+# 29. DDG - COMBINED WITH SITE AND ERROR
+# ============================================
+
+site:.id "Error in lines :" AND "mysql"
+site:.go.id "Warning: mysql_fetch_array" AND "product.php"
+site:.ac.id "Failed to open stream" AND "?page="
+site:.co.id "Database connection failed" AND "config.php"
+site:.sch.id "Fatal error" AND "include"
+
+# ============================================
+# 30. DDG ULTIMATE DORKS
+# ============================================
+
+# Kombinasi paling powerfull di DDG
+site:.id "Error in lines :" "sql" 
+site:.go.id "Warning: mysql_fetch_array" "select"
+site:.ac.id "Failed to open stream" "include_once"
+site:.id "DB_PASSWORD" filetype:env
+site:.id "INSERT INTO" filetype:sql
+site:.id "root path" inurl:?page=
+
+# DDG Unique dengan !bang
+!github site:.id "Error in lines :" "sql"
+!pastebin "DB_PASSWORD" "mysql"
+!stackoverflow "Failed to open stream" "php"
