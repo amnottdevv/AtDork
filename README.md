@@ -1,7 +1,6 @@
-
 # AtDork – Professional OSINT Dorking Tool
 
-![Version](https://img.shields.io/badge/version-1.3.x.x-blue.svg)
+![Version](https://img.shields.io/badge/version-1.3.9.6-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-linux%20%7C%20macos%20%7C%20windows-lightgrey)
@@ -18,12 +17,14 @@
 
 - 🚀 **Blazing fast** – Multi‑threaded batch processing with configurable concurrency.
 - 🔍 **Multi‑engine** – Queries DuckDuckGo, Google, Bing, Startpage, Yandex, Yahoo, and more.
-- 🛡️ **Anonymous** – Built‑in proxy rotation, Tor integration, strict mode to prevent IP leaks. **NEW: IP leak detection (`--ip-guard`)** stops the scan immediately if your real IP is exposed.
+- 🛡️ **Anonymous** – Built‑in proxy rotation, Tor integration, strict mode to prevent IP leaks. IP leak detection (`--ip-guard`) stops the scan immediately if your real IP is exposed.
 - 🧹 **Clean results** – Automatic spam filtering, URL validation, and deduplication.
-- 📊 **Professional output** – Export to JSON, CSV, TXT; SQLite database for history and resume. **CSV exports are now protected against formula injection.**
+- 📊 **Professional output** – Export to JSON, CSV, TXT; SQLite database for history and resume. CSV exports are protected against formula injection.
 - 🎯 **Smart filtering** – Vulnerability signature detection for WordPress, Joomla, SQLi, and more.
 - 📝 **Template system** – Curated YAML‑based dork collections for instant productivity.
-- ⚙️ **Highly configurable** – **50+ CLI flags** to control every aspect of your search.
+- 🗂️ **Local dork database** – Load pre-built, categorized dork collections straight from disk (see [Database Dorks](#database-dorks) below).
+- 🌐 **GHDB scraper** – Pull fresh dorks directly from the public Exploit-DB Google Hacking Database, filterable by category and year.
+- ⚙️ **Highly configurable** – 60+ CLI flags to control every aspect of your search.
 - 🔧 **Post‑processing** – Execute external commands on discovered URLs (`--exec`).
 - 💾 **Caching** – Cache search results locally to avoid redundant requests and enable offline access.
 - 🔒 **Safe logging** – Proxy credentials are automatically redacted from log files to prevent accidental leaks.
@@ -48,7 +49,7 @@ pip install .
 ### Verify Installation
 ```bash
 atdork --version
-# Output: atdork 1.3.x.x
+# Output: atdork 1.3.9.6
 ```
 
 ---
@@ -149,6 +150,75 @@ atdork --template sqli --select 1,3,5 -r 20
 | `--preview` | Show dorks without executing |
 | `--template-path` | Custom template folder |
 
+### Database Dorks
+
+AtDork ships with a local, categorized collection of dork files that you can load directly without hitting the network. This is useful for offline prep, reproducible test runs, or building your own batch lists from a known-good set.
+
+```bash
+# Extract the bundled dork collection into ./database
+atdork --extract-database
+
+# Extract to a custom location, overwriting if it already exists
+atdork --extract-database-to mydorks/ --force
+
+# List the available files and how many dorks each contains
+atdork --list-database-dork
+
+# Load dorks from one file and run them
+atdork --database-dork 01_footholds -r 20
+
+# Combine multiple files
+atdork --database-dork 01_footholds,03_sensitive_directories -r 20
+
+# Randomly sample N dorks from the combined set (reproducible with a seed)
+atdork --database-dork 01_footholds --database-r 10 --database-seed 42
+
+# Preview what would be loaded without running anything
+atdork --database-dork 01_footholds --database-preview
+
+# Point at a custom database root instead of auto-discovery
+atdork --database-dork subdir/file --database-path /path/to/custom/db
+```
+
+| Flag | Purpose |
+|------|---------|
+| `--extract-database` | Extract the bundled dork collection to `./database` |
+| `--extract-database-to PATH` | Extract to a custom destination |
+| `--database-dork-extract PATH` | Shortcut for the two flags above |
+| `--force` | Overwrite an existing extraction destination |
+| `--list-database-dork` | List available dork files with counts |
+| `--database-dork SPEC` | Load dorks from file(s); comma-separated, subdirectories supported |
+| `--database-r N` | Randomly select N dorks from the combined set |
+| `--database-seed N` | Seed for reproducible `--database-r` selection |
+| `--database-path PATH` | Custom database root directory |
+| `--database-preview` | Preview loaded dorks without executing them |
+
+> The files are organized by topic (web misconfigurations, exposed directories/files, exposed panels, and similar categories relevant to authorized security testing). Run `atdork --list-database-dork` to see exactly what's available in your build.
+
+### GHDB Scraper
+
+Pull dorks live from the public Exploit-DB Google Hacking Database, with optional category/year filters.
+
+```bash
+# Show available GHDB categories and how many dorks each has
+atdork --ghdb-scraper --ghdb-list-categories
+
+# Scrape and save dorks about exposed passwords from 2022-2024
+atdork --ghdb-scraper --ghdb-categories password --ghdb-years 2022-2024 --ghdb-file dorks.txt
+
+# Limit total results, save as JSON (includes metadata)
+atdork --ghdb-scraper --ghdb-categories 9,12 --ghdb-r 50 --ghdb-file dorks.json
+```
+
+| Flag | Purpose |
+|------|---------|
+| `--ghdb-scraper` | Run the GHDB scraper mode |
+| `--ghdb-file` | Save results to file (`.json` or `.txt`, auto-detected) |
+| `--ghdb-categories` | Filter by category name (partial match) or numeric ID, comma-separated |
+| `--ghdb-years` | Filter by year(s), e.g. `2024` or `2020-2023,2024` |
+| `--ghdb-r` | Limit total number of dorks returned after filtering |
+| `--ghdb-list-categories` | List GHDB categories with dork counts, then exit |
+
 ### Proxy & Anonymity
 ```bash
 # Single proxy
@@ -224,7 +294,7 @@ atdork -q "test" --strict-filter
 atdork -q "test" --validate-url only --validate-title 10 --validate-desc 50 --validate-spam true
 ```
 
-### Database & History
+### Database & History (SQLite)
 ```bash
 # Resume interrupted batch
 atdork --resume
@@ -266,7 +336,7 @@ atdork -q "site:gov filetype:pdf" -r 20 --cache-only
 atdork --clear-cache
 ```
 
-### Notifications (NEW)
+### Notifications
 
 Send batch summaries to Discord, Slack, or Telegram after searches complete.
 
@@ -291,11 +361,8 @@ atdork --batch-file dorks.txt -r 20 \
 
 #### Notification Options
 ```bash
-# Send notification with vulnerable results only
-atdork --batch-file dorks.txt --notify "discord:..." --notify-vuln-only
-
-# Custom notification message
-atdork --batch-file dorks.txt --notify "slack:..." --notify-message "Scan finished!"
+# Send notification only if vulnerable results were found
+atdork --batch-file dorks.txt --notify "discord:..." --notify-if-vuln
 ```
 
 **Setup Instructions:**
@@ -325,6 +392,22 @@ atdork --batch-file dorks.txt --notify "slack:..." --notify-message "Scan finish
 | `--list-templates` | List available templates | |
 | `--template-path` | Custom template directory | |
 | `--preview` | Preview template dorks | |
+| `--extract-database` | Extract bundled dork collection to `./database` | |
+| `--extract-database-to` | Custom extraction destination | |
+| `--database-dork-extract` | Shortcut: extract to given path | |
+| `--force` | Overwrite existing extraction destination | |
+| `--list-database-dork` | List available database dork files | |
+| `--database-dork` | Load dorks from database file(s) | |
+| `--database-r` | Randomly select N dorks from database | |
+| `--database-seed` | Seed for reproducible `--database-r` | |
+| `--database-path` | Custom database root directory | |
+| `--database-preview` | Preview database dorks without running | |
+| `--ghdb-scraper` | Run GHDB scraper mode | |
+| `--ghdb-file` | Save GHDB results to file | |
+| `--ghdb-categories` | Filter GHDB by category name/ID | |
+| `--ghdb-years` | Filter GHDB by year(s)/range | |
+| `--ghdb-r` | Limit total GHDB results | |
+| `--ghdb-list-categories` | List GHDB categories, then exit | |
 | `--region` | Search region | `us-en` |
 | `--safesearch` | `on`, `moderate`, `off` | `moderate` |
 | `--timelimit` | `d`, `w`, `m`, `y` | |
@@ -352,9 +435,8 @@ atdork --batch-file dorks.txt --notify "slack:..." --notify-message "Scan finish
 | `--cache-ttl` | Cache TTL in hours | 24 |
 | `--cache-only` | Use cache only, no network requests | |
 | `--clear-cache` | Delete all cache before starting | |
-| `--notify` | Send notification to webhook (format: `<platform>:<url>`) | |
-| `--notify-vuln-only` | Only notify if vulnerable results found | |
-| `--notify-message` | Custom notification message prefix | |
+| `--notify` | Send notification to webhook (`<platform>:<url>`) | |
+| `--notify-if-vuln` | Only notify if vulnerable results found | |
 | `--no-validate` | Disable spam filtering | |
 | `--strict-filter` | Strict validation | |
 | `--validate-url` | URL validation mode | `all` |
@@ -365,11 +447,11 @@ atdork --batch-file dorks.txt --notify "slack:..." --notify-message "Scan finish
 | `--no-fallback-backends` | Disable backend fallback | |
 | `--no-verify` | Disable SSL verification | |
 | `--log-file` | Log file path | `atdork.log` |
-| `--db-path` | Database path | `atdork.db` |
+| `--db-path` | SQLite history/dedup database path | `atdork.db` |
 | `--resume` | Resume pending queries | |
 | `--history` | Show search history | |
 | `--no-dedup` | Disable URL deduplication | |
-| `--export-db` | Export database to file | |
+| `--export-db` | Export history database to file | |
 | `--config` | YAML config file path | |
 | `--interactive` | Interactive mode | |
 | `--debug` | Enable debug logging | |
@@ -386,9 +468,11 @@ atdork --template sqli,xss,lfi --target target.com \
   --format json -o recon.json
 ```
 
-### Exposed Database Credentials
+### Reproducible Recon Runs from the Local Database
 ```bash
-atdork -q 'filetype:env "DB_PASSWORD"' -r 50 --no-validate -v
+atdork --database-dork 01_footholds,03_sensitive_directories \
+  --database-r 25 --database-seed 7 \
+  --proxy-file proxies.txt --format json -o recon_batch.json
 ```
 
 ### Finding Admin Panels
@@ -444,6 +528,7 @@ AtDork automatically loads this file from the current directory. CLI flags overr
 | **CSV opens with formulas** | Update to v1.3.8+ (CSV injection fixed) |
 | **Proxy credentials in logs** | Update to v1.3.8+ (credentials are now redacted) |
 | **Notification not sent** | Check webhook format and URL; ensure no trailing spaces; verify platform credentials |
+| **"Database directory not found"** | Run `atdork --extract-database` first, or pass `--database-path` |
 
 ---
 
@@ -458,10 +543,12 @@ atdork/
 │   ├── proxy_manager.py         # Proxy pool management
 │   ├── filter_vuln.py           # Vulnerability signature filtering
 │   ├── template_dork.py         # YAML template loader
+│   ├── database_dork.py         # Local dork database loader/extractor
+│   ├── ghdb_scraper.py          # Exploit-DB GHDB scraper
 │   ├── post_processor.py        # External command execution on results
 │   ├── manage_cache.py          # SQLite-based result caching
 │   ├── notification.py          # Discord, Slack, Telegram webhooks
-│   ├── database.py              # SQLite storage & export
+│   ├── database.py              # SQLite storage & export (history/dedup)
 │   ├── config.py                # YAML configuration loader
 │   ├── logger.py                # Rotating file logger
 │   └── case/
@@ -478,6 +565,7 @@ atdork/
 │   ├── storage.py               # File export (TXT/JSON/CSV)
 │   ├── validator.py             # Spam/invalid result filtering
 │   └── redactor.py              # Proxy credential redaction
+├── database/                    # Bundled dork collection (extract with --extract-database)
 ├── wordlists/                   # Vulnerability signatures & templates
 ├── tests/                       # Unit tests (pytest)
 ├── pyproject.toml               # Package configuration
@@ -488,7 +576,7 @@ atdork/
 
 ## Ethical Use & Disclaimer
 
-AtDork is intended for **legal, authorized security testing only**.  
+AtDork is intended for **legal, authorized security testing only**.
 You must have explicit written permission from the target owner before scanning.
 
 **Prohibited uses:**
@@ -521,34 +609,6 @@ Distributed under the MIT License. See `LICENSE` for details.
 
 If you find this tool useful, consider leaving a ⭐ on GitHub!
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ## Code Quality Metrics
 
 ![Complexity](https://img.shields.io/badge/complexity-5.67-brightgreen)
@@ -563,4 +623,4 @@ If you find this tool useful, consider leaving a ⭐ on GitHub!
 | Test Coverage | 31.3% | ⚠️ Fair |
 | Pylint Score | 8.75/100 | ✅ Good |
 
-*Analysis: atdork.py, core/, lib/ • Last updated: 2026-07-09 09:46:29 UTC*
+*Analysis: atdork.py, core/, lib/ • Last updated: 2026-07-09 UTC*
