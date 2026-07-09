@@ -1,0 +1,330 @@
+# ============================================
+# COMMON DORKS - LFI / RFI / PATH DISCLOSURE
+# ============================================
+
+# ============================================
+# PARAMETER DASAR LFI (Local File Inclusion)
+# ============================================
+
+inurl:?page=
+inurl:?file=
+inurl:?path=
+inurl:?dir=
+inurl:?template=
+inurl:?theme=
+inurl:?lang=
+inurl:?language=
+inurl:?config=
+inurl:?include=
+inurl:?load=
+inurl:?module=
+inurl:?controller=
+inurl:?action=
+inurl:?view=
+inurl:?layout=
+inurl:?content=
+inurl:?page_id=
+inurl:?pg=
+inurl:?cat=
+inurl:?c=
+inurl:?section=
+inurl:?site=
+inurl:?home=
+inurl:?index=
+inurl:?main=
+inurl:?style=
+inurl:?css=
+inurl:?js=
+inurl:?script=
+inurl:?img=
+inurl:?image=
+inurl:?photo=
+inurl:?pic=
+inurl:?doc=
+inurl:?document=
+inurl:?pdf=
+inurl:?read=
+inurl:?open=
+inurl:?show=
+inurl:?display=
+inurl:?browse=
+inurl:?nav=
+inurl:?navigation=
+
+# ============================================
+# PARAMETER UNTUK RFI (Remote File Inclusion)
+# ============================================
+
+inurl:?page=http
+inurl:?file=http
+inurl:?path=http
+inurl:?template=http
+inurl:?theme=http
+inurl:?lang=http
+inurl:?include=http
+inurl:?load=http
+inurl:?module=http
+inurl:?controller=http
+inurl:?view=http
+inurl:?content=http
+inurl:?url=http
+inurl:?link=http
+inurl:?src=http
+inurl:?source=http
+inurl:?target=http
+inurl:?redirect=http
+inurl:?return=http
+inurl:?next=http
+inurl:?goto=http
+
+# ============================================
+# DETECTING PATH TRAVERSAL (../ atau ..\)
+# ============================================
+
+inurl:../ 
+inurl:..\
+inurl:%2e%2e%2f
+inurl:%2e%2e%5c
+inurl:..%2f
+inurl:..%5c
+inurl:..\/
+inurl:..///
+inurl:....//
+inurl:..../// 
+
+# ============================================
+# MENCARI FILE SENSITIVE (via LFI)
+# ============================================
+
+# File Linux/Unix
+inurl:?page= etc/passwd
+inurl:?file= etc/passwd
+inurl:?path= etc/passwd
+inurl:?dir= etc/passwd
+inurl:?include= etc/passwd
+inurl:?load= etc/passwd
+inurl:?page= etc/shadow
+inurl:?file= etc/shadow
+inurl:?path= etc/shadow
+inurl:?page= etc/hosts
+inurl:?file= etc/hosts
+inurl:?page= proc/self/environ
+inurl:?file= proc/self/environ
+inurl:?page= var/log/apache/access.log
+inurl:?file= var/log/nginx/access.log
+inurl:?page= var/log/mysql/error.log
+
+# File Windows
+inurl:?page= boot.ini
+inurl:?file= boot.ini
+inurl:?path= boot.ini
+inurl:?page= win.ini
+inurl:?file= win.ini
+inurl:?path= win.ini
+inurl:?page= windows/repair/sam
+inurl:?file= windows/win.ini
+inurl:?page= windows/system32/drivers/etc/hosts
+
+# File Config umum
+inurl:?page= config.php
+inurl:?file= config.php
+inurl:?path= config.php
+inurl:?page= configuration.php
+inurl:?file= .env
+inurl:?path= .env
+inurl:?page= database.php
+inurl:?file= db.php
+inurl:?page= wp-config.php
+inurl:?file= wp-config.php
+
+# ============================================
+# KOMBINASI DENGAN OPERATOR LAIN
+# ============================================
+
+# Cari error LFI (indikasi celah)
+inurl:?page= intext:"failed to open stream"
+inurl:?file= intext:"failed to open stream"
+inurl:?path= intext:"failed to open stream"
+inurl:?page= intext:"include_once" 
+inurl:?file= intext:"include_once"
+inurl:?page= intext:"require_once"
+inurl:?file= intext:"require_once"
+inurl:?page= intext:"Warning: include"
+inurl:?file= intext:"Warning: include"
+inurl:?page= intext:"Fatal error"
+inurl:?file= intext:"Fatal error"
+inurl:?page= intext:"No such file"
+inurl:?file= intext:"No such file"
+inurl:?page= intext:"file not found"
+inurl:?file= intext:"file not found"
+
+# Cari LFI + parameter numerik
+inurl:?page=1
+inurl:?file=1
+inurl:?path=1
+inurl:?dir=1
+inurl:?page=index
+inurl:?file=index
+inurl:?page=about
+inurl:?file=about
+inurl:?page=contact
+inurl:?file=contact
+inurl:?page=home
+inurl:?file=home
+
+# ============================================
+# DORK UNTUK PATH DISCLOSURE
+# ============================================
+
+# Path bocor via error
+intitle:"Index of" inurl:?page=
+intitle:"Index of" inurl:?file=
+inurl:?page= intext:"root path"
+inurl:?file= intext:"root path"
+inurl:?page= intext:"document root"
+inurl:?file= intext:"document root"
+inurl:?page= intext:"absolute path"
+inurl:?file= intext:"absolute path"
+inurl:?page= intext:"full path"
+inurl:?file= intext:"full path"
+inurl:?page= intext:"Server at"
+inurl:?file= intext:"Server at"
+
+# ============================================
+# DORK UNTUK CMS TERTENTU (LFI)
+# ============================================
+
+# WordPress LFI
+inurl:wp-content/plugins/ inurl:?page=
+inurl:wp-content/themes/ inurl:?file=
+inurl:wp-includes/ inurl:?page=
+inurl:?page= wp-content
+inurl:?file= wp-config.php
+
+# Joomla LFI
+inurl:components/ inurl:?view=
+inurl:modules/ inurl:?layout=
+inurl:templates/ inurl:?template=
+inurl:?option=com_ inurl:?view=
+inurl:?option=com_ inurl:?layout=
+
+# Drupal LFI
+inurl:sites/all/ inurl:?page=
+inurl:modules/ inurl:?include=
+inurl:themes/ inurl:?theme=
+
+# Laravel LFI (sering bocor .env)
+inurl:?page= .env
+inurl:?file= .env
+inurl:?path= storage/logs/laravel.log
+inurl:?page= storage/logs/laravel.log
+
+# CodeIgniter LFI
+inurl:?page= application/config/database.php
+inurl:?file= application/config/config.php
+
+# ============================================
+# DORK UNTUK SITE INDONESIA (LFI)
+# ============================================
+
+site:.go.id inurl:?page=
+site:.go.id inurl:?file=
+site:.go.id inurl:?path=
+site:.ac.id inurl:?page=
+site:.sch.id inurl:?page=
+site:.co.id inurl:?page=
+
+# Gabungkan dengan error
+site:.id inurl:?page= intext:"failed to open"
+site:.id inurl:?file= intext:"include_once"
+
+# ============================================
+# DORK UNTUK MENCARI PARAMETER GANDA (LFI)
+# ============================================
+
+inurl:?page= AND inurl:?id=
+inurl:?file= AND inurl:?cat=
+inurl:?path= AND inurl:?mode=
+inurl:?view= AND inurl:?lang=
+inurl:?template= AND inurl:?page=
+
+# ============================================
+# DORK UNTUK NULL BYTE (%00) - LFI lanjutan
+# ============================================
+
+inurl:?page= %00
+inurl:?file= %00
+inurl:?path= %00
+inurl:?page= .%00
+inurl:?file= .%00
+inurl:?page= %2500
+inurl:?file= %2500
+
+# ============================================
+# DORK UNTUK MENCARI FILE LOG (via LFI)
+# ============================================
+
+inurl:?page= access.log
+inurl:?file= error.log
+inurl:?path= debug.log
+inurl:?page= log.txt
+inurl:?file= log.html
+inurl:?page= mysql.log
+inurl:?file= query.log
+inurl:?path= audit.log
+
+# ============================================
+# DORK UNTUK MENCARI PARAMETER TERSEMBUNYI
+# ============================================
+
+inurl:?view_file=
+inurl:?viewpage=
+inurl:?readfile=
+inurl:?openfile=
+inurl:?downloadfile=
+inurl:?getfile=
+inurl:?showfile=
+inurl:?displayfile=
+inurl:?loadpage=
+inurl:?loadfile=
+inurl:?loadpath=
+inurl:?include_file=
+inurl:?require_file=
+inurl:?import=
+
+# ============================================
+# DORK UNTUK MENCARI INDEXING (Directory Listing)
+# ============================================
+
+intitle:"index of" "parent directory"
+intitle:"index of" "application"
+intitle:"index of" "config"
+intitle:"index of" "backup"
+intitle:"index of" "database"
+intitle:"index of" "password"
+intitle:"index of" "admin"
+intitle:"index of" ".env"
+intitle:"index of" "wp-config"
+intitle:"index of" "etc/passwd"
+intitle:"index of" "logs"
+intitle:"index of" "includes"
+intitle:"index of" "uploads"
+intitle:"index of" "files"
+intitle:"index of" "images"
+intitle:"index of" "css"
+intitle:"index of" "js"
+
+# ============================================
+# DORK UNTUK MENCARI BACKUP FILE (via LFI)
+# ============================================
+
+inurl:?page= backup.sql
+inurl:?file= backup.tar
+inurl:?path= backup.gz
+inurl:?page= .sql
+inurl:?file= .tar
+inurl:?path= .bak
+inurl:?page= .old
+inurl:?file= .orig
+inurl:?page= .swp
+inurl:?file= .~ 
