@@ -1,0 +1,698 @@
+# ============================================
+# BING DORKS - ADVANCED OPERATORS
+# ============================================
+#
+# BING OPERATOR EKSKLUSIF:
+# 1. loc: / location: - Mencari berdasarkan lokasi geografis
+# 2. ip: - Mencari website di alamat IP tertentu
+# 3. domain: - Mencari domain tertentu (lebih akurat dari site:)
+# 4. linkfromdomain: - Mencari halaman yang TIDAK ada link dari domain tertentu
+# 5. language: - Mencari dalam bahasa tertentu
+# 6. feed: - Mencari RSS/Atom feed
+# 7. hasrelationship: - Mencari relasi antar website
+# 8. prefer: - Meningkatkan bobot keyword tertentu
+# 9. site: - (sama seperti Google tapi dengan tambahan)
+#
+# ============================================
+
+# ============================================
+# 1. loc: / location: - MENCARI BERDASARKAN LOKASI
+# ============================================
+#
+# FUNGSI: Mencari website yang terasosiasi dengan lokasi geografis
+# KEGUNAAN: Untuk pentest regional/target spesifik
+# ============================================
+
+# Cari website di Indonesia
+location:Indonesia inurl:product.php?id=
+location:Indonesia inurl:view.php?id=
+location:Indonesia inurl:?page=
+location:Indonesia inurl:?q=
+
+# Cari website di Jakarta
+location:Jakarta inurl:admin.php
+location:Jakarta inurl:upload.php
+location:Jakarta inurl:?id=
+
+# Cari website di kota-kota besar Indonesia
+location:Jakarta inurl:?page=
+location:Surabaya inurl:?id=
+location:Bandung inurl:?q=
+location:Medan inurl:?cat=
+location:Yogyakarta inurl:upload.php
+
+# Cari website pemerintah berdasarkan lokasi
+location:Indonesia site:.go.id inurl:?id=
+location:Jakarta site:.go.id inurl:?page=
+
+# Cari website pendidikan berdasarkan lokasi
+location:Indonesia site:.ac.id inurl:?q=
+location:Yogyakarta site:.ac.id inurl:?search=
+
+# Cari website perusahaan berdasarkan lokasi
+location:Indonesia site:.co.id inurl:?id=
+location:Jakarta site:.co.id inurl:?cat=
+
+# Cari website di negara ASEAN
+location:Singapore inurl:?id=
+location:Malaysia inurl:?page=
+location:Thailand inurl:?q=
+
+# Cari website global berdasarkan lokasi
+location:United States inurl:product.php?id=
+location:United Kingdom inurl:view.php?id=
+location:Australia inurl:?id=
+
+# ============================================
+# 2. ip: - MENCARI BERDASARKAN ALAMAT IP
+# ============================================
+#
+# FUNGSI: Mencari semua website yang berada di satu alamat IP (shared hosting)
+# KEGUNAAN: Menemukan website lain di server yang sama untuk pentest
+# ============================================
+
+# Cari website di IP tertentu (ganti dengan IP target)
+ip:8.8.8.8
+ip:1.1.1.1
+ip:192.168.1.1
+
+# Cari website di IP server Indonesia
+ip:103.8.12.100
+ip:114.5.1.1
+ip:180.240.0.1
+
+# Cari website di IP + parameter rentan
+ip:8.8.8.8 inurl:?id=
+ip:8.8.8.8 inurl:?page=
+ip:8.8.8.8 inurl:?q=
+
+# Cari website di IP + file sensitif
+ip:8.8.8.8 inurl:admin.php
+ip:8.8.8.8 inurl:phpinfo.php
+ip:8.8.8.8 contains:config
+
+# Cari website di IP + CMS tertentu
+ip:8.8.8.8 inurl:wp-content
+ip:8.8.8.8 inurl:components
+
+# Cari website di IP + error
+ip:8.8.8.8 intext:"mysql"
+ip:8.8.8.8 intext:"error"
+
+# Cari semua website di shared hosting (IP server)
+ip:103.8.12.100 inurl:?id=
+ip:103.8.12.100 inurl:?q=
+ip:103.8.12.100 inurl:upload.php
+
+# ============================================
+# 3. domain: - MENCARI DOMAIN SPESIFIK
+# ============================================
+#
+# FUNGSI: Mencari halaman dari domain tertentu (mirip site: tapi lebih akurat)
+# KEGUNAAN: Filter hasil yang lebih presisi
+# ============================================
+
+# Cari di domain utama dan subdomain
+domain:target.com
+domain:go.id
+domain:ac.id
+domain:co.id
+domain:sch.id
+
+# Cari di domain + parameter
+domain:target.com inurl:?id=
+domain:target.com inurl:?page=
+domain:target.com inurl:?q=
+
+# Cari di domain + file sensitif
+domain:target.com inurl:admin.php
+domain:target.com inurl:config.php
+domain:target.com contains:.env
+
+# Cari di domain + error
+domain:target.com intext:"mysql"
+domain:target.com intext:"error"
+domain:target.com intext:"Warning"
+
+# Cari di domain Indonesia
+domain:go.id inurl:?id=
+domain:ac.id inurl:?page=
+domain:sch.id inurl:?q=
+domain:co.id inurl:?cat=
+
+# Cari di domain + upload
+domain:target.com inurl:upload.php
+domain:target.com inurl:file-upload.php
+
+# Cari di domain + XSS
+domain:target.com inurl:?q= test
+domain:target.com inurl:?search= test
+
+# ============================================
+# 4. linkfromdomain: - MENCARI HALAMAN TANPA LINK DARI DOMAIN
+# ============================================
+#
+# FUNGSI: Mencari halaman di target.com yang TIDAK memiliki link dari target.com
+# KEGUNAAN: Menemukan halaman "terlupakan" / tersembunyi
+# ============================================
+
+# Cari halaman tanpa link internal
+linkfromdomain:target.com
+
+# Cari halaman tersembunyi di website Indonesia
+linkfromdomain:go.id inurl:admin
+linkfromdomain:ac.id inurl:backup
+linkfromdomain:sch.id inurl:config
+
+# Cari halaman tersembunyi + file sensitif
+linkfromdomain:target.com inurl:backup
+linkfromdomain:target.com inurl:config
+linkfromdomain:target.com inurl:admin
+
+# Cari halaman tersembunyi + parameter
+linkfromdomain:target.com inurl:?id=
+linkfromdomain:target.com inurl:?page=
+
+# Cari halaman tersembunyi di subdomain
+linkfromdomain:target.com inurl:dev
+linkfromdomain:target.com inurl:staging
+linkfromdomain:target.com inurl:test
+
+# Cari halaman tersembunyi + CMS
+linkfromdomain:target.com inurl:wp-admin
+linkfromdomain:target.com inurl:administrator
+linkfromdomain:target.com inurl:phpmyadmin
+
+# Cari halaman tersembunyi + direktori
+linkfromdomain:target.com intitle:"index of"
+linkfromdomain:target.com inurl:backup
+linkfromdomain:target.com inurl:temp
+
+# ============================================
+# 5. language: - MENCARI BERDASARKAN BAHASA
+# ============================================
+#
+# FUNGSI: Mencari halaman dalam bahasa tertentu
+# KEGUNAAN: Fokus target di negara/region tertentu
+# ============================================
+
+# Cari website berbahasa Indonesia
+language:indonesian inurl:?id=
+language:indonesian inurl:?page=
+language:indonesian inurl:?q=
+language:indonesian inurl:upload.php
+
+# Cari website berbahasa Inggris
+language:english inurl:product.php?id=
+language:english inurl:view.php?id=
+language:english inurl:?q=
+
+# Cari website berbahasa Indonesia + site
+language:indonesian site:.go.id inurl:?id=
+language:indonesian site:.ac.id inurl:?page=
+language:indonesian site:.co.id inurl:?q=
+
+# Cari website berbahasa Indonesia + parameter XSS
+language:indonesian inurl:?q= intext:"cari"
+language:indonesian inurl:?search= intext:"hasil"
+
+# Cari website berbahasa Indonesia + error
+language:indonesian intext:"error" inurl:?id=
+language:indonesian intext:"mysql" inurl:?page=
+
+# Cari website berbahasa Indonesia + admin
+language:indonesian inurl:admin.php
+language:indonesian inurl:dashboard.php
+
+# Cari website berbahasa Malaysia/Indonesia
+language:malay inurl:?id=
+language:indonesian OR language:malay inurl:?page=
+
+# ============================================
+# 6. feed: - MENCARI RSS/ATOM FEED
+# ============================================
+#
+# FUNGSI: Mencari RSS/Atom feed yang terpapar
+# KEGUNAAN: Menemukan struktur konten dan potensi XSS di feed
+# ============================================
+
+# Cari feed di website
+feed:target.com
+feed:target.com inurl:feed
+feed:target.com inurl:rss
+feed:target.com inurl:atom
+
+# Cari feed + parameter
+feed:target.com inurl:?feed=
+feed:target.com inurl:?rss=
+feed:target.com inurl:?atom=
+
+# Cari feed di website Indonesia
+feed:go.id
+feed:ac.id
+feed:co.id
+feed:sch.id
+
+# Cari feed + XSS
+feed:target.com inurl:?feed= intext:"<script>"
+feed:target.com inurl:?rss= intext:"alert"
+
+# ============================================
+# 7. hasrelationship: - MENCARI RELASI ANTAR WEBSITE
+# ============================================
+#
+# FUNGSI: Mencari website yang memiliki relasi dengan domain lain
+# KEGUNAAN: Menemukan website sister/afiliasi
+# ============================================
+
+# Cari website yang terhubung dengan domain target
+hasrelationship:target.com
+
+# Cari website yang terhubung dengan domain Indonesia
+hasrelationship:go.id
+hasrelationship:ac.id
+hasrelationship:co.id
+
+# Cari website terhubung + parameter
+hasrelationship:target.com inurl:?id=
+hasrelationship:target.com inurl:?page=
+
+# ============================================
+# 8. prefer: - MENINGKATKAN BOBOT KEYWORD
+# ============================================
+#
+# FUNGSI: Memberi prioritas pada keyword tertentu
+# KEGUNAAN: Meningkatkan akurasi hasil
+# ============================================
+
+# Prioritaskan parameter ID di hasil
+prefer:inurl:?id= inurl:product.php
+prefer:inurl:?page= inurl:view.php
+prefer:inurl:?q= inurl:search.php
+
+# Prioritaskan file sensitif
+prefer:config inurl:config.php
+prefer:backup inurl:backup.sql
+prefer:admin inurl:admin.php
+
+# Prioritaskan error SQL
+prefer:mysql intext:"mysql" inurl:?id=
+prefer:warning intext:"Warning" inurl:?page=
+
+# ============================================
+# 9. KOMBINASI OPERATOR BING (POWERFUL!)
+# ============================================
+
+# Cari website di IP + lokasi + parameter
+ip:103.8.12.100 location:Indonesia inurl:?id=
+
+# Cari website di domain + bahasa + file sensitif
+domain:go.id language:indonesian contains:config
+
+# Cari halaman tersembunyi + lokasi
+linkfromdomain:target.com location:Indonesia inurl:admin
+
+# Cari IP + error + parameter
+ip:8.8.8.8 intext:"mysql" inurl:?id=
+
+# Cari domain + feed + XSS
+domain:target.com feed:target.com intext:"<script>"
+
+# Cari lokasi + contains + parameter
+location:Indonesia contains:sql inurl:?id=
+
+# Cari bahasa + upload + parameter
+language:indonesian inurl:upload.php inurl:?id=
+
+# ============================================
+# 10. BING UNTUK MENCARI WEBSITE DI SHARED HOSTING
+# ============================================
+
+# Cari website di server yang sama
+ip:103.8.12.100
+ip:114.5.1.1
+ip:180.240.0.1
+
+# Cari website di server + parameter rentan
+ip:103.8.12.100 inurl:?id=
+ip:103.8.12.100 inurl:?page=
+ip:103.8.12.100 inurl:?q=
+
+# Cari website di server + file sensitif
+ip:103.8.12.100 contains:config
+ip:103.8.12.100 inurl:phpinfo.php
+ip:103.8.12.100 inurl:.env
+
+# Cari website di server + admin panel
+ip:103.8.12.100 inurl:admin
+ip:103.8.12.100 inurl:dashboard
+ip:103.8.12.100 inurl:panel
+
+# ============================================
+# 11. BING UNTUK MENCARI SUBDOMAIN
+# ============================================
+
+# Cari subdomain (tanpa operator khusus, pakai domain:)
+domain:target.com inurl:subdomain
+domain:target.com inurl:dev
+domain:target.com inurl:staging
+domain:target.com inurl:test
+domain:target.com inurl:beta
+domain:target.com inurl:internal
+domain:target.com inurl:private
+
+# Cari subdomain di Indonesia
+domain:go.id inurl:dev
+domain:ac.id inurl:staging
+domain:co.id inurl:test
+domain:sch.id inurl:beta
+
+# Cari subdomain + parameter
+domain:target.com inurl:dev inurl:?id=
+domain:target.com inurl:staging inurl:?page=
+
+# ============================================
+# 12. BING UNTUK MENCARI BACKUP & ARSIP
+# ============================================
+
+# Cari backup dengan contains:
+contains:backup domain:target.com
+contains:archive domain:target.com
+contains:old domain:target.com
+contains:temp domain:target.com
+
+# Cari backup + lokasi
+location:Indonesia contains:backup inurl:database
+location:Jakarta contains:sql inurl:backup
+
+# Cari backup + IP
+ip:103.8.12.100 contains:backup
+ip:103.8.12.100 contains:sql
+
+# ============================================
+# 13. BING UNTUK MENCARI FILE LOG
+# ============================================
+
+# Cari log file dengan contains:
+contains:access.log domain:target.com
+contains:error.log domain:target.com
+contains:debug.log domain:target.com
+contains:log.txt domain:target.com
+
+# Cari log + error
+contains:error.log intext:"error" domain:target.com
+contains:access.log intext:"GET" domain:target.com
+
+# Cari log di Indonesia
+location:Indonesia contains:error.log site:.go.id
+location:Indonesia contains:access.log site:.ac.id
+
+# ============================================
+# 14. BING UNTUK MENCARI FILE CONFIGURATION
+# ============================================
+
+# Cari config dengan contains:
+contains:config domain:target.com
+contains:.env domain:target.com
+contains:wp-config domain:target.com
+contains:configuration domain:target.com
+
+# Cari config + password
+contains:config contains:password domain:target.com
+contains:.env contains:DB_PASSWORD domain:target.com
+contains:wp-config contains:DB_PASSWORD domain:target.com
+
+# Cari config di Indonesia
+location:Indonesia contains:config site:.go.id
+location:Indonesia contains:.env site:.co.id
+
+# ============================================
+# 15. BING UNTUK MENCARI FILE DATABASE DUMP
+# ============================================
+
+# Cari database dump
+contains:sql domain:target.com inurl:backup
+contains:dump domain:target.com inurl:database
+contains:db domain:target.com inurl:backup
+
+# Cari SQL file
+contains:INSERT INTO domain:target.com
+contains:CREATE TABLE domain:target.com
+contains:VALUES domain:target.com
+
+# Cari database di Indonesia
+location:Indonesia contains:sql site:.go.id
+location:Indonesia contains:dump site:.ac.id
+
+# ============================================
+# 16. BING UNTUK MENCARI SOURCE CODE BOCOR
+# ============================================
+
+# Cari source code
+contains:git domain:target.com
+contains:svn domain:target.com
+contains:repository domain:target.com
+
+# Cari file source code
+contains:.java domain:target.com
+contains:.py domain:target.com
+contains:.js domain:target.com inurl:src
+
+# Cari source code di Indonesia
+location:Indonesia contains:git site:.go.id
+location:Indonesia contains:repository site:.ac.id
+
+# ============================================
+# 17. BING UNTUK MENCARI PHPINFO
+# ============================================
+
+# Cari phpinfo
+inurl:phpinfo.php domain:target.com
+inurl:info.php domain:target.com
+inurl:php-info domain:target.com
+
+# Cari phpinfo + parameter
+inurl:phpinfo.php inurl:?id= domain:target.com
+inurl:info.php inurl:?page= domain:target.com
+
+# Cari phpinfo di Indonesia
+location:Indonesia inurl:phpinfo.php site:.go.id
+location:Indonesia inurl:info.php site:.ac.id
+
+# ============================================
+# 18. BING UNTUK MENCARI DIRECTORY LISTING
+# ============================================
+
+# Cari index of
+intitle:"index of" domain:target.com
+intitle:"parent directory" domain:target.com
+intitle:"index of" inurl:uploads domain:target.com
+intitle:"index of" inurl:backup domain:target.com
+
+# Cari index of + file sensitif
+intitle:"index of" contains:config domain:target.com
+intitle:"index of" contains:.env domain:target.com
+intitle:"index of" contains:passwd domain:target.com
+
+# Cari index of di Indonesia
+intitle:"index of" site:.go.id
+intitle:"index of" site:.ac.id
+intitle:"index of" site:.co.id
+
+# ============================================
+# 19. BING UNTUK MENCARI ADMIN PANEL
+# ============================================
+
+# Cari admin panel
+inurl:admin.php domain:target.com
+inurl:administrator.php domain:target.com
+inurl:dashboard.php domain:target.com
+inurl:panel.php domain:target.com
+inurl:control.php domain:target.com
+
+# Cari admin panel + parameter
+inurl:admin.php inurl:?id= domain:target.com
+inurl:administrator.php inurl:?page= domain:target.com
+inurl:dashboard.php inurl:?q= domain:target.com
+
+# Cari admin panel di Indonesia
+location:Indonesia inurl:admin.php site:.go.id
+location:Indonesia inurl:dashboard.php site:.ac.id
+location:Indonesia inurl:panel.php site:.co.id
+
+# ============================================
+# 20. BING UNTUK MENCARI PARAMETER TERSEMBUNYI
+# ============================================
+
+# Cari parameter debug/testing
+inurl:?debug= domain:target.com
+inurl:?test= domain:target.com
+inurl:?mode= domain:target.com
+inurl:?status= domain:target.com
+inurl:?trace= domain:target.com
+
+# Cari parameter + error
+inurl:?debug= intext:"error" domain:target.com
+inurl:?test= intext:"warning" domain:target.com
+
+# Cari parameter tersembunyi di Indonesia
+location:Indonesia inurl:?debug= site:.go.id
+location:Indonesia inurl:?test= site:.ac.id
+
+# ============================================
+# 21. BING UNTUK MENCARI WEBSITE DENGAN CERTIFICATE SSL
+# ============================================
+
+# Cari SSL certificate bocor
+contains:.key domain:target.com
+contains:.pem domain:target.com
+contains:.crt domain:target.com
+contains:private key domain:target.com
+
+# Cari SSL di Indonesia
+location:Indonesia contains:.key site:.go.id
+location:Indonesia contains:.pem site:.co.id
+
+# ============================================
+# 22. BING UNTUK MENCARI FILE JSON/YAML
+# ============================================
+
+# Cari file JSON
+contains:config.json domain:target.com
+contains:settings.json domain:target.com
+contains:package.json domain:target.com
+contains:composer.json domain:target.com
+
+# Cari file YAML
+contains:config.yaml domain:target.com
+contains:application.yml domain:target.com
+contains:docker-compose.yml domain:target.com
+
+# Cari JSON/YAML di Indonesia
+location:Indonesia contains:config.json site:.go.id
+location:Indonesia contains:application.yml site:.ac.id
+
+# ============================================
+# 23. BING UNTUK MENCARI WEBSHELL
+# ============================================
+
+# Cari webshell
+inurl:shell.php domain:target.com
+inurl:cmd.php domain:target.com
+inurl:c99.php domain:target.com
+inurl:r57.php domain:target.com
+inurl:webshell.php domain:target.com
+
+# Cari webshell + parameter
+inurl:shell.php inurl:?cmd= domain:target.com
+inurl:cmd.php inurl:?exec= domain:target.com
+
+# Cari webshell di Indonesia
+location:Indonesia inurl:shell.php site:.go.id
+location:Indonesia inurl:cmd.php site:.ac.id
+
+# ============================================
+# 24. BING UNTUK MENCARI FILE UPLOAD BYPASS
+# ============================================
+
+# Cari file dengan ekstensi ganda
+contains:.php.jpg domain:target.com
+contains:.php.png domain:target.com
+contains:.phtml domain:target.com
+contains:.phar domain:target.com
+
+# Cari file upload bypass di Indonesia
+location:Indonesia contains:.php.jpg site:.go.id
+location:Indonesia contains:.phtml site:.ac.id
+
+# ============================================
+# 25. BING UNTUK MENCARI ERROR LOG
+# ============================================
+
+# Cari error log terpapar
+intext:"error_log" domain:target.com
+intext:"Warning:" domain:target.com
+intext:"Fatal error" domain:target.com
+intext:"Notice:" domain:target.com
+
+# Cari error + parameter
+intext:"mysql" inurl:?id= domain:target.com
+intext:"Warning" inurl:?page= domain:target.com
+intext:"Fatal" inurl:?q= domain:target.com
+
+# Cari error di Indonesia
+location:Indonesia intext:"error" site:.go.id
+location:Indonesia intext:"Warning" site:.ac.id
+
+# ============================================
+# 26. BING UNTUK MENCARI FILE .HTACCESS
+# ============================================
+
+# Cari .htaccess bocor
+contains:.htaccess domain:target.com
+inurl:.htaccess domain:target.com
+contains:htaccess inurl:config domain:target.com
+
+# Cari .htaccess di Indonesia
+location:Indonesia contains:.htaccess site:.go.id
+location:Indonesia contains:.htaccess site:.ac.id
+
+# ============================================
+# 27. BING UNTUK MENCARI SITEMAP
+# ============================================
+
+# Cari sitemap
+inurl:sitemap.xml domain:target.com
+inurl:sitemap.php domain:target.com
+contains:sitemap domain:target.com
+
+# Cari sitemap + parameter
+inurl:sitemap.php inurl:?id= domain:target.com
+inurl:sitemap.xml inurl:?q= domain:target.com
+
+# ============================================
+# 28. BING UNTUK MENCARI API ENDPOINT
+# ============================================
+
+# Cari API
+inurl:api.php domain:target.com
+inurl:api/v1 domain:target.com
+inurl:api/v2 domain:target.com
+inurl:rest.php domain:target.com
+inurl:json.php domain:target.com
+
+# Cari API + parameter
+inurl:api.php inurl:?id= domain:target.com
+inurl:api/v1 inurl:?q= domain:target.com
+
+# Cari API di Indonesia
+location:Indonesia inurl:api.php site:.go.id
+location:Indonesia inurl:api/v1 site:.ac.id
+
+# ============================================
+# 29. BING UNTUK MENCARI COOKIE / SESSION
+# ============================================
+
+# Cari cookie/session bocor
+contains:cookie domain:target.com
+contains:session domain:target.com
+contains:PHPSESSID domain:target.com
+contains:JSESSIONID domain:target.com
+
+# Cari cookie + error
+contains:cookie intext:"error" domain:target.com
+contains:session intext:"warning" domain:target.com
+
+# ============================================
+# 30. KOMBINASI ULTIMATE BING
+# ============================================
+
+# Kombinasi paling powerful di Bing
+location:Indonesia domain:go.id inurl:?id= contains:sql
+location:Jakarta domain:ac.id inurl:?page= contains:config
+ip:103.8.12.100 contains:backup inurl:?q=
+language:indonesian inurl:upload.php contains:shell
+linkfromdomain:target.com inurl:admin intitle:"login"
+prefer:mysql inurl:?id= intext:"Warning"
+domain:target.com contains:.env inurl:config
+location:Indonesia contains:sql inurl:backup
