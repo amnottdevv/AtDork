@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "atdork"
-version = "1.3.9.5"
+version = "1.3.9.6"
 description = "dorking tools with ddgs metasearch OSINT tool"
 readme = "README.md"
 license = "MIT"
@@ -31,7 +31,8 @@ dependencies = [
     "pyfiglet>=0.8",
     "pyyaml>=6.0",
     "requests>=2.28",
-    "beautifulsoup4>=4.12.0",
+    "beautifulsoup4>=4.12",
+    "urllib3>=2.0",
 ]
 
 [project.optional-dependencies]
@@ -48,21 +49,62 @@ Homepage = "https://github.com/amnottdevv/atdork"
 "Source Code" = "https://github.com/amnottdevv/atdork"
 "documentation" = "https://amnottdevv.github.io/AtDork/"
 
+# ---------------------------------------------------------------------------
+# Package discovery & data files
+# ---------------------------------------------------------------------------
+#
+# The `database/` folder contains 89 .txt files spread across 18+ nested
+# subdirectories (Bug Bounty Dorks/, CMS/Wordpress/, Cryptocurrency Dorks/,
+# etc.) â€” WITHOUT __init__.py markers in each subfolder.
+#
+# To bundle every .txt/.md file under database/ (including ones added later
+# in any new subfolder), we use a combination of:
+#   1. `include-package-data = true` â€” auto-include data files for packages
+#   2. Recursive glob patterns in `[tool.setuptools.package-data]`
+#   3. A MANIFEST.in fallback for sdist builds (belt-and-suspenders)
+#
+# This means: drop a new `database/<new_subdir>/<new_file>.txt` and it will
+# be automatically bundled in the next wheel build â€” no config changes needed.
+
 [tool.setuptools]
 py-modules = ["atdork"]
-packages = [
-    "core",
-    "core.case",
-    "lib",
-    "wordlists",
-    "wordlists.templates",
+include-package-data = true
+
+[tool.setuptools.packages.find]
+# Auto-discover all Python packages (folders with __init__.py)
+# Note: database/ subfolders don't have __init__.py, so they're treated
+# as data directories, not packages â€” package-data globs below handle them.
+include = [
+    "core*",
+    "lib*",
+    "wordlists*",
     "database",
 ]
+exclude = ["tests*", "docs*", "raw*", "assets*"]
 
 [tool.setuptools.package-data]
+# Wordlists: vulnerability signatures (flat directory)
 wordlists = ["*.txt"]
+
+# Templates: YAML dork collections
 "wordlists.templates" = ["*.yaml", "*.yml"]
-database = ["*.txt", "*.md"]
+
+# Database: bundled 900K+ dorks across 89 files in nested subfolders.
+# Recursive globs (`**/`) catch ALL .txt/.md files in ANY subfolder,
+# so newly added subdirectories are bundled automatically.
+# Patterns are evaluated against the `database` package root.
+database = [
+    "*.txt",
+    "*.md",
+    "**/*.txt",
+    "**/*.md",
+    "**/**/*.txt",
+    "**/**/*.md",
+    "**/**/**/*.txt",
+    "**/**/**/*.md",
+    "**/**/**/**/*.txt",
+    "**/**/**/**/*.md",
+]
 
 [project.scripts]
 atdork = "atdork:main"
