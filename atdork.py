@@ -1,9 +1,23 @@
 #!/usr/bin/env python3
 """
 Atdork - Professional OSINT Tool
-Version : 1.3.9.4
+Version : 1.3.9.5
 Author  : alzzmarket
 GitHub  : github.com/amnottdevv/atdork
+
+Changelog (1.3.9.5):
+  - Integrated `core/database_dork.py` for loading dorks from the bundled
+    GHDB database (database/*.txt).
+  - New flags:
+      --extract-database              Extract bundled database to ./database
+      --extract-database-to PATH      Custom destination for extraction
+      --force                         Overwrite existing destination
+      --list-database-dork            List available database dork files
+      --database-dork SPEC            Load dorks from database file(s)
+      --database-r N                  Randomly select N dorks
+      --database-path PATH            Custom database root directory
+      --database-preview              Preview loaded dorks without running
+      --database-seed N               Optional RNG seed for --database-r
 """
 
 import argparse
@@ -11,11 +25,13 @@ import sys
 import os
 import json
 import logging
+import random
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 
 from rich.console import Console
 from rich.prompt import Prompt
+from rich.table import Table
 from pyfiglet import Figlet
 
 from core.config import load_config
@@ -24,6 +40,11 @@ from core.batch_runner import load_queries_from_file, parse_query_string, run_ba
 from core.proxy_manager import create_proxy_manager
 from core.filter_vuln import filter_vulnerable
 from core.template_dork import load_template_dorks, list_available_templates
+from core.database_dork import (
+    load_database_dorks,
+    list_database_dorks,
+    extract_database,
+)
 from core.post_processor import PostProcessor, extract_urls, extract_vulnerable_urls
 from lib.display import show_banner, display_results
 from lib.storage import save_results
@@ -49,6 +70,8 @@ from core.manage_cache import SearchCache
 # Notification
 from core.notification import send_batch_summary
 
+VERSION = "1.3.9.5"
+
 console = Console()
 
 
@@ -58,7 +81,7 @@ def _show_ascii_banner():
     banner = f.renderText('Atdork')
     console.print(f"[bold green]{banner}[/bold green]")
     console.print("[bold cyan]Professional OSINT Tool[/bold cyan]")
-    console.print(f"[dim]v1.3.9.4 - {datetime.now().strftime('%Y-%m-%d %H:%M')}[/dim]")
+    console.print(f"[dim]v{VERSION} - {datetime.now().strftime('%Y-%m-%d %H:%M')}[/dim]")
     console.print()
 
 
@@ -145,7 +168,7 @@ def build_parser():
     # Logging
     parser.add_argument("--log-file", type=str, default="atdork.log", help="Path file log.")
 
-    # Database
+    # Database (SQLite history/dedup)
     parser.add_argument("--db-path", type=str, default="atdork.db", help="Path SQLite database.")
     parser.add_argument("--resume", action="store_true", help="Resume batch yang tertunda.")
     parser.add_argument("--history", action="store_true", help="Tampilkan riwayat pencarian.")
@@ -182,6 +205,64 @@ def build_parser():
     parser.add_argument("--template-path", type=str, help="Path ke folder template.")
     parser.add_argument("--preview", action="store_true", help="Pratinjau isi template tanpa menjalankannya.")
 
+    # Database Dork (v1.3.9.5) — NEW
+    db_group = parser.add_argument_group(
+        "Database Dork (v1.3.9.5)",
+        "Load dorks from the bundled GHDB database (database/*.txt). "
+        "Examples:\n"
+        "  atdork --extract-database\n"
+        "  atdork --list-database-dork\n"
+        "  atdork --database-dork 01_footholds --database-r 10\n"
+        "  atdork --database-dork 01_footholds,03_sensitive_directories\n"
+        "  atdork --database-dork /db-1/1_none --database-r 5 --database-preview",
+    )
+    db_group.add_argument(
+        "--extract-database", action="store_true",
+        help="Extract bundled database to ./database (or --extract-database-to PATH).",
+    )
+    db_group.add_argument(
+        "--extract-database-to", type=str, default=None,
+        help="Custom destination directory for --extract-database.",
+    )
+    db_group.add_argument(
+        "--database-dork-extract", type=str, default=None,
+        metavar="PATH",
+        help="Shortcut: extract bundled database to PATH. "
+             "Equivalent to '--extract-database --extract-database-to PATH'. "
+             "Use with --force to overwrite. "
+             "Example: atdork --database-dork-extract mydork/",
+    )
+    db_group.add_argument(
+        "--force", action="store_true",
+        help="Overwrite existing destination when extracting.",
+    )
+    db_group.add_argument(
+        "--list-database-dork", action="store_true",
+        help="List all available database dork files with their dork counts.",
+    )
+    db_group.add_argument(
+        "--database-dork", type=str, default=None,
+        help="Comma-separated list of database dork file specs. Each spec may "
+             "omit the .txt extension and may include subdirectory paths "
+             "(e.g. '01_footholds', '/db-1/1_none', 'subdir/file.txt').",
+    )
+    db_group.add_argument(
+        "--database-r", type=int, default=None,
+        help="Randomly select N dorks from the combined set (without replacement).",
+    )
+    db_group.add_argument(
+        "--database-path", type=str, default=None,
+        help="Custom database root directory (overrides auto-discovery).",
+    )
+    db_group.add_argument(
+        "--database-preview", action="store_true",
+        help="Preview loaded database dorks without running a search.",
+    )
+    db_group.add_argument(
+        "--database-seed", type=int, default=None,
+        help="Optional RNG seed for reproducible --database-r selection.",
+    )
+
     # GHDB Scraper
     ghdb_group = parser.add_argument_group("GHDB Scraper")
     ghdb_group.add_argument(
@@ -211,7 +292,7 @@ def build_parser():
     )
 
     parser.add_argument("--debug", action="store_true")
-    parser.add_argument("--version", action="version", version="%(prog)s 1.3.9.4")
+    parser.add_argument("--version", action="version", version=f"%(prog)s {VERSION}")
     return parser
 
 
@@ -221,20 +302,20 @@ def _parse_validation_args(args) -> dict:
         return {"strict": False}
     if args.strict_filter:
         return {"strict": True}
-    
+
     # FIX HIGH: Safe type conversion untuk validate_title dan validate_desc
     try:
         min_title = None if args.validate_title == "false" else int(args.validate_title)
     except (ValueError, TypeError):
         console.print("[yellow]⚠️ Warning: Invalid --validate-title value, using default (5)[/yellow]")
         min_title = 5
-    
+
     try:
         min_desc = None if args.validate_desc == "false" else int(args.validate_desc)
     except (ValueError, TypeError):
         console.print("[yellow]⚠️ Warning: Invalid --validate-desc value, using default (10)[/yellow]")
         min_desc = 10
-    
+
     check_spam = args.validate_spam == "true"
     url_mode = args.validate_url
     return {
@@ -321,6 +402,188 @@ def _build_cache_params(args) -> Dict[str, Any]:
     }
 
 
+# --------------------------------------------------------------------------- #
+# Database Dork handlers (v1.3.9.5)
+# --------------------------------------------------------------------------- #
+
+def _handle_extract_database(args) -> None:
+    """Handle --extract-database: copy bundled database to local directory."""
+    dest = args.extract_database_to
+    try:
+        result_path = extract_database(dest_dir=dest, overwrite=args.force)
+    except FileNotFoundError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        sys.exit(1)
+    except FileExistsError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        console.print("[yellow]Hint: pass --force to overwrite.[/yellow]")
+        sys.exit(1)
+    except ValueError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        sys.exit(1)
+
+    # Show summary
+    files = list_database_dorks(result_path)
+    total_dorks = sum(f["count"] for f in files)
+    console.print(f"[green]✅ Database extracted to: {result_path}[/green]")
+    console.print(f"[dim]{len(files)} files, {total_dorks} dorks total.[/dim]")
+
+    # Optional: show table
+    if files:
+        table = Table(title="Extracted Files", show_lines=False)
+        table.add_column("File", style="cyan", no_wrap=True)
+        table.add_column("Dorks", justify="right", style="green")
+        for f in files:
+            table.add_row(f["relpath"], str(f["count"]))
+        table.add_row("[bold]TOTAL[/bold]", f"[bold]{total_dorks}[/bold]")
+        console.print(table)
+
+
+def _handle_list_database_dork(args) -> None:
+    """Handle --list-database-dork: show available database files."""
+    try:
+        files = list_database_dorks(args.database_path)
+    except FileNotFoundError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        sys.exit(1)
+
+    if not files:
+        console.print("[yellow]Tidak ada file database dork ditemukan.[/yellow]")
+        console.print(
+            "[dim]Hint: jalankan 'atdork --extract-database' untuk menyalin "
+            "database bundled ke direktori saat ini.[/dim]"
+        )
+        return
+
+    table = Table(
+        title=f"AtDork Database Dorks ({len(files)} files)",
+        show_lines=False,
+        title_style="bold cyan",
+    )
+    table.add_column("#", style="dim", justify="right", width=4)
+    table.add_column("Spec", style="cyan", no_wrap=True)
+    table.add_column("Dorks", justify="right", style="green", width=8)
+    table.add_column("Size", justify="right", style="yellow", width=10)
+
+    total_dorks = 0
+    for i, f in enumerate(files, 1):
+        relpath = f["relpath"]
+        # Show spec without .txt extension (so user can copy-paste)
+        spec = relpath
+        if spec.lower().endswith(".txt"):
+            spec = spec[:-4]
+        size_str = _format_size(f["size_bytes"])
+        table.add_row(str(i), spec, str(f["count"]), size_str)
+        total_dorks += f["count"]
+
+    table.add_row("", "[bold]TOTAL[/bold]", f"[bold]{total_dorks}[/bold]", "")
+    console.print(table)
+
+    console.print(
+        "\n[bold cyan]Usage examples:[/bold cyan]\n"
+        f"  [dim]atdork --database-dork {files[0]['relpath'][:-4] if files[0]['relpath'].lower().endswith('.txt') else files[0]['relpath']} --database-r 10[/dim]\n"
+        f"  [dim]atdork --database-dork {files[0]['relpath'][:-4] if files[0]['relpath'].lower().endswith('.txt') else files[0]['relpath']},{files[1]['relpath'][:-4] if files[1]['relpath'].lower().endswith('.txt') else files[1]['relpath'] if len(files) > 1 else '...'}[/dim]\n"
+        "  [dim]atdork --database-dork /subdir/file --database-preview[/dim]"
+    )
+
+
+def _format_size(size_bytes: int) -> str:
+    """Format bytes as human-readable string."""
+    if size_bytes <= 0:
+        return "-"
+    for unit in ("B", "KB", "MB", "GB"):
+        if size_bytes < 1024:
+            return f"{size_bytes:.1f} {unit}"
+        size_bytes /= 1024
+    return f"{size_bytes:.1f} TB"
+
+
+def _handle_database_dork_preview(args) -> None:
+    """Handle --database-dork with --database-preview: show dorks without running."""
+    if not args.database_dork:
+        console.print("[red]Error: --database-preview requires --database-dork.[/red]")
+        sys.exit(1)
+
+    try:
+        dorks = load_database_dorks(
+            spec=args.database_dork,
+            db_path=args.database_path,
+            random_count=args.database_r,
+            seed=args.database_seed,
+        )
+    except (FileNotFoundError, ValueError) as e:
+        console.print(f"[red]Error: {e}[/red]")
+        sys.exit(1)
+
+    # Show source info
+    spec_parts = [s.strip() for s in args.database_dork.split(",") if s.strip()]
+    console.print(f"[bold cyan]📂 Database dorks loaded:[/bold cyan] {len(dorks)}")
+    console.print(f"[dim]From: {', '.join(spec_parts)}[/dim]")
+    if args.database_r:
+        console.print(f"[dim]Random selection: {args.database_r} of {len(dorks) if not args.database_r else '...'} dorks[/dim]")
+    if args.database_seed is not None:
+        console.print(f"[dim]RNG seed: {args.database_seed}[/dim]")
+    console.print()
+
+    for i, dork in enumerate(dorks, 1):
+        console.print(f"  [green]{i:4d}.[/green] {dork}")
+
+    console.print(f"\n[bold green]Total: {len(dorks)} dorks ready.[/bold green]")
+    console.print(
+        "[dim]Remove --database-preview to execute them as batch queries.[/dim]"
+    )
+
+
+def _collect_database_queries(args) -> List[str]:
+    """
+    Collect queries from --database-dork.
+
+    Returns:
+        List of dork query strings.
+    """
+    if not args.database_dork:
+        return []
+
+    try:
+        dorks = load_database_dorks(
+            spec=args.database_dork,
+            db_path=args.database_path,
+            random_count=args.database_r,
+            seed=args.database_seed,
+        )
+    except (FileNotFoundError, ValueError) as e:
+        console.print(f"[red]Error loading database dorks: {e}[/red]")
+        sys.exit(1)
+
+    if not dorks:
+        console.print("[yellow]⚠️  No dorks loaded from database.[/yellow]")
+        return []
+
+    # Show summary
+    spec_parts = [s.strip() for s in args.database_dork.split(",") if s.strip()]
+    console.print(f"[bold cyan]📂 Database dorks loaded:[/bold cyan] {len(dorks)} from {len(spec_parts)} file(s)")
+    console.print(f"[dim]Files: {', '.join(spec_parts)}[/dim]")
+    if args.database_r:
+        console.print(f"[dim]Random selection (--database-r {args.database_r}): {len(dorks)} dorks[/dim]")
+    if args.database_seed is not None:
+        console.print(f"[dim]RNG seed: {args.database_seed}[/dim]")
+
+    # Show preview (first 5)
+    if len(dorks) <= 5:
+        for i, d in enumerate(dorks, 1):
+            console.print(f"[dim]  {i}. {d}[/dim]")
+    else:
+        for i, d in enumerate(dorks[:3], 1):
+            console.print(f"[dim]  {i}. {d}[/dim]")
+        console.print(f"[dim]  ... ({len(dorks) - 3} more)[/dim]")
+
+    return dorks
+
+
+# --------------------------------------------------------------------------- #
+# Interactive mode
+# --------------------------------------------------------------------------- #
+
 def interactive_mode(db: Database):
     show_banner()
     query = Prompt.ask("[bold yellow]Masukkan keyword/dork[/bold yellow]").strip()
@@ -368,8 +631,30 @@ def cli_mode(args):
 
     args.max_results = max(1, min(100, args.max_results))
 
-    # Database connection
+    # Database connection (SQLite history/dedup)
     db = Database(args.db_path) if (args.resume or args.history or args.export_db or not args.no_dedup) else None
+
+    # ----- Database Dork: --extract-database / --database-dork-extract (early exit) -----
+    # --database-dork-extract PATH is a shortcut for --extract-database --extract-database-to PATH
+    if args.database_dork_extract:
+        args.extract_database = True
+        args.extract_database_to = args.database_dork_extract
+    if args.extract_database:
+        _handle_extract_database(args)
+        if db: db.close()
+        return
+
+    # ----- Database Dork: --list-database-dork (early exit) -----
+    if args.list_database_dork:
+        _handle_list_database_dork(args)
+        if db: db.close()
+        return
+
+    # ----- Database Dork: --database-dork --database-preview (early exit) -----
+    if args.database_dork and args.database_preview:
+        _handle_database_dork_preview(args)
+        if db: db.close()
+        return
 
     # Handle --list-templates
     if args.list_templates:
@@ -383,7 +668,7 @@ def cli_mode(args):
         if db: db.close()
         return
 
-    # Handle --preview
+    # Handle --preview (template)
     if args.preview and args.template:
         try:
             for tname in args.template.split(","):
@@ -434,8 +719,9 @@ def cli_mode(args):
     else:
         queries = []
 
-    # Kumpulkan query
+    # Kumpulkan query dari berbagai sumber
     if not queries:
+        # 1. Template dorks
         if args.template:
             for tname in args.template.split(","):
                 tname = tname.strip()
@@ -448,6 +734,12 @@ def cli_mode(args):
                     console.print(f"[red]Error loading template '{tname}': {e}[/red]")
                     sys.exit(1)
 
+        # 2. Database dorks (NEW v1.3.9.5)
+        if args.database_dork:
+            db_queries = _collect_database_queries(args)
+            queries.extend(db_queries)
+
+        # 3. Single query (-q)
         if args.query:
             if args.batch_separator in args.query:
                 custom_queries = parse_query_string(args.query, args.batch_separator)
@@ -455,6 +747,7 @@ def cli_mode(args):
                 custom_queries = [args.query]
             queries.extend(custom_queries)
 
+        # 4. Batch file
         if args.batch_file:
             try:
                 file_queries = load_queries_from_file(args.batch_file)
@@ -464,7 +757,7 @@ def cli_mode(args):
                 sys.exit(1)
 
     if not queries:
-        console.print("[red]Error: Tidak ada query yang diberikan. Gunakan -q, --template, atau --batch-file.[/red]")
+        console.print("[red]Error: Tidak ada query yang diberikan. Gunakan -q, --template, --database-dork, atau --batch-file.[/red]")
         sys.exit(1)
 
     # Proxy manager
@@ -810,15 +1103,30 @@ def main():
         )
         sys.exit(0 if success else 1)
 
-    # FIX URGENT: Complete the incomplete if statement from line 756
+    # --- Database Dork mode (v1.3.9.5) ---
+    # --extract-database, --list-database-dork, and --database-dork --database-preview
+    # are handled inside cli_mode (they are NOT search operations but utility modes).
+    # They're still routed through cli_mode for consistent banner/logging setup.
+
     # Check if interactive mode or no action parameters provided
-    should_interactive = (
-        args.interactive or 
-        (not args.query and not args.batch_file and not args.resume and 
-         not args.history and not args.export_db and not args.template and 
-         not args.list_templates and not args.preview)
+    # Use getattr() for safety in case some args aren't registered (partial copy / older file)
+    has_action = (
+        getattr(args, "query", None) or
+        getattr(args, "batch_file", None) or
+        getattr(args, "resume", False) or
+        getattr(args, "history", False) or
+        getattr(args, "export_db", None) or
+        getattr(args, "template", None) or
+        getattr(args, "list_templates", False) or
+        getattr(args, "preview", False) or
+        # NEW (v1.3.9.5)
+        getattr(args, "extract_database", False) or
+        getattr(args, "database_dork_extract", None) or
+        getattr(args, "list_database_dork", False) or
+        getattr(args, "database_dork", None)
     )
-    
+    should_interactive = args.interactive or (not has_action)
+
     if should_interactive:
         db = Database(args.db_path)
         interactive_mode(db)
