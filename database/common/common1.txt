@@ -1,0 +1,237 @@
+# ============================================
+# COMMON DORKS - SQL INJECTION & IDOR
+# ============================================
+
+inurl:product.php?id=
+inurl:product.php?pid=
+inurl:product.php?product_id=
+inurl:view.php?id=
+inurl:views.php?id=
+inurl:detail.php?id=
+inurl:details.php?id=
+inurl:item.php?id=
+inurl:page.php?id=
+inurl:news.php?id=
+inurl:article.php?id=
+inurl:post.php?id=
+inurl:blog.php?id=
+inurl:?id=
+inurl:?cat=
+inurl:?category=
+inurl:?cate=
+inurl:?cid=
+inurl:?c=
+inurl:?kategori=
+inurl:?k=
+inurl:?subcat=
+inurl:?subcategory=
+inurl:?scat=
+inurl:?menu=
+inurl:?page=
+inurl:?p=
+inurl:?pid=
+inurl:?prod=
+inurl:?product=
+inurl:?item=
+inurl:?code=
+inurl:?ref=
+inurl:?source=
+inurl:?src=
+inurl:?file=
+inurl:?folder=
+inurl:?dir=
+inurl:?path=
+inurl:?url=
+inurl:?link=
+
+# ============================================
+# KOMBINASI DENGAN OPERATOR LAIN
+# ============================================
+
+# Cari error SQL (indikasi celah)
+inurl:product.php?id= intext:"mysql" 
+inurl:product.php?id= intext:"sql" 
+inurl:product.php?id= intext:"warning" 
+inurl:product.php?id= intext:"error" 
+inurl:product.php?id= intext:"failed" 
+inurl:product.php?id= intext:"syntax" 
+
+# Cari di domain tertentu (ganti target.com)
+site:target.com inurl:product.php?id=
+site:target.com inurl:view.php?id=
+site:target.com inurl:?id=
+site:target.com inurl:?cat=
+
+# Cari berdasarkan ekstensi
+inurl:product.php?id= ext:php
+inurl:view.php?id= ext:php
+inurl:?id= ext:php
+inurl:?cat= ext:php
+
+# Cari di judul tertentu
+inurl:product.php?id= intitle:"product"
+inurl:view.php?id= intitle:"view"
+inurl:?id= intitle:"detail"
+inurl:?cat= intitle:"category"
+
+# Cari parameter numerik (rawan SQLi)
+inurl:product.php?id=1
+inurl:product.php?id=2
+inurl:product.php?id=3
+inurl:product.php?pid=1
+inurl:product.php?pid=2
+inurl:view.php?id=1
+inurl:detail.php?id=1
+inurl:item.php?id=1
+inurl:news.php?id=1
+
+# Cari parameter yang menggunakan angka di URL
+inurl:"?id=" inurl:"=" intitle:"index"
+inurl:"?cat=" inurl:"=" intitle:"index"
+inurl:"?page=" inurl:"=" intitle:"index"
+
+# Cari di website pemerintah Indonesia (contoh)
+site:.go.id inurl:product.php?id=
+site:.go.id inurl:view.php?id=
+site:.go.id inurl:?id=
+site:.go.id inurl:?cat=
+
+# Cari di website pendidikan
+site:.ac.id inurl:product.php?id=
+site:.sch.id inurl:view.php?id=
+site:.edu inurl:?id=
+
+# Cari yang masih pakai parameter lama (versi rentan)
+inurl:product.php?id= inurl:"mysql" inurl:"version"
+inurl:view.php?id= intitle:"error" inurl:"sql"
+
+# Cari parameter dengan tanda kutip (uji SQLi)
+inurl:' inurl:product.php?id=
+inurl:' inurl:view.php?id=
+inurl:" inurl:?id=
+
+# Cari parameter yang bisa di-order (order by)
+inurl:product.php?id= order by
+inurl:view.php?id= order by
+inurl:?id= order by
+
+# Cari parameter UNION (uji SQLi lanjutan)
+inurl:product.php?id= union
+inurl:view.php?id= union
+inurl:?id= union
+inurl:?cat= union
+
+# Cari parameter dengan komentar SQL (-- , #)
+inurl:product.php?id= --
+inurl:view.php?id= --
+inurl:?id= --
+inurl:?cat= --
+inurl:product.php?id= %23
+inurl:view.php?id= %23
+
+# Cari parameter AND/OR (uji boolean SQLi)
+inurl:product.php?id= AND
+inurl:view.php?id= AND
+inurl:?id= AND
+inurl:?cat= AND
+inurl:product.php?id= OR
+inurl:view.php?id= OR
+
+# ============================================
+# DORK UNTUK MENCARI ADMIN PANEL (IDOR)
+# ============================================
+
+inurl:admin.php?id=
+inurl:administrator.php?id=
+inurl:dashboard.php?id=
+inurl:panel.php?id=
+inurl:control.php?id=
+inurl:manage.php?id=
+inurl:moderator.php?id=
+inurl:superadmin.php?id=
+inurl:root.php?id=
+
+# ============================================
+# DORK UNTUK MENCARI USER/DATA PRIBADI
+# ============================================
+
+inurl:profile.php?id=
+inurl:user.php?id=
+inurl:users.php?id=
+inurl:account.php?id=
+inurl:member.php?id=
+inurl:customer.php?id=
+inurl:client.php?id=
+
+# ============================================
+# DORK UNTUK MENCARI FILE UPLOAD
+# ============================================
+
+inurl:upload.php?id=
+inurl:file.php?id=
+inurl:download.php?id=
+inurl:image.php?id=
+inurl:photo.php?id=
+inurl:gallery.php?id=
+
+# ============================================
+# DORK UNTUK MENCARI PARAMETER TERSEMBUNYI
+# ============================================
+
+inurl:?debug=
+inurl:?test=
+inurl:?mode=
+inurl:?status=
+inurl:?type=
+inurl:?action=
+inurl:?function=
+inurl:?cmd=
+inurl:?exec=
+inurl:?run=
+
+# ============================================
+# DORK UNTUK MENCARI SITE DENGAN PARAMETER GANDA
+# ============================================
+
+inurl:product.php?id= AND inurl:cat=
+inurl:view.php?id= AND inurl:page=
+inurl:?id= AND inurl:cat=
+inurl:?page= AND inurl:id=
+inurl:?cat= AND inurl:id=
+
+# ============================================
+# DORK UNTUK MENCARI SITE DENGAN E-COMMERCE
+# ============================================
+
+inurl:product.php?id= site:.shop
+inurl:product.php?id= site:.store
+inurl:product.php?id= inurl:shop
+inurl:product.php?id= inurl:store
+inurl:product.php?id= inurl:buy
+inurl:product.php?id= inurl:order
+
+# ============================================
+# DORK UNTUK MENCARI SITE DENGAN CMS TERTENTU
+# ============================================
+
+# WordPress
+inurl:product.php?id= inurl:wp-content
+inurl:view.php?id= inurl:wp-includes
+
+# Joomla
+inurl:product.php?id= inurl:components
+inurl:view.php?id= inurl:modules
+
+# Drupal
+inurl:product.php?id= inurl:sites
+inurl:view.php?id= inurl:modules
+
+# ============================================
+# DORK UNTUK MENCARI SITE DENGAN ERROR LOG
+# ============================================
+
+inurl:product.php?id= intext:"error_log"
+inurl:view.php?id= intext:"error_log"
+inurl:?id= intext:"error_log"
+inurl:product.php?id= intext:"debug"
+inurl:view.php?id= intext:"debug"
