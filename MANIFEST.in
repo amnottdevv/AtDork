@@ -1,0 +1,26 @@
+# MANIFEST.in — ensures data files are included in sdist (.tar.gz) builds
+# even when setuptools' auto-discovery misses them.
+# Wheel builds use [tool.setuptools.package-data] in pyproject.toml.
+
+# Bundled 900K+ dorks in database/ (recursive — includes all subfolders)
+recursive-include database *.txt
+recursive-include database *.md
+
+# Vulnerability signatures & templates
+recursive-include wordlists *.txt
+recursive-include wordlists *.yaml
+recursive-include wordlists *.yml
+
+# Documentation & assets (for sdist completeness)
+recursive-include docs *.md *.css
+include README.md LICENSE mkdocs.yml AtDork.yaml
+
+# Exclude build artifacts & caches
+global-exclude __pycache__
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude .DS_Store
+global-exclude *.egg-info
+recursive-exclude tests *
+recursive-exclude raw *
+recursive-exclude assets *
