@@ -1,0 +1,2876 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://amnottdevv.github.io/atdork/cli-reference/">
+      
+      
+        <link rel="prev" href="../features/ghdb-scrapper/">
+      
+      
+        <link rel="next" href="../configuration/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>CLI Reference - AtDork Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="light-blue">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#cli-reference" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="AtDork Documentation" class="md-header__button md-logo" aria-label="AtDork Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            AtDork Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              CLI Reference
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="light-blue"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="light-blue"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/amnottdevv/atdork" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    amnottdevv/atdork
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../installation/" class="md-tabs__link">
+          
+  
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../features/resilience-system/" class="md-tabs__link">
+          
+  
+  
+  Documentation
+
+        </a>
+      </li>
+    
+  
+
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
+          
+  
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../troubleshooting/" class="md-tabs__link">
+          
+  
+  
+  Support
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../database/bing-and-ddg/" class="md-tabs__link">
+          
+  
+  
+  database
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="AtDork Documentation" class="md-nav__button md-logo" aria-label="AtDork Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    AtDork Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/amnottdevv/atdork" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    amnottdevv/atdork
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../basic-usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Basic Usage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Documentation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Documentation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_3_1" id="__nav_3_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Features
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Features
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../features/resilience-system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Resilience System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../features/proxy-anonymity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Proxy & Anonymity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../features/filter-vuln/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vulnerability Filter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../features/template-system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Template System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../features/batch-processing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Batch Processing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../features/output-formats/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Output Formats
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../features/post-processing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    post processing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../features/database-history/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    database and history
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../features/cache-system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    cache system
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../features/notification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    notification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../features/database-scrapper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    database dork
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../features/ghdb-scrapper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ghdb scrapper
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#quick-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#detailed-flag-descriptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed Flag Descriptions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Detailed Flag Descriptions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#query-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Query &amp; Results
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#output-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output Options
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#templates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Templates
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#search-engine-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Search Engine Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#request-tuning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Request Tuning
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#proxy-anonymity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Proxy &amp; Anonymity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#concurrency-resilience" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Concurrency &amp; Resilience
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#post-processing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Post-Processing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validation-filtering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation &amp; Filtering
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#database-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Database &amp; History
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#logging-debugging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Logging &amp; Debugging
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration &amp; Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#flag-categories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flag Categories
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Flag Categories">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#by-purpose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        By Purpose
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Support
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Support
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    database
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    database
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../database/bing-and-ddg/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    bing and ddg dorks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../database/bug-bounty-dorks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    bug bounty dorks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../database/censys-dorks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    censys dorks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../database/cms-dorks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    cms dorks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../database/common-dorks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    common dorks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../database/github-dorks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    github dorks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../database/lfi-dorks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    lfi dorks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../database/rfi-dorks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    rfi dorks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#quick-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#detailed-flag-descriptions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Detailed Flag Descriptions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Detailed Flag Descriptions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#query-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Query &amp; Results
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#output-options" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Output Options
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#templates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Templates
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#search-engine-settings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Search Engine Settings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#request-tuning" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Request Tuning
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#proxy-anonymity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Proxy &amp; Anonymity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#concurrency-resilience" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Concurrency &amp; Resilience
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#post-processing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Post-Processing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validation-filtering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation &amp; Filtering
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#database-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Database &amp; History
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#logging-debugging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Logging &amp; Debugging
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration &amp; Mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#flag-categories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flag Categories
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Flag Categories">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#by-purpose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        By Purpose
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="cli-reference">CLI Reference<a class="headerlink" href="#cli-reference" title="Permanent link">&para;</a></h1>
+<p>Complete reference for all command-line arguments available in AtDork.</p>
+<hr />
+<h2 id="quick-overview">Quick Overview<a class="headerlink" href="#quick-overview" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Flag</th>
+<th style="text-align: left;">Type</th>
+<th style="text-align: left;">Default</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>-q</code>, <code>--query</code></td>
+<td style="text-align: left;">String</td>
+<td style="text-align: left;">None</td>
+<td style="text-align: left;">Main search query (dork)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>-r</code>, <code>--max-results</code></td>
+<td style="text-align: left;">Integer</td>
+<td style="text-align: left;"><code>20</code></td>
+<td style="text-align: left;">Max results per engine (1-100)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--batch-file</code></td>
+<td style="text-align: left;">Path</td>
+<td style="text-align: left;">None</td>
+<td style="text-align: left;">File with one dork per line</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--batch-separator</code></td>
+<td style="text-align: left;">String</td>
+<td style="text-align: left;"><code>;</code></td>
+<td style="text-align: left;">Separator for inline multiple queries</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>-o</code>, <code>--output</code></td>
+<td style="text-align: left;">Path</td>
+<td style="text-align: left;">None</td>
+<td style="text-align: left;">Output file path</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--output-dir</code></td>
+<td style="text-align: left;">Path</td>
+<td style="text-align: left;">None</td>
+<td style="text-align: left;">Output directory for per-query files</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--format</code></td>
+<td style="text-align: left;">Choice</td>
+<td style="text-align: left;"><code>txt</code></td>
+<td style="text-align: left;">Output format: <code>txt</code>, <code>json</code>, <code>csv</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>-v</code>, <code>--verbose</code></td>
+<td style="text-align: left;">Boolean</td>
+<td style="text-align: left;"><code>false</code></td>
+<td style="text-align: left;">Show results during batch mode</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--no-snippet</code></td>
+<td style="text-align: left;">Boolean</td>
+<td style="text-align: left;"><code>false</code></td>
+<td style="text-align: left;">Hide snippets in terminal output</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--template</code></td>
+<td style="text-align: left;">String</td>
+<td style="text-align: left;">None</td>
+<td style="text-align: left;">Template name(s), comma-separated</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--target</code></td>
+<td style="text-align: left;">String</td>
+<td style="text-align: left;">None</td>
+<td style="text-align: left;">Domain for <code>{target}</code> substitution</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--select</code></td>
+<td style="text-align: left;">String</td>
+<td style="text-align: left;">None</td>
+<td style="text-align: left;">Select specific dorks from template (e.g., <code>1,3,5</code>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--list-templates</code></td>
+<td style="text-align: left;">Boolean</td>
+<td style="text-align: left;"><code>false</code></td>
+<td style="text-align: left;">List all available templates</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--template-path</code></td>
+<td style="text-align: left;">Path</td>
+<td style="text-align: left;">None</td>
+<td style="text-align: left;">Custom template directory</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--preview</code></td>
+<td style="text-align: left;">Boolean</td>
+<td style="text-align: left;"><code>false</code></td>
+<td style="text-align: left;">Preview template dorks without executing</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--region</code></td>
+<td style="text-align: left;">Choice</td>
+<td style="text-align: left;"><code>us-en</code></td>
+<td style="text-align: left;">Search region</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--safesearch</code></td>
+<td style="text-align: left;">Choice</td>
+<td style="text-align: left;"><code>moderate</code></td>
+<td style="text-align: left;">SafeSearch level: <code>on</code>, <code>moderate</code>, <code>off</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--timelimit</code></td>
+<td style="text-align: left;">Choice</td>
+<td style="text-align: left;">None</td>
+<td style="text-align: left;">Time filter: <code>d</code>, <code>w</code>, <code>m</code>, <code>y</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--backend</code></td>
+<td style="text-align: left;">String</td>
+<td style="text-align: left;"><code>auto</code></td>
+<td style="text-align: left;">Search engine(s), comma-separated</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--user-agent</code></td>
+<td style="text-align: left;">String</td>
+<td style="text-align: left;">None</td>
+<td style="text-align: left;">Custom User-Agent (auto-rotate if None)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--timeout</code></td>
+<td style="text-align: left;">Integer</td>
+<td style="text-align: left;"><code>10</code></td>
+<td style="text-align: left;">Request timeout in seconds</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--retries</code></td>
+<td style="text-align: left;">Integer</td>
+<td style="text-align: left;"><code>2</code></td>
+<td style="text-align: left;">Retry attempts on failure</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--delay</code></td>
+<td style="text-align: left;">Float</td>
+<td style="text-align: left;"><code>0</code></td>
+<td style="text-align: left;">Delay between requests (seconds)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--proxy</code></td>
+<td style="text-align: left;">String</td>
+<td style="text-align: left;">None</td>
+<td style="text-align: left;">Comma-separated proxy URLs</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--proxy-file</code></td>
+<td style="text-align: left;">Path</td>
+<td style="text-align: left;">None</td>
+<td style="text-align: left;">File with proxy URLs (one per line)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--tor</code></td>
+<td style="text-align: left;">Boolean</td>
+<td style="text-align: left;"><code>false</code></td>
+<td style="text-align: left;">Use Tor SOCKS5 proxy</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--strict</code></td>
+<td style="text-align: left;">Boolean</td>
+<td style="text-align: left;"><code>false</code></td>
+<td style="text-align: left;">Fail if all proxies are down (no direct fallback)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--proxy-cooldown</code></td>
+<td style="text-align: left;">Integer</td>
+<td style="text-align: left;"><code>60</code></td>
+<td style="text-align: left;">Cooldown after proxy failure (seconds)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--max-failures</code></td>
+<td style="text-align: left;">Integer</td>
+<td style="text-align: left;"><code>3</code></td>
+<td style="text-align: left;">Remove proxy after N consecutive failures</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--concurrency</code></td>
+<td style="text-align: left;">Integer</td>
+<td style="text-align: left;"><code>1</code></td>
+<td style="text-align: left;">Number of parallel threads (1-10)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--max-fallback-failures</code></td>
+<td style="text-align: left;">Integer</td>
+<td style="text-align: left;"><code>3</code></td>
+<td style="text-align: left;">Failures before fallback to sequential</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--resilient</code></td>
+<td style="text-align: left;">Boolean</td>
+<td style="text-align: left;"><code>false</code></td>
+<td style="text-align: left;">Enable circuit breaker &amp; backend fallback</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--adaptive-delay</code></td>
+<td style="text-align: left;">Boolean</td>
+<td style="text-align: left;"><code>false</code></td>
+<td style="text-align: left;">Enable adaptive rate limiting</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--ip-guard</code></td>
+<td style="text-align: left;">Boolean</td>
+<td style="text-align: left;"><code>false</code></td>
+<td style="text-align: left;">Enable IP leak detection (requires <code>--strict</code>)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--exec</code></td>
+<td style="text-align: left;">String</td>
+<td style="text-align: left;">None</td>
+<td style="text-align: left;">Execute command on each result (<code>{}</code> = URL)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--exec-on-vuln</code></td>
+<td style="text-align: left;">String</td>
+<td style="text-align: left;">None</td>
+<td style="text-align: left;">Execute command only on vulnerable results</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--exec-parallel</code></td>
+<td style="text-align: left;">Integer</td>
+<td style="text-align: left;"><code>1</code></td>
+<td style="text-align: left;">Parallel processes for <code>--exec</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--exec-timeout</code></td>
+<td style="text-align: left;">Integer</td>
+<td style="text-align: left;"><code>30</code></td>
+<td style="text-align: left;">Timeout per <code>--exec</code> command (seconds)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--no-validate</code></td>
+<td style="text-align: left;">Boolean</td>
+<td style="text-align: left;"><code>false</code></td>
+<td style="text-align: left;">Disable all spam/invalid filtering</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--strict-filter</code></td>
+<td style="text-align: left;">Boolean</td>
+<td style="text-align: left;"><code>false</code></td>
+<td style="text-align: left;">Strict validation (title≥5, desc≥10)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--validate-url</code></td>
+<td style="text-align: left;">Choice</td>
+<td style="text-align: left;"><code>all</code></td>
+<td style="text-align: left;">URL mode: <code>only</code>, <code>path</code>, <code>params</code>, <code>all</code>, <code>false</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--validate-title</code></td>
+<td style="text-align: left;">String</td>
+<td style="text-align: left;"><code>5</code></td>
+<td style="text-align: left;">Min title length or <code>false</code> to disable</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--validate-desc</code></td>
+<td style="text-align: left;">String</td>
+<td style="text-align: left;"><code>10</code></td>
+<td style="text-align: left;">Min description length or <code>false</code> to disable</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--validate-spam</code></td>
+<td style="text-align: left;">Boolean</td>
+<td style="text-align: left;"><code>true</code></td>
+<td style="text-align: left;">Enable spam detection</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--filter-vuln</code></td>
+<td style="text-align: left;">String</td>
+<td style="text-align: left;">None</td>
+<td style="text-align: left;">Vulnerability platform filter</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--no-fallback-backends</code></td>
+<td style="text-align: left;">Boolean</td>
+<td style="text-align: left;"><code>false</code></td>
+<td style="text-align: left;">Disable backend fallback</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--no-verify</code></td>
+<td style="text-align: left;">Boolean</td>
+<td style="text-align: left;"><code>false</code></td>
+<td style="text-align: left;">Disable SSL certificate verification</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--log-file</code></td>
+<td style="text-align: left;">Path</td>
+<td style="text-align: left;"><code>atdork.log</code></td>
+<td style="text-align: left;">Log file path</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--db-path</code></td>
+<td style="text-align: left;">Path</td>
+<td style="text-align: left;"><code>atdork.db</code></td>
+<td style="text-align: left;">SQLite database path</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--resume</code></td>
+<td style="text-align: left;">Boolean</td>
+<td style="text-align: left;"><code>false</code></td>
+<td style="text-align: left;">Resume pending queries from database</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--history</code></td>
+<td style="text-align: left;">Boolean</td>
+<td style="text-align: left;"><code>false</code></td>
+<td style="text-align: left;">Show search history</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--no-dedup</code></td>
+<td style="text-align: left;">Boolean</td>
+<td style="text-align: left;"><code>false</code></td>
+<td style="text-align: left;">Disable URL deduplication</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--export-db</code></td>
+<td style="text-align: left;">Path</td>
+<td style="text-align: left;">None</td>
+<td style="text-align: left;">Export database to file (json/csv)</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--config</code></td>
+<td style="text-align: left;">Path</td>
+<td style="text-align: left;">None</td>
+<td style="text-align: left;">YAML config file path</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--interactive</code></td>
+<td style="text-align: left;">Boolean</td>
+<td style="text-align: left;"><code>false</code></td>
+<td style="text-align: left;">Run interactive mode</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--debug</code></td>
+<td style="text-align: left;">Boolean</td>
+<td style="text-align: left;"><code>false</code></td>
+<td style="text-align: left;">Enable debug logging</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--version</code></td>
+<td style="text-align: left;">None</td>
+<td style="text-align: left;">None</td>
+<td style="text-align: left;">Show version and exit</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>-h</code>, <code>--help</code></td>
+<td style="text-align: left;">None</td>
+<td style="text-align: left;">None</td>
+<td style="text-align: left;">Show help message and exit</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="detailed-flag-descriptions">Detailed Flag Descriptions<a class="headerlink" href="#detailed-flag-descriptions" title="Permanent link">&para;</a></h2>
+<h3 id="query-results">Query &amp; Results<a class="headerlink" href="#query-results" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Flag</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>-q, --query</code></td>
+<td style="text-align: left;">Main search query (dork). Can be combined with <code>--batch-separator</code> for multiple queries.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>-r, --max-results</code></td>
+<td style="text-align: left;">Maximum number of results to return per query. Values above 100 are automatically clamped.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--batch-file</code></td>
+<td style="text-align: left;">Path to a text file containing one dork per line. Lines starting with <code>#</code> are ignored.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--batch-separator</code></td>
+<td style="text-align: left;">Separator for splitting a single <code>-q</code> string into multiple queries. Default is <code>;</code>.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="output-options">Output Options<a class="headerlink" href="#output-options" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Flag</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>-o, --output</code></td>
+<td style="text-align: left;">Save all results to a single file. Format determined by <code>--format</code> or file extension.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--output-dir</code></td>
+<td style="text-align: left;">Save each query's results to a separate file in the specified directory.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--format</code></td>
+<td style="text-align: left;">Output format: <code>txt</code> (human-readable), <code>json</code> (structured), <code>csv</code> (spreadsheet).</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>-v, --verbose</code></td>
+<td style="text-align: left;">Display results in real-time during batch processing.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--no-snippet</code></td>
+<td style="text-align: left;">Hide result snippets in terminal output for cleaner display.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="templates">Templates<a class="headerlink" href="#templates" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Flag</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>--template</code></td>
+<td style="text-align: left;">Load one or more YAML templates (comma-separated). Example: <code>--template sqli,wordpress</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--target</code></td>
+<td style="text-align: left;">Domain to substitute for <code>{target}</code> placeholder in template dorks.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--select</code></td>
+<td style="text-align: left;">Run only specific dorks from a template (1-based indices). Example: <code>--select 1,3,5</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--list-templates</code></td>
+<td style="text-align: left;">Display all available templates with descriptions.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--template-path</code></td>
+<td style="text-align: left;">Custom directory to search for template files.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--preview</code></td>
+<td style="text-align: left;">Show template dorks without executing them. Useful for validation.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="search-engine-settings">Search Engine Settings<a class="headerlink" href="#search-engine-settings" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Flag</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>--region</code></td>
+<td style="text-align: left;">Search region/language code. Examples: <code>us-en</code>, <code>uk-en</code>, <code>de-de</code>, <code>ru-ru</code>.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--safesearch</code></td>
+<td style="text-align: left;">Filter adult content: <code>on</code> (strict), <code>moderate</code> (default), <code>off</code> (none).</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--timelimit</code></td>
+<td style="text-align: left;">Restrict results by time: <code>d</code> (day), <code>w</code> (week), <code>m</code> (month), <code>y</code> (year).</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--backend</code></td>
+<td style="text-align: left;">Search engine(s) to use. Options: <code>google</code>, <code>bing</code>, <code>duckduckgo</code>, <code>startpage</code>, <code>yandex</code>, <code>auto</code>, or comma-separated list.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="request-tuning">Request Tuning<a class="headerlink" href="#request-tuning" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Flag</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>--user-agent</code></td>
+<td style="text-align: left;">Custom User-Agent string. If not provided, AtDork rotates through a built-in pool.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--timeout</code></td>
+<td style="text-align: left;">Request timeout in seconds. Increases progressively with retries.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--retries</code></td>
+<td style="text-align: left;">Number of retry attempts per backend before moving to the next.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--delay</code></td>
+<td style="text-align: left;">Fixed delay between requests in seconds. Overridden by <code>--adaptive-delay</code> if enabled.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="proxy-anonymity">Proxy &amp; Anonymity<a class="headerlink" href="#proxy-anonymity" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Flag</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>--proxy</code></td>
+<td style="text-align: left;">Comma-separated list of proxy URLs. Format: <code>scheme://[user:pass@]host:port</code>.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--proxy-file</code></td>
+<td style="text-align: left;">Path to a file containing proxy URLs (one per line). Lines starting with <code>#</code> are ignored.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--tor</code></td>
+<td style="text-align: left;">Enable Tor SOCKS5 proxy at <code>socks5h://127.0.0.1:9050</code>.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--strict</code></td>
+<td style="text-align: left;"><strong>Fail closed</strong> – if all proxies fail, AtDork exits with error instead of falling back to direct connection.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--proxy-cooldown</code></td>
+<td style="text-align: left;">Seconds to wait before retrying a failed proxy (default: 60).</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--max-failures</code></td>
+<td style="text-align: left;">Number of consecutive failures before a proxy is permanently removed (default: 3).</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--ip-guard</code></td>
+<td style="text-align: left;">Enable IP leak detection. Requires <code>--strict</code>. AtDork stops if your real IP is exposed.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="concurrency-resilience">Concurrency &amp; Resilience<a class="headerlink" href="#concurrency-resilience" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Flag</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>--concurrency</code></td>
+<td style="text-align: left;">Number of parallel threads for batch processing (1-10). Higher values = faster but more likely to hit rate limits.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--max-fallback-failures</code></td>
+<td style="text-align: left;">Consecutive failures before falling back from parallel to sequential mode.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--resilient</code></td>
+<td style="text-align: left;">Enable intelligent fault-tolerance: circuit breaker, backend fallback, and automatic retry.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--adaptive-delay</code></td>
+<td style="text-align: left;">Dynamically adjust request delay based on real-time backend response codes.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="post-processing">Post-Processing<a class="headerlink" href="#post-processing" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Flag</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>--exec</code></td>
+<td style="text-align: left;">Execute a shell command on each result URL. Use <code>{}</code> as placeholder for the URL. Example: <code>--exec "curl -I {}"</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--exec-on-vuln</code></td>
+<td style="text-align: left;">Execute command only on results flagged as vulnerable by <code>--filter-vuln</code>.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--exec-parallel</code></td>
+<td style="text-align: left;">Number of parallel processes for <code>--exec</code> commands. Default: 1.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--exec-timeout</code></td>
+<td style="text-align: left;">Timeout in seconds for each <code>--exec</code> command. Default: 30.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="validation-filtering">Validation &amp; Filtering<a class="headerlink" href="#validation-filtering" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Flag</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>--no-validate</code></td>
+<td style="text-align: left;">Disable all spam/invalid result filtering. Keeps raw results.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--strict-filter</code></td>
+<td style="text-align: left;">Enable strict validation: title ≥ 5 chars, description ≥ 10 chars, spam detection on, URL all mode.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--validate-url</code></td>
+<td style="text-align: left;">URL validation mode: <code>only</code> (domain only), <code>path</code> (domain+path), <code>params</code> (domain+params), <code>all</code> (full), <code>false</code> (disabled).</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--validate-title</code></td>
+<td style="text-align: left;">Minimum title length. Set to <code>false</code> to disable title validation.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--validate-desc</code></td>
+<td style="text-align: left;">Minimum description length. Set to <code>false</code> to disable description validation.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--validate-spam</code></td>
+<td style="text-align: left;">Enable/disable spam detection. Default: <code>true</code>.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--filter-vuln</code></td>
+<td style="text-align: left;">Filter results by vulnerability platform. Examples: <code>wordpress</code>, <code>joomla</code>, <code>sqli</code>, <code>wordpress-link</code>.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="database-history">Database &amp; History<a class="headerlink" href="#database-history" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Flag</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>--db-path</code></td>
+<td style="text-align: left;">Path to SQLite database file. Default: <code>atdork.db</code>.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--resume</code></td>
+<td style="text-align: left;">Resume pending or failed queries from the database.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--history</code></td>
+<td style="text-align: left;">Display search history with query text and status.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--no-dedup</code></td>
+<td style="text-align: left;">Disable global URL deduplication. Keeps all results.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--export-db</code></td>
+<td style="text-align: left;">Export entire database to JSON or CSV. Example: <code>--export-db all_results.json</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="logging-debugging">Logging &amp; Debugging<a class="headerlink" href="#logging-debugging" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Flag</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>--log-file</code></td>
+<td style="text-align: left;">Path to log file. Default: <code>atdork.log</code>.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--debug</code></td>
+<td style="text-align: left;">Enable debug logging (more verbose output).</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--no-verify</code></td>
+<td style="text-align: left;">Disable SSL certificate verification (not recommended).</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--no-fallback-backends</code></td>
+<td style="text-align: left;">Disable automatic backend fallback on failure.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h3 id="configuration-mode">Configuration &amp; Mode<a class="headerlink" href="#configuration-mode" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Flag</th>
+<th style="text-align: left;">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><code>--config</code></td>
+<td style="text-align: left;">Path to YAML configuration file. CLI flags override YAML values.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--interactive</code></td>
+<td style="text-align: left;">Launch interactive mode with prompts instead of CLI flags.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>--version</code></td>
+<td style="text-align: left;">Display version and exit.</td>
+</tr>
+<tr>
+<td style="text-align: left;"><code>-h, --help</code></td>
+<td style="text-align: left;">Display help message and exit.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="flag-categories">Flag Categories<a class="headerlink" href="#flag-categories" title="Permanent link">&para;</a></h2>
+<h3 id="by-purpose">By Purpose<a class="headerlink" href="#by-purpose" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th style="text-align: left;">Category</th>
+<th style="text-align: left;">Flags</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align: left;"><strong>Core</strong></td>
+<td style="text-align: left;"><code>-q</code>, <code>-r</code>, <code>--batch-file</code>, <code>--template</code>, <code>--interactive</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Output</strong></td>
+<td style="text-align: left;"><code>-o</code>, <code>--output-dir</code>, <code>--format</code>, <code>-v</code>, <code>--no-snippet</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Search</strong></td>
+<td style="text-align: left;"><code>--region</code>, <code>--safesearch</code>, <code>--timelimit</code>, <code>--backend</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Network</strong></td>
+<td style="text-align: left;"><code>--user-agent</code>, <code>--timeout</code>, <code>--retries</code>, <code>--delay</code>, <code>--no-verify</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Proxy</strong></td>
+<td style="text-align: left;"><code>--proxy</code>, <code>--proxy-file</code>, <code>--tor</code>, <code>--strict</code>, <code>--proxy-cooldown</code>, <code>--max-failures</code>, <code>--ip-guard</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Resilience</strong></td>
+<td style="text-align: left;"><code>--resilient</code>, <code>--adaptive-delay</code>, <code>--concurrency</code>, <code>--max-fallback-failures</code>, <code>--no-fallback-backends</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Filter</strong></td>
+<td style="text-align: left;"><code>--filter-vuln</code>, <code>--no-validate</code>, <code>--strict-filter</code>, <code>--validate-url</code>, <code>--validate-title</code>, <code>--validate-desc</code>, <code>--validate-spam</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Post-Process</strong></td>
+<td style="text-align: left;"><code>--exec</code>, <code>--exec-on-vuln</code>, <code>--exec-parallel</code>, <code>--exec-timeout</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Database</strong></td>
+<td style="text-align: left;"><code>--db-path</code>, <code>--resume</code>, <code>--history</code>, <code>--no-dedup</code>, <code>--export-db</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Template</strong></td>
+<td style="text-align: left;"><code>--template</code>, <code>--target</code>, <code>--select</code>, <code>--list-templates</code>, <code>--template-path</code>, <code>--preview</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Debug</strong></td>
+<td style="text-align: left;"><code>--log-file</code>, <code>--debug</code>, <code>--config</code></td>
+</tr>
+<tr>
+<td style="text-align: left;"><strong>Info</strong></td>
+<td style="text-align: left;"><code>--version</code>, <code>-h</code></td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.top", "search.suggest", "search.highlight", "code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

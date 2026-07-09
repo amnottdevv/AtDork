@@ -1,0 +1,3033 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://amnottdevv.github.io/atdork/features/filter-vuln/">
+      
+      
+        <link rel="prev" href="../proxy-anonymity/">
+      
+      
+        <link rel="next" href="../template-system/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Vulnerability Filter - AtDork Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="light-blue">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#vulnerability-filter-filter-vuln" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="AtDork Documentation" class="md-header__button md-logo" aria-label="AtDork Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            AtDork Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Vulnerability Filter
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="light-blue"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="light-blue"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/amnottdevv/atdork" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    amnottdevv/atdork
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../installation/" class="md-tabs__link">
+          
+  
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../resilience-system/" class="md-tabs__link">
+          
+  
+  
+  Documentation
+
+        </a>
+      </li>
+    
+  
+
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../cli-reference/" class="md-tabs__link">
+          
+  
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../troubleshooting/" class="md-tabs__link">
+          
+  
+  
+  Support
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../database/bing-and-ddg/" class="md-tabs__link">
+          
+  
+  
+  database
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="AtDork Documentation" class="md-nav__button md-logo" aria-label="AtDork Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    AtDork Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/amnottdevv/atdork" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    amnottdevv/atdork
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../basic-usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Basic Usage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Documentation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Documentation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3_1" id="__nav_3_1_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Features
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_1_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Features
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../resilience-system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Resilience System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../proxy-anonymity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Proxy & Anonymity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vulnerability Filter
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vulnerability Filter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Introduction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-it-does" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What It Does">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#supported-platforms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported Platforms
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-use" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to Use
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How to Use">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-vulnerability-filtering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Basic Vulnerability Filtering
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#link-only-filtering-matches-urls-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Link-Only Filtering (Matches URLs Only)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#combining-with-other-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Combining with Other Flags
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multiple-vulnerability-filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multiple Vulnerability Filters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-custom-wordlists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using Custom Wordlists
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with-post-processing-run-commands-on-vulnerable-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        With Post-Processing (Run Commands on Vulnerable Results)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#batch-processing-with-vulnerability-filter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Batch Processing with Vulnerability Filter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with-resilience-and-proxy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        With Resilience and Proxy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with-strict-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        With Strict Validation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Works
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How It Works">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-wordlist-loading-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Wordlist Loading System
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-filter-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Filter Types
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-detection-logic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Detection Logic
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-example-wordpress-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Example: WordPress Detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-fail-closed-design" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Fail Closed Design
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-package-resource-loading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Package Resource Loading
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#full-flag-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Full Flag Reference
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#real-world-use-cases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Real-World Use Cases
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Real-World Use Cases">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-wordpress-vulnerability-hunting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. WordPress Vulnerability Hunting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-sql-injection-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. SQL Injection Discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-exposed-configuration-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Exposed Configuration Files
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-joomla-vulnerability-scanning-link-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Joomla Vulnerability Scanning (Link-Only)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-rapid-wordpress-scan-with-multiple-wordlists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Rapid WordPress Scan with Multiple Wordlists
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-automated-vulnerability-assessment-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Automated Vulnerability Assessment Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#creating-custom-wordlists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Creating Custom Wordlists
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Creating Custom Wordlists">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-create-a-wordlist-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: Create a Wordlist File
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-use-the-custom-wordlist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Use the Custom Wordlist
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-test-your-wordlist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: Test Your Wordlist
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wordlist-development-tips" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wordlist Development Tips
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Best Practices
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../template-system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Template System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../batch-processing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Batch Processing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../output-formats/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Output Formats
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../post-processing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    post processing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../database-history/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    database and history
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cache-system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    cache system
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    notification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../database-scrapper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    database dork
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ghdb-scrapper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ghdb scrapper
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Support
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Support
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    database
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    database
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../database/bing-and-ddg/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    bing and ddg dorks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../database/bug-bounty-dorks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    bug bounty dorks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../database/censys-dorks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    censys dorks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../database/cms-dorks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    cms dorks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../database/common-dorks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    common dorks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../database/github-dorks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    github dorks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../database/lfi-dorks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    lfi dorks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../database/rfi-dorks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    rfi dorks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Introduction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-it-does" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="What It Does">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#supported-platforms" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supported Platforms
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-use" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to Use
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How to Use">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#basic-vulnerability-filtering" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Basic Vulnerability Filtering
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#link-only-filtering-matches-urls-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Link-Only Filtering (Matches URLs Only)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#combining-with-other-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Combining with Other Flags
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multiple-vulnerability-filters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multiple Vulnerability Filters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#using-custom-wordlists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using Custom Wordlists
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with-post-processing-run-commands-on-vulnerable-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        With Post-Processing (Run Commands on Vulnerable Results)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#batch-processing-with-vulnerability-filter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Batch Processing with Vulnerability Filter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with-resilience-and-proxy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        With Resilience and Proxy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#with-strict-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        With Strict Validation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Works
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How It Works">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-wordlist-loading-system" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Wordlist Loading System
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-filter-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Filter Types
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-detection-logic" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Detection Logic
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-example-wordpress-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Example: WordPress Detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-fail-closed-design" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Fail Closed Design
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-package-resource-loading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Package Resource Loading
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#full-flag-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Full Flag Reference
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#real-world-use-cases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Real-World Use Cases
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Real-World Use Cases">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-wordpress-vulnerability-hunting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. WordPress Vulnerability Hunting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-sql-injection-discovery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. SQL Injection Discovery
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-exposed-configuration-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Exposed Configuration Files
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-joomla-vulnerability-scanning-link-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Joomla Vulnerability Scanning (Link-Only)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-rapid-wordpress-scan-with-multiple-wordlists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Rapid WordPress Scan with Multiple Wordlists
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-automated-vulnerability-assessment-pipeline" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Automated Vulnerability Assessment Pipeline
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#creating-custom-wordlists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Creating Custom Wordlists
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Creating Custom Wordlists">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#step-1-create-a-wordlist-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 1: Create a Wordlist File
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-2-use-the-custom-wordlist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 2: Use the Custom Wordlist
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#step-3-test-your-wordlist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Step 3: Test Your Wordlist
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#wordlist-development-tips" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wordlist Development Tips
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Best Practices
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="vulnerability-filter-filter-vuln">Vulnerability Filter (<code>--filter-vuln</code>)<a class="headerlink" href="#vulnerability-filter-filter-vuln" title="Permanent link">&para;</a></h1>
+<h2 id="introduction">Introduction<a class="headerlink" href="#introduction" title="Permanent link">&para;</a></h2>
+<p>The <code>--filter-vuln</code> flag is AtDork's specialized vulnerability detection system. It automatically identifies potentially vulnerable results based on platform-specific signatures, helping security researchers and bug bounty hunters quickly focus on high-value targets.</p>
+<p>The filter scans result URLs, titles, and descriptions against curated wordlists of platform-specific patterns. When a match is found, the result is flagged as "vulnerable" and separated from safe results.</p>
+<hr />
+<h2 id="what-it-does">What It Does<a class="headerlink" href="#what-it-does" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Platform Detection</strong></td>
+<td>Identifies platforms like WordPress, Joomla, Drupal, and more</td>
+</tr>
+<tr>
+<td><strong>Vulnerability Pattern Matching</strong></td>
+<td>Matches known vulnerable paths, parameters, and signatures</td>
+</tr>
+<tr>
+<td><strong>Link vs Path Modes</strong></td>
+<td><code>-link</code> mode matches URLs only; default mode matches all fields</td>
+</tr>
+<tr>
+<td><strong>Custom Wordlists</strong></td>
+<td>Create your own wordlists for specific platforms or technologies</td>
+</tr>
+<tr>
+<td><strong>Smart Filtering</strong></td>
+<td>Results are classified as "vulnerable" or "safe" with clear counts</td>
+</tr>
+<tr>
+<td><strong>Post-Processing Ready</strong></td>
+<td>Use <code>--exec-on-vuln</code> to run commands only on vulnerable results</td>
+</tr>
+</tbody>
+</table>
+<h3 id="supported-platforms">Supported Platforms<a class="headerlink" href="#supported-platforms" title="Permanent link">&para;</a></h3>
+<p>AtDork includes built-in wordlists for:</p>
+<table>
+<thead>
+<tr>
+<th>Platform</th>
+<th>Wordlist File</th>
+<th>Example Signature</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>WordPress</td>
+<td><code>wordpress.txt</code></td>
+<td><code>wp-content</code>, <code>wp-admin</code>, <code>wp-includes</code></td>
+</tr>
+<tr>
+<td>Joomla</td>
+<td><code>joomla.txt</code></td>
+<td><code>components/com_</code>, <code>administrator</code></td>
+</tr>
+<tr>
+<td>Drupal</td>
+<td><code>drupal.txt</code></td>
+<td><code>sites/default</code>, <code>core/</code></td>
+</tr>
+<tr>
+<td>SQL Injection</td>
+<td><code>sqli.txt</code></td>
+<td><code>id=</code>, <code>page=</code>, <code>?q=</code></td>
+</tr>
+<tr>
+<td>XSS</td>
+<td><code>xss.txt</code></td>
+<td><code>search=</code>, <code>s=</code>, <code>query=</code></td>
+</tr>
+<tr>
+<td>LFI (Local File Inclusion)</td>
+<td><code>lfi.txt</code></td>
+<td><code>page=../../</code>, <code>file=</code></td>
+</tr>
+<tr>
+<td>Exposed Config</td>
+<td><code>exposed_config.txt</code></td>
+<td><code>.env</code>, <code>config.php</code>, <code>settings.yml</code></td>
+</tr>
+<tr>
+<td>Login Panels</td>
+<td><code>login_panels.txt</code></td>
+<td><code>login</code>, <code>admin</code>, <code>panel</code></td>
+</tr>
+<tr>
+<td>Backup Files</td>
+<td><code>backup_files.txt</code></td>
+<td><code>.bak</code>, <code>.old</code>, <code>.backup</code></td>
+</tr>
+<tr>
+<td>Sensitive Directories</td>
+<td><code>sensitive_dirs.txt</code></td>
+<td><code>index of</code>, <code>directory listing</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="how-to-use">How to Use<a class="headerlink" href="#how-to-use" title="Permanent link">&para;</a></h2>
+<h3 id="basic-vulnerability-filtering">Basic Vulnerability Filtering<a class="headerlink" href="#basic-vulnerability-filtering" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>atdork<span class="w"> </span>-q<span class="w"> </span><span class="s2">&quot;inurl:wp-content&quot;</span><span class="w"> </span>-r<span class="w"> </span><span class="m">30</span><span class="w"> </span>--filter-vuln<span class="w"> </span>wordpress
+</code></pre></div>
+<h3 id="link-only-filtering-matches-urls-only">Link-Only Filtering (Matches URLs Only)<a class="headerlink" href="#link-only-filtering-matches-urls-only" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>atdork<span class="w"> </span>-q<span class="w"> </span><span class="s2">&quot;site:example.com&quot;</span><span class="w"> </span>--filter-vuln<span class="w"> </span>wordpress-link
+</code></pre></div>
+<h3 id="combining-with-other-flags">Combining with Other Flags<a class="headerlink" href="#combining-with-other-flags" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>atdork<span class="w"> </span>-q<span class="w"> </span><span class="s2">&quot;inurl:wp-content site:example.com&quot;</span><span class="w"> </span>-r<span class="w"> </span><span class="m">40</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--filter-vuln<span class="w"> </span>wordpress<span class="w"> </span>--verbose
+</code></pre></div>
+<h3 id="multiple-vulnerability-filters">Multiple Vulnerability Filters<a class="headerlink" href="#multiple-vulnerability-filters" title="Permanent link">&para;</a></h3>
+<p>AtDork supports one filter at a time, but you can chain them using different wordlists. For multiple platform detection, use templates:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>atdork<span class="w"> </span>--template<span class="w"> </span>wordpress,joomla,sqli<span class="w"> </span>--target<span class="w"> </span>example.com<span class="w"> </span>-r<span class="w"> </span><span class="m">30</span>
+</code></pre></div>
+<h3 id="using-custom-wordlists">Using Custom Wordlists<a class="headerlink" href="#using-custom-wordlists" title="Permanent link">&para;</a></h3>
+<p>Create your own wordlist file in <code>wordlists/</code> folder:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># wordlists/myplatform.txt</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>wp-content
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>wp-admin
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>wp-includes
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>wp-json
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>xmlrpc.php
+</code></pre></div>
+<p>Then use it:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>atdork<span class="w"> </span>-q<span class="w"> </span><span class="s2">&quot;site:example.com&quot;</span><span class="w"> </span>--filter-vuln<span class="w"> </span>myplatform
+</code></pre></div>
+<h3 id="with-post-processing-run-commands-on-vulnerable-results">With Post-Processing (Run Commands on Vulnerable Results)<a class="headerlink" href="#with-post-processing-run-commands-on-vulnerable-results" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>atdork<span class="w"> </span>-q<span class="w"> </span><span class="s2">&quot;inurl:wp-content&quot;</span><span class="w"> </span>-r<span class="w"> </span><span class="m">40</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span>--filter-vuln<span class="w"> </span>wordpress<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span>--exec-on-vuln<span class="w"> </span><span class="s2">&quot;wpscan --url {} --enumerate p&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span>--exec-parallel<span class="w"> </span><span class="m">2</span><span class="w"> </span>--exec-timeout<span class="w"> </span><span class="m">60</span>
+</code></pre></div>
+<h3 id="batch-processing-with-vulnerability-filter">Batch Processing with Vulnerability Filter<a class="headerlink" href="#batch-processing-with-vulnerability-filter" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>atdork<span class="w"> </span>--batch-file<span class="w"> </span>dorks.txt<span class="w"> </span>--filter-vuln<span class="w"> </span>wordpress<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">  </span>--resilient<span class="w"> </span>--format<span class="w"> </span>json<span class="w"> </span>-o<span class="w"> </span>vuln_results.json
+</code></pre></div>
+<h3 id="with-resilience-and-proxy">With Resilience and Proxy<a class="headerlink" href="#with-resilience-and-proxy" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>atdork<span class="w"> </span>--template<span class="w"> </span>wordpress<span class="w"> </span>--target<span class="w"> </span>example.com<span class="w"> </span>-r<span class="w"> </span><span class="m">30</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span>--filter-vuln<span class="w"> </span>wordpress<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="w">  </span>--proxy-file<span class="w"> </span>proxies.txt<span class="w"> </span>--strict<span class="w"> </span>--resilient
+</code></pre></div>
+<h3 id="with-strict-validation">With Strict Validation<a class="headerlink" href="#with-strict-validation" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>atdork<span class="w"> </span>-q<span class="w"> </span><span class="s2">&quot;inurl:wp-content&quot;</span><span class="w"> </span>-r<span class="w"> </span><span class="m">40</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">  </span>--filter-vuln<span class="w"> </span>wordpress<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="w">  </span>--strict-filter<span class="w"> </span>--validate-title<span class="w"> </span><span class="m">10</span><span class="w"> </span>--validate-desc<span class="w"> </span><span class="m">20</span>
+</code></pre></div>
+<hr />
+<h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
+<h3 id="1-wordlist-loading-system">1. Wordlist Loading System<a class="headerlink" href="#1-wordlist-loading-system" title="Permanent link">&para;</a></h3>
+<p>AtDork loads wordlists from the <code>wordlists/</code> directory. Each wordlist is a simple text file with one pattern per line:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># wordlists/wordpress.txt</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="c1"># WordPress-specific signatures</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>wp-content
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>wp-admin
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>wp-includes
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>wp-json
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>xmlrpc.php
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a>wp-login.php
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a>wp-config.php
+</code></pre></div>
+<p><strong>Pattern Rules:</strong>
+- Each line is a <strong>regex pattern</strong> (case-insensitive)
+- Lines starting with <code>#</code> are ignored
+- Empty lines are ignored</p>
+<p><strong>Loading Process:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>1. User provides --filter-vuln wordpress
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>   ↓
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>2. AtDork looks for wordlists/wordpress.txt
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a>   ├─ From package resources (installed version)
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>   └─ From file system (source version)
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>   ↓
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a>3. Each line is compiled into a regex pattern
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>   ↓
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>4. Patterns are cached for performance
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a>   ↓
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>5. If wordlist is missing → ERROR (fail closed)
+</code></pre></div></p>
+<h3 id="2-filter-types">2. Filter Types<a class="headerlink" href="#2-filter-types" title="Permanent link">&para;</a></h3>
+<p>AtDork supports two types of filters:</p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Suffix</th>
+<th>Searches In</th>
+<th>When to Use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Path</strong> (default)</td>
+<td>none</td>
+<td><code>title</code>, <code>href</code>, <code>body</code></td>
+<td>General purpose detection</td>
+</tr>
+<tr>
+<td><strong>Link</strong></td>
+<td><code>-link</code></td>
+<td><strong>Only</strong> <code>href</code> (URL)</td>
+<td>When you only care about URL patterns</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example:</strong>
+- <code>--filter-vuln wordpress</code> → searches <code>title</code>, <code>href</code>, and <code>body</code>
+- <code>--filter-vuln wordpress-link</code> → searches <strong>only</strong> <code>href</code></p>
+<h3 id="3-detection-logic">3. Detection Logic<a class="headerlink" href="#3-detection-logic" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>1. User provides --filter-vuln wordpress
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>   ↓
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>2. AtDork loads wordlists/wordpress.txt
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a>   ↓
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>3. Each line is compiled into a regex pattern
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>   ↓
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>4. For each result:
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>   ├─ If path mode:
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>   │  ├─ Get title, href, body
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>   │  └─ Combine into one string
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a>   ├─ If link mode:
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>   │  └─ Use href only
+<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a>   ├─ Test against all regex patterns
+<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>   └─ If any pattern matches → mark as &quot;vulnerable&quot;
+<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a>   ↓
+<a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a>5. Results are split into:
+<a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a>   ├─ vulnerable list (matching patterns)
+<a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a>   └─ safe list (no matches)
+<a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a>   ↓
+<a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a>6. CLI displays counts: &quot;🔴 Rentan: 12 | 🟢 Aman: 8&quot;
+<a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a>   ↓
+<a id="__codelineno-12-22" name="__codelineno-12-22" href="#__codelineno-12-22"></a>7. Only vulnerable results are kept for output
+</code></pre></div>
+<h3 id="4-example-wordpress-detection">4. Example: WordPress Detection<a class="headerlink" href="#4-example-wordpress-detection" title="Permanent link">&para;</a></h3>
+<p><strong>Input Result:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="p">{</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="w">  </span><span class="nt">&quot;title&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;WordPress Login&quot;</span><span class="p">,</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span><span class="nt">&quot;href&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;https://example.com/wp-admin/&quot;</span><span class="p">,</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">  </span><span class="nt">&quot;body&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Please enter your credentials to access the admin area&quot;</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="p">}</span>
+</code></pre></div></p>
+<p><strong>Wordlist (<code>wordlists/wordpress.txt</code>):</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>wp-content
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>wp-admin
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>wp-includes
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a>wp-json
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>xmlrpc.php
+</code></pre></div></p>
+<p><strong>Detection:</strong>
+- <code>title</code> contains "WordPress" → no match (not in wordlist)
+- <code>href</code> contains <code>wp-admin</code> → <strong>MATCH!</strong>
+- <code>body</code> contains "admin" → no match (not in wordlist)
+- Result is classified as <strong>"vulnerable"</strong></p>
+<p><strong>Why this matters:</strong> The URL <code>/wp-admin/</code> is a strong indicator of a WordPress installation, which is a common target for vulnerability scanning.</p>
+<h3 id="5-fail-closed-design">5. Fail Closed Design<a class="headerlink" href="#5-fail-closed-design" title="Permanent link">&para;</a></h3>
+<p>Starting from v1.3.8, AtDork uses <strong>Fail Closed</strong> behavior:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>If wordlist is missing:
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>  ❌ Exit with error
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>  📝 Show clear error message
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>  💡 Suggest fix
+</code></pre></div>
+<p><strong>Error Example:</strong>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>Error: Wordlist file &#39;does-not-exist.txt&#39; tidak ditemukan.
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>   Sumber yang dicek: paket resource &#39;wordlists&#39;
+</code></pre></div></p>
+<p><strong>Why this is important:</strong>
+- Prevents <strong>false confidence</strong> (thinking there are no vulnerabilities when the filter isn't working)
+- Makes issues <strong>immediately visible</strong>
+- Ensures <strong>reliable results</strong> every time</p>
+<h3 id="6-package-resource-loading">6. Package Resource Loading<a class="headerlink" href="#6-package-resource-loading" title="Permanent link">&para;</a></h3>
+<p>Since v1.3.8, wordlists are included in the installed package:</p>
+<table>
+<thead>
+<tr>
+<th>Installation Method</th>
+<th>Wordlist Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>From PyPI</strong> (<code>pip install atdork</code>)</td>
+<td>Packaged resources (built-in)</td>
+</tr>
+<tr>
+<td><strong>From Source</strong> (<code>git clone</code> + <code>pip install -e .</code>)</td>
+<td><code>wordlists/</code> directory</td>
+</tr>
+<tr>
+<td><strong>Custom Wordlist</strong></td>
+<td><code>wordlists/</code> directory (overrides packaged)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Benefits:</strong>
+- No extra files needed after <code>pip install</code>
+- Consistent behavior across installations
+- Easy to override with custom wordlists</p>
+<hr />
+<h2 id="full-flag-reference">Full Flag Reference<a class="headerlink" href="#full-flag-reference" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--filter-vuln</code></td>
+<td>Platform filter (e.g., <code>wordpress</code>, <code>joomla-link</code>)</td>
+<td>None</td>
+</tr>
+<tr>
+<td><code>--exec-on-vuln</code></td>
+<td>Execute command only on vulnerable results</td>
+<td>None</td>
+</tr>
+<tr>
+<td><code>--exec-parallel</code></td>
+<td>Parallel processes for <code>--exec</code></td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>--exec-timeout</code></td>
+<td>Timeout per command (seconds)</td>
+<td>30</td>
+</tr>
+<tr>
+<td><code>--verbose</code>, <code>-v</code></td>
+<td>Show results with vulnerability counts</td>
+<td>Disabled</td>
+</tr>
+<tr>
+<td><code>--strict-filter</code></td>
+<td>Strict validation with length checks</td>
+<td>Disabled</td>
+</tr>
+<tr>
+<td><code>--no-validate</code></td>
+<td>Disable all filtering (keep raw results)</td>
+<td>Disabled</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="real-world-use-cases">Real-World Use Cases<a class="headerlink" href="#real-world-use-cases" title="Permanent link">&para;</a></h2>
+<h3 id="1-wordpress-vulnerability-hunting">1. WordPress Vulnerability Hunting<a class="headerlink" href="#1-wordpress-vulnerability-hunting" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>atdork<span class="w"> </span>-q<span class="w"> </span><span class="s2">&quot;inurl:wp-content site:example.com&quot;</span><span class="w"> </span>-r<span class="w"> </span><span class="m">40</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span>--filter-vuln<span class="w"> </span>wordpress<span class="w"> </span>-v<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">  </span>--exec-on-vuln<span class="w"> </span><span class="s2">&quot;wpscan --url {} --enumerate p&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">  </span>--exec-parallel<span class="w"> </span><span class="m">2</span><span class="w"> </span>--exec-timeout<span class="w"> </span><span class="m">60</span>
+</code></pre></div>
+<p><strong>What it does:</strong>
+- Finds WordPress sites
+- Filters only those with WordPress signatures
+- Runs WPScan on each vulnerable result</p>
+<h3 id="2-sql-injection-discovery">2. SQL Injection Discovery<a class="headerlink" href="#2-sql-injection-discovery" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>atdork<span class="w"> </span>-q<span class="w"> </span><span class="s2">&quot;inurl:product.php?id=&quot;</span><span class="w"> </span>-r<span class="w"> </span><span class="m">50</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span>--filter-vuln<span class="w"> </span>sqli<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a><span class="w">  </span>--format<span class="w"> </span>json<span class="w"> </span>-o<span class="w"> </span>sqli_results.json
+</code></pre></div>
+<p><strong>What it does:</strong>
+- Finds pages with potential SQL injection parameters
+- Filters results with SQLi signatures
+- Exports to JSON for further analysis</p>
+<h3 id="3-exposed-configuration-files">3. Exposed Configuration Files<a class="headerlink" href="#3-exposed-configuration-files" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>atdork<span class="w"> </span>-q<span class="w"> </span><span class="s1">&#39;filetype:env &quot;DB_PASSWORD&quot;&#39;</span><span class="w"> </span>-r<span class="w"> </span><span class="m">50</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a><span class="w">  </span>--filter-vuln<span class="w"> </span>exposed_config<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="w">  </span>--no-validate<span class="w"> </span>-v
+</code></pre></div>
+<p><strong>What it does:</strong>
+- Finds exposed <code>.env</code> files with database credentials
+- Filters only config file signatures
+- Shows results in terminal for quick review</p>
+<h3 id="4-joomla-vulnerability-scanning-link-only">4. Joomla Vulnerability Scanning (Link-Only)<a class="headerlink" href="#4-joomla-vulnerability-scanning-link-only" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>atdork<span class="w"> </span>-q<span class="w"> </span><span class="s2">&quot;site:example.com&quot;</span><span class="w"> </span>-r<span class="w"> </span><span class="m">30</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a><span class="w">  </span>--filter-vuln<span class="w"> </span>joomla-link<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a><span class="w">  </span>--resilient<span class="w"> </span>--proxy-file<span class="w"> </span>proxies.txt
+</code></pre></div>
+<p><strong>What it does:</strong>
+- Scans for Joomla installations
+- Link-only mode focuses on URLs
+- Resilience mode handles rate limits</p>
+<h3 id="5-rapid-wordpress-scan-with-multiple-wordlists">5. Rapid WordPress Scan with Multiple Wordlists<a class="headerlink" href="#5-rapid-wordpress-scan-with-multiple-wordlists" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>atdork<span class="w"> </span>--template<span class="w"> </span>sqli,wordpress,exposed_config<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="w">  </span>--target<span class="w"> </span>example.com<span class="w"> </span>-r<span class="w"> </span><span class="m">30</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a><span class="w">  </span>--filter-vuln<span class="w"> </span>wordpress<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="w">  </span>--format<span class="w"> </span>json<span class="w"> </span>-o<span class="w"> </span>comprehensive_scan.json
+</code></pre></div>
+<h3 id="6-automated-vulnerability-assessment-pipeline">6. Automated Vulnerability Assessment Pipeline<a class="headerlink" href="#6-automated-vulnerability-assessment-pipeline" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="c1"># Step 1: Discover potential targets</span>
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>atdork<span class="w"> </span>-q<span class="w"> </span><span class="s2">&quot;inurl:wp-content&quot;</span><span class="w"> </span>-r<span class="w"> </span><span class="m">100</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a><span class="w">  </span>--filter-vuln<span class="w"> </span>wordpress<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="w">  </span>--format<span class="w"> </span>csv<span class="w"> </span>-o<span class="w"> </span>potential_targets.csv
+<a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a>
+<a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a><span class="c1"># Step 2: Scan each target with WPScan</span>
+<a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a><span class="k">while</span><span class="w"> </span><span class="nv">IFS</span><span class="o">=</span>,<span class="w"> </span><span class="nb">read</span><span class="w"> </span>-r<span class="w"> </span>title<span class="w"> </span>url<span class="w"> </span>body<span class="p">;</span><span class="w"> </span><span class="k">do</span>
+<a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a><span class="w">  </span>wpscan<span class="w"> </span>--url<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$url</span><span class="s2">&quot;</span><span class="w"> </span>--enumerate<span class="w"> </span>p<span class="w"> </span>--output<span class="w"> </span><span class="s2">&quot;scan_</span><span class="k">$(</span>basename<span class="w"> </span><span class="s2">&quot;</span><span class="nv">$url</span><span class="s2">&quot;</span><span class="k">)</span><span class="s2">.json&quot;</span>
+<a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a><span class="k">done</span><span class="w"> </span>&lt;<span class="w"> </span>potential_targets.csv
+</code></pre></div>
+<hr />
+<h2 id="creating-custom-wordlists">Creating Custom Wordlists<a class="headerlink" href="#creating-custom-wordlists" title="Permanent link">&para;</a></h2>
+<h3 id="step-1-create-a-wordlist-file">Step 1: Create a Wordlist File<a class="headerlink" href="#step-1-create-a-wordlist-file" title="Permanent link">&para;</a></h3>
+<p>Create a text file in the <code>wordlists/</code> directory:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="c1"># wordlists/custom.txt</span>
+<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="c1"># One pattern per line</span>
+<a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a><span class="c1"># Lines starting with # are ignored</span>
+<a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a>
+<a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a><span class="c1"># Admin panels</span>
+<a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a>admin
+<a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a>login
+<a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a>panel
+<a id="__codelineno-23-9" name="__codelineno-23-9" href="#__codelineno-23-9"></a>dashboard
+<a id="__codelineno-23-10" name="__codelineno-23-10" href="#__codelineno-23-10"></a>
+<a id="__codelineno-23-11" name="__codelineno-23-11" href="#__codelineno-23-11"></a><span class="c1"># Sensitive paths</span>
+<a id="__codelineno-23-12" name="__codelineno-23-12" href="#__codelineno-23-12"></a>config
+<a id="__codelineno-23-13" name="__codelineno-23-13" href="#__codelineno-23-13"></a>backup
+<a id="__codelineno-23-14" name="__codelineno-23-14" href="#__codelineno-23-14"></a>.old
+<a id="__codelineno-23-15" name="__codelineno-23-15" href="#__codelineno-23-15"></a>.bak
+<a id="__codelineno-23-16" name="__codelineno-23-16" href="#__codelineno-23-16"></a>
+<a id="__codelineno-23-17" name="__codelineno-23-17" href="#__codelineno-23-17"></a><span class="c1"># Parameter patterns</span>
+<a id="__codelineno-23-18" name="__codelineno-23-18" href="#__codelineno-23-18"></a><span class="nv">id</span><span class="o">=</span>
+<a id="__codelineno-23-19" name="__codelineno-23-19" href="#__codelineno-23-19"></a><span class="nv">page</span><span class="o">=</span>
+<a id="__codelineno-23-20" name="__codelineno-23-20" href="#__codelineno-23-20"></a><span class="nv">file</span><span class="o">=</span>
+<a id="__codelineno-23-21" name="__codelineno-23-21" href="#__codelineno-23-21"></a><span class="nv">path</span><span class="o">=</span>
+</code></pre></div>
+<h3 id="step-2-use-the-custom-wordlist">Step 2: Use the Custom Wordlist<a class="headerlink" href="#step-2-use-the-custom-wordlist" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>atdork<span class="w"> </span>-q<span class="w"> </span><span class="s2">&quot;site:example.com&quot;</span><span class="w"> </span>--filter-vuln<span class="w"> </span>custom
+</code></pre></div>
+<h3 id="step-3-test-your-wordlist">Step 3: Test Your Wordlist<a class="headerlink" href="#step-3-test-your-wordlist" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="c1"># Test with a small query first</span>
+<a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>atdork<span class="w"> </span>-q<span class="w"> </span><span class="s2">&quot;test&quot;</span><span class="w"> </span>-r<span class="w"> </span><span class="m">5</span><span class="w"> </span>--filter-vuln<span class="w"> </span>custom<span class="w"> </span>--verbose
+<a id="__codelineno-25-3" name="__codelineno-25-3" href="#__codelineno-25-3"></a>
+<a id="__codelineno-25-4" name="__codelineno-25-4" href="#__codelineno-25-4"></a><span class="c1"># Preview what will be matched</span>
+<a id="__codelineno-25-5" name="__codelineno-25-5" href="#__codelineno-25-5"></a>atdork<span class="w"> </span>-q<span class="w"> </span><span class="s2">&quot;site:example.com&quot;</span><span class="w"> </span>-r<span class="w"> </span><span class="m">10</span><span class="w"> </span>--filter-vuln<span class="w"> </span>custom<span class="w"> </span>--no-validate
+</code></pre></div>
+<h3 id="wordlist-development-tips">Wordlist Development Tips<a class="headerlink" href="#wordlist-development-tips" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Start with common patterns</strong> for each platform</li>
+<li><strong>Use regex</strong> for complex patterns (e.g., <code>wordpress.*wp-admin</code>)</li>
+<li><strong>Test with <code>--verbose</code></strong> to see which patterns are matching</li>
+<li><strong>Keep it focused</strong> – one platform per wordlist</li>
+<li><strong>Update regularly</strong> – new vulnerabilities are discovered daily</li>
+</ol>
+<hr />
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Problem</th>
+<th>Solution</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>"Wordlist file not found" error</strong></td>
+<td>Update to latest version (<code>pip install --upgrade atdork</code>)</td>
+</tr>
+<tr>
+<td><strong>Filter returns 0 vulnerable results</strong></td>
+<td>Try <code>-link</code> variant (e.g., <code>wordpress-link</code>) or check your wordlist content</td>
+</tr>
+<tr>
+<td><strong>Custom wordlist not working</strong></td>
+<td>Place file in <code>wordlists/</code> with <code>.txt</code> extension</td>
+</tr>
+<tr>
+<td><strong>False positives (too many matches)</strong></td>
+<td>Create a more specific wordlist with unique signatures</td>
+</tr>
+<tr>
+<td><strong>False negatives (missed vulnerabilities)</strong></td>
+<td>Add more patterns to the wordlist file</td>
+</tr>
+<tr>
+<td><strong>Results showing "unknown" filter type</strong></td>
+<td>Check wordlist file format and path</td>
+</tr>
+<tr>
+<td><strong>Filter not working after pip install</strong></td>
+<td>Ensure you're using v1.3.8 or later</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="best-practices">Best Practices<a class="headerlink" href="#best-practices" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Use <code>-link</code> for URL-only matching</strong> – Reduces false positives</li>
+<li><strong>Combine with <code>--resilient</code></strong> – Handles rate limits during large scans</li>
+<li><strong>Use <code>--exec-on-vuln</code></strong> – Automate vulnerability scanning</li>
+<li><strong>Create custom wordlists</strong> – For specific technologies or patterns</li>
+<li><strong>Test with <code>--verbose</code></strong> – Verify patterns are matching correctly</li>
+<li><strong>Validate results</strong> – Use <code>--strict-filter</code> to ensure quality</li>
+<li><strong>Document your wordlists</strong> – Add comments describing each pattern</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.top", "search.suggest", "search.highlight", "code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
