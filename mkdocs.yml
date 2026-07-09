@@ -84,3 +84,12 @@ nav:
   - Support:
       - Troubleshooting: troubleshooting.md
       - Contributing: contributing.md
+  - database :
+     - bing and ddg dorks : database/bing-and-ddg.md
+     - bug bounty dorks : database/bug-bounty-dorks.md
+     - censys dorks : database/censys-dorks.md
+     - cms dorks : database/cms-dorks.md
+     - common dorks : database/common-dorks.md
+     - github dorks : database/github-dorks.md
+     - lfi dorks : database/lfi-dorks.md
+     - rfi dorks : database/rfi-dorks.md
