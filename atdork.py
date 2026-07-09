@@ -5,12 +5,26 @@ Version : 1.3.9.5
 Author  : alzzmarket
 GitHub  : github.com/amnottdevv/atdork
 
+Version : 1.3.9.6
+Author  : alzzmarket
+GitHub  : github.com/amnottdevv/atdork
+
+Changelog (1.3.9.6):
+  - Bundled dork database expanded to 900K+ dorks across 89 files
+    (Bug Bounty, CCTV, CMS, Carding, Cloud, Cryptocurrency, Gaming,
+     GitHub, LFI/RFI, Misc, Movie, Onion, Search Engines, Shodan,
+     Shopping, exploit-db categories)
+  - All Database Dork features (introduced in 1.3.9.5) now work
+    transparently with the expanded database, including subfolder
+    navigation, comma combos, and random selection.
+
 Changelog (1.3.9.5):
   - Integrated `core/database_dork.py` for loading dorks from the bundled
     GHDB database (database/*.txt).
   - New flags:
       --extract-database              Extract bundled database to ./database
       --extract-database-to PATH      Custom destination for extraction
+      --database-dork-extract PATH    Shortcut for extract (v1.3.9.5+)
       --force                         Overwrite existing destination
       --list-database-dork            List available database dork files
       --database-dork SPEC            Load dorks from database file(s)
@@ -71,6 +85,7 @@ from core.manage_cache import SearchCache
 from core.notification import send_batch_summary
 
 VERSION = "1.3.9.5"
+VERSION = "1.3.9.6"
 
 console = Console()
 
@@ -640,6 +655,22 @@ def cli_mode(args):
         args.extract_database = True
         args.extract_database_to = args.database_dork_extract
     if args.extract_database:
+    # Three equivalent ways to trigger extraction:
+    #   1. --extract-database                          (extract to ./database)
+    #   2. --extract-database --extract-database-to X  (extract to X)
+    #   3. --database-dork-extract X                   (shortcut, extract to X)
+    #   4. --extract-database-to X                     (implicit, extract to X)
+    # Use getattr() for safety in case the argument isn't registered (partial copy / older file)
+    _db_dork_extract = getattr(args, "database_dork_extract", None)
+    _extract_to = getattr(args, "extract_database_to", None)
+    if _db_dork_extract:
+        # Shortcut form: --database-dork-extract PATH
+        args.extract_database = True
+        args.extract_database_to = _db_dork_extract
+    elif _extract_to and not getattr(args, "extract_database", False):
+        # Implicit form: --extract-database-to PATH (without --extract-database)
+        args.extract_database = True
+    if getattr(args, "extract_database", False):
         _handle_extract_database(args)
         if db: db.close()
         return
@@ -1122,6 +1153,10 @@ def main():
         # NEW (v1.3.9.5)
         getattr(args, "extract_database", False) or
         getattr(args, "database_dork_extract", None) or
+        # NEW (v1.3.9.5) — extraction triggers
+        getattr(args, "extract_database", False) or
+        getattr(args, "database_dork_extract", None) or
+        getattr(args, "extract_database_to", None) or  # implicit extraction
         getattr(args, "list_database_dork", False) or
         getattr(args, "database_dork", None)
     )
