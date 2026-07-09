@@ -1,0 +1,407 @@
+# ============================================
+# COMMON DORKS - XSS & HTML INJECTION
+# ============================================
+
+# ============================================
+# PARAMETER DASAR XSS (Reflected)
+# ============================================
+
+inurl:?q=
+inurl:?query=
+inurl:?search=
+inurl:?s=
+inurl:?keyword=
+inurl:?key=
+inurl:?term=
+inurl:?string=
+inurl:?text=
+inurl:?input=
+inurl:?name=
+inurl:?title=
+inurl:?subject=
+inurl:?message=
+inurl:?comment=
+inurl:?feedback=
+inurl:?reply=
+inurl:?to=
+inurl:?from=
+inurl:?user=
+inurl:?username=
+inurl:?login=
+inurl:?email=
+inurl:?mail=
+inurl:?phone=
+inurl:?mobile=
+inurl:?no=
+inurl:?num=
+inurl:?number=
+inurl:?filter=
+inurl:?sort=
+inurl:?order=
+inurl:?by=
+inurl:?field=
+inurl:?date=
+inurl:?time=
+inurl:?year=
+inurl:?month=
+inurl:?day=
+inurl:?city=
+inurl:?state=
+inurl:?country=
+inurl:?address=
+inurl:?zip=
+inurl:?postal=
+inurl:?code=
+
+# ============================================
+# PARAMETER FORM / INPUT UMUM
+# ============================================
+
+inurl:?firstname=
+inurl:?lastname=
+inurl:?fullname=
+inurl:?nick=
+inurl:?username=
+inurl:?password=
+inurl:?pass=
+inurl:?confirm=
+inurl:?captcha=
+inurl:?token=
+inurl:?csrf=
+inurl:?session=
+inurl:?cookie=
+inurl:?auth=
+
+# ============================================
+# PARAMETER UNTUK CMS & PLATFORM
+# ============================================
+
+# WordPress
+inurl:?s= inurl:wp-content
+inurl:?search= inurl:wp-includes
+inurl:?cat= inurl:wp-content
+
+# Joomla
+inurl:?search= inurl:components
+inurl:?keyword= inurl:modules
+inurl:?q= inurl:com_content
+
+# Drupal
+inurl:?q= inurl:sites
+inurl:?search= inurl:modules
+inurl:?keys= inurl:themes
+
+# Laravel
+inurl:?q= inurl:storage
+inurl:?search= inurl:public
+
+# PHP Native
+inurl:?search= inurl:index.php
+inurl:?q= inurl:product.php
+inurl:?keyword= inurl:view.php
+inurl:?query= inurl:detail.php
+
+# ============================================
+# DORK UNTUK MENCARI REFLECTED XSS
+# ============================================
+
+# Mencari parameter dengan input yang keluar di URL
+inurl:?q= test inurl:"?q="
+inurl:?search= test inurl:"?search="
+inurl:?s= test inurl:"?s="
+inurl:?keyword= test inurl:"?keyword="
+
+# Mencari parameter dengan hasil pencarian
+inurl:?q= intitle:"search results"
+inurl:?search= intitle:"search results"
+inurl:?q= intext:"results for"
+inurl:?search= intext:"results for"
+inurl:?q= intext:"found"
+inurl:?search= intext:"found"
+
+# Mencari parameter dengan error (indikasi XSS)
+inurl:?q= intext:"<" 
+inurl:?search= intext:">"
+inurl:?q= intext:"'" 
+inurl:?q= intext:""" 
+inurl:?q= intext:"alert"
+inurl:?search= intext:"script"
+
+# ============================================
+# DORK UNTUK MENCARI STORED XSS (Comment/Guestbook)
+# ============================================
+
+inurl:comment.php
+inurl:comments.php
+inurl:guestbook.php
+inurl:feedback.php
+inurl:review.php
+inurl:rating.php
+inurl:testimonial.php
+inurl:message.php
+inurl:forum.php
+inurl:thread.php
+inurl:post.php
+inurl:blog.php inurl:comment
+inurl:article.php inurl:comment
+inurl:news.php inurl:comment
+inurl:product.php inurl:review
+
+# Cari yang sudah terinfeksi XSS di komentar
+inurl:comment.php intext:"<script>"
+inurl:guestbook.php intext:"<script>"
+inurl:review.php intext:"<script>"
+inurl:feedback.php intext:"<script>"
+
+# ============================================
+# DORK UNTUK MENCARI HTML INJECTION
+# ============================================
+
+inurl:?q= intext:"<h1>"
+inurl:?q= intext:"<b>"
+inurl:?q= intext:"<i>"
+inurl:?q= intext:"<u>"
+inurl:?search= intext:"<marquee>"
+inurl:?q= intext:"<img"
+inurl:?search= intext:"<a href"
+inurl:?q= intext:"<div"
+inurl:?q= intext:"<span"
+
+# Mencari parameter yang memantulkan HTML
+inurl:?q= <h1>XSS</h1>
+inurl:?search= <b>test</b>
+inurl:?s= <i>italic</i>
+inurl:?keyword= <u>underline</u>
+
+# ============================================
+# DORK UNTUK MENCARI JAVASCRIPT INJECTION
+# ============================================
+
+inurl:?q= javascript:
+inurl:?search= javascript:
+inurl:?s= javascript:
+inurl:?q= onerror=
+inurl:?q= onload=
+inurl:?q= onclick=
+inurl:?q= onmouseover=
+inurl:?q= onfocus=
+inurl:?q= onblur=
+inurl:?q= onchange=
+inurl:?q= onsubmit=
+
+# ============================================
+# KOMBINASI DENGAN OPERATOR LAIN
+# ============================================
+
+# Filter domain Indonesia
+site:.go.id inurl:?q=
+site:.go.id inurl:?search=
+site:.ac.id inurl:?q=
+site:.sch.id inurl:?keyword=
+site:.co.id inurl:?query=
+site:.id inurl:?s=
+
+# Gabungkan dengan error
+inurl:?q= intext:"mysql" 
+inurl:?search= intext:"error"
+inurl:?q= intext:"warning"
+
+# Gabungkan dengan parameter lain
+inurl:?q= AND inurl:?cat=
+inurl:?search= AND inurl:?id=
+inurl:?keyword= AND inurl:?page=
+
+# Filter hasil demo/test
+inurl:?q= -inurl:demo -inurl:test -inurl:example -inurl:sample
+inurl:?search= -inurl:demo -inurl:test -inurl:example
+
+# ============================================
+# DORK UNTUK MENCARI XSS DI E-COMMERCE
+# ============================================
+
+inurl:product.php?q=
+inurl:product.php?search=
+inurl:product.php?keyword=
+inurl:shop.php?q=
+inurl:store.php?search=
+inurl:category.php?q=
+inurl:category.php?search=
+inurl:cart.php?q=
+inurl:checkout.php?q=
+
+# ============================================
+# DORK UNTUK MENCARI XSS DI LOGIN/REGISTER
+# ============================================
+
+inurl:login.php?q=
+inurl:register.php?q=
+inurl:signup.php?q=
+inurl:signin.php?q=
+inurl:profile.php?q=
+inurl:account.php?q=
+inurl:user.php?q=
+inurl:members.php?q=
+
+# ============================================
+# DORK UNTUK MENCARI XSS DI FILE UPLOAD
+# ============================================
+
+inurl:upload.php?q=
+inurl:file.php?q=
+inurl:image.php?q=
+inurl:photo.php?q=
+inurl:gallery.php?q=
+inurl:download.php?q=
+
+# ============================================
+# DORK UNTUK MENCARI PARAMETER DENGAN BASE64 / ENCODE
+# ============================================
+
+inurl:?q= base64
+inurl:?search= base64
+inurl:?q= encode
+inurl:?q= decode
+inurl:?data=
+inurl:?json=
+inurl:?xml=
+inurl:?callback=
+inurl:?jsonp=
+
+# ============================================
+# DORK UNTUK MENCARI XSS DI API
+# ============================================
+
+inurl:api.php?q=
+inurl:api.php?search=
+inurl:api.php?keyword=
+inurl:api/v1?q=
+inurl:api/v2?search=
+inurl:rest.php?q=
+inurl:rest.php?search=
+inurl:json.php?q=
+inurl:xml.php?q=
+
+# ============================================
+# DORK UNTUK MENCARI XSS DI PARAMETER TERSEMBUNYI
+# ============================================
+
+inurl:?debug=
+inurl:?test=
+inurl:?mode=
+inurl:?status=
+inurl:?type=
+inurl:?action=
+inurl:?function=
+inurl:?cmd=
+inurl:?exec=
+inurl:?run=
+inurl:?trace=
+inurl:?log=
+inurl:?dump=
+inurl:?print=
+inurl:?echo=
+inurl:?render=
+inurl:?format=
+inurl:?output=
+
+# ============================================
+# DORK UNTUK MENCARI PARAMETER DENGAN REDIRECT (Open Redirect + XSS)
+# ============================================
+
+inurl:?redirect=
+inurl:?return=
+inurl:?next=
+inurl:?goto=
+inurl:?url=
+inurl:?link=
+inurl:?target=
+inurl:?dest=
+inurl:?destination=
+inurl:?continue=
+inurl:?callback=
+
+# ============================================
+# DORK UNTUK MENCARI XSS DI SITE BERBAHASA INDONESIA
+# ============================================
+
+site:.go.id inurl:?q= intext:"cari"
+site:.go.id inurl:?search= intext:"hasil"
+site:.ac.id inurl:?keyword= intext:"pencarian"
+site:.sch.id inurl:?s= intext:"temukan"
+site:.co.id inurl:?query= intext:"filter"
+
+# Cari yang mungkin sudah terkena XSS
+site:.id inurl:?q= intext:"<script>alert"
+site:.id inurl:?search= intext:"<img src=x"
+site:.id inurl:?s= intext:"onerror"
+
+# ============================================
+# DORK UNTUK MENCARI XSS PADA WEBSITE POPULER
+# ============================================
+
+# Forum
+inurl:?q= inurl:forum
+inurl:?search= inurl:board
+inurl:?keyword= inurl:thread
+
+# Blog
+inurl:?q= inurl:blog
+inurl:?search= inurl:post
+inurl:?s= inurl:article
+
+# E-learning
+inurl:?q= inurl:course
+inurl:?search= inurl:lesson
+inurl:?keyword= inurl:module
+
+# E-government
+site:.go.id inurl:?q= inurl:pengaduan
+site:.go.id inurl:?search= inurl:layanan
+
+# ============================================
+# DORK UNTUK MENCARI XSS DI PARAMETER GANDA
+# ============================================
+
+inurl:?q= AND inurl:?page=
+inurl:?search= AND inurl:?id=
+inurl:?s= AND inurl:?cat=
+inurl:?keyword= AND inurl:?lang=
+inurl:?query= AND inurl:?filter=
+
+# ============================================
+# DORK UNTUK MENCARI XSS VIA USER-AGENT / HEADER
+# ============================================
+
+# (Tidak langsung via Google, tapi bisa diuji manual)
+# inurl:?q= intext:"User-Agent"
+# inurl:?q= intext:"HTTP_REFERER"
+
+# ============================================
+# DORK UNTUK MENCARI XSS DI PARAMETER ANGKA
+# ============================================
+
+inurl:?q=1
+inurl:?q=2
+inurl:?search=1
+inurl:?search=2
+inurl:?s=1
+inurl:?s=2
+inurl:?keyword=1
+inurl:?keyword=2
+
+# ============================================
+# DORK UNTUK MENCARI XSS YANG SUDAH TERJADI (Alert popup di konten)
+# ============================================
+
+intext:"<script>alert"
+intext:"<script>prompt"
+intext:"<script>confirm"
+intext:"alert(document.cookie)"
+intext:"<img src=x onerror="
+intext:"<svg/onload="
+intext:"javascript:alert"
+intext:"onerror=alert"
+intext:"onload=alert"
+intext:"onclick=alert"
+intext:"<iframe src=" intext:"alert"
+intext:"<body onload=alert"
