@@ -1,4 +1,6 @@
-# Bug Bounty Program Discovery Dorks (`database/bug-bounty-dorks/`)
+# Bug Bounty Program Discovery Dorks (`@bug-bounty/`)
+
+> **Data location:** these dorks live in the [Atdork-DB](https://github.com/amnottdevv/Atdork-DB) repository under `@folders` (e.g. `@bug-bounty/bug1.txt`). Browse with `atdork search <keyword>`, install with `atdork install <ref>`.
 
 This category is different from the vulnerability-class dorks elsewhere in
 the database. Instead of finding a *weak parameter*, these dorks find
@@ -7,7 +9,7 @@ useful when you're looking for legitimate, in-scope targets to test against
 rather than testing at random.
 
 ```
-database/bug-bounty-dorks/
+@bug-bounty/
 └── bbdorks.txt   # Responsible disclosure pages, security.txt files, VDP/bounty program listings
 ```
 
@@ -41,20 +43,20 @@ responsible disclosure hall of fame
 ## Usage
 
 ```bash
-# Extract the database first if you haven't already
-atdork --extract-database
+# Install this collection (refs also work straight from Atdork-DB)
+atdork install @bug-bounty
 
 # Load and run the bug bounty discovery dorks
-atdork --database-dork bug-bounty-dorks/bbdorks -r 30
+atdork --database-dork @bug-bounty/bbdorks -r 30
 
 # Preview what would run, without executing
-atdork --database-dork bug-bounty-dorks/bbdorks --database-preview
+atdork --database-dork @bug-bounty/bbdorks --database-preview
 
 # Random sample, reproducible with a seed
-atdork --database-dork bug-bounty-dorks/bbdorks --database-r 20 --database-seed 5
+atdork --database-dork @bug-bounty/bbdorks --database-r 20 --database-seed 5
 
 # Save discovered program pages to a file for later review
-atdork --database-dork bug-bounty-dorks/bbdorks -r 50 --format json -o programs.json
+atdork --database-dork @bug-bounty/bbdorks -r 50 --format json -o programs.json
 ```
 
 Since this category is mostly `site:`-restricted or region-restricted
@@ -63,7 +65,7 @@ tends to work well on any backend — but DuckDuckGo (`--backend duckduckgo`)
 handles the `r=h:` region shorthand entries natively:
 
 ```bash
-atdork --database-dork bug-bounty-dorks/bbdorks --backend duckduckgo -r 30
+atdork --database-dork @bug-bounty/bbdorks --backend duckduckgo -r 30
 ```
 
 ## What to do with the results
@@ -97,4 +99,4 @@ The developers and this documentation are not responsible for testing conducted 
 
 ---
 
-*See also: [Common Dorks](common-dorks.md), [Bing & DuckDuckGo Dorks](bing-and-ddg-dorks.md), [LFI Dorks](lfi-dorks.md), and the [Database Dorks overview](index.md) for the full `database/` folder structure.*
+*See also: [Common Dorks](common-dorks.md), [Bing & DuckDuckGo Dorks](bing-and-ddg-dorks.md), [LFI Dorks](lfi-dorks.md), and the [Database Dorks overview](index.md) for the full Atdork-DB folder structure.*

@@ -17,3 +17,6 @@ atdork.log
 
 # Hasil eksekusi
 results/
+
+# MkDocs build output
+/site/

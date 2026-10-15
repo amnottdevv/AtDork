@@ -1,4 +1,6 @@
-# Censys Search Dorks (`database/censys-dorks/censysdork.txt`)
+# Censys Search Dorks (`@censys/censysdork.txt`)
+
+> **Data location:** these dorks live in the [Atdork-DB](https://github.com/amnottdevv/Atdork-DB) repository under `@folders` (e.g. `@censys/censys1.txt`). Browse with `atdork search <keyword>`, install with `atdork install <ref>`.
 
 Unlike the Google/Bing/DuckDuckGo dorks elsewhere in this database, Censys
 queries search a database of **internet-wide scan results** — banners,
@@ -8,7 +10,7 @@ actually connecting to hosts. That makes this category fundamentally about
 it spans three very different use cases that deserve different handling:
 
 ```
-database/censys-dorks/
+@censys/
 └── censysdork.txt
 ```
 
@@ -45,7 +47,7 @@ same_service(
 ```
 
 ```bash
-atdork --database-dork censys-dorks/censysdork --backend censys -r 20
+atdork --database-dork @censys/censysdork --backend censys -r 20
 ```
 
 **What to do with a hit:** report it. Censys and most JARM/certificate
@@ -82,7 +84,7 @@ services.truncated: false
 
 ```bash
 # Discovery only — do not follow up by connecting to anything found
-atdork --database-dork censys-dorks/censysdork --backend censys --database-preview
+atdork --database-dork @censys/censysdork --backend censys --database-preview
 ```
 
 If you find an exposed ICS/OT device that looks like real critical
@@ -112,7 +114,7 @@ same_service(services.http.request.uri: "*/dashboard/" and services.http.respons
 ```
 
 ```bash
-atdork --database-dork censys-dorks/censysdork --backend censys -r 20 --filter-vuln exposed-service
+atdork --database-dork @censys/censysdork --backend censys -r 20 --filter-vuln exposed-service
 ```
 
 ---
@@ -142,4 +144,4 @@ law, given the potential for physical harm.
 
 ---
 
-*See also: [CMS Dorks](cms-dorks.md), [GitHub Secret-Exposure Dorks](github-dorks.md), and the [Database Dorks overview](index.md) for the full `database/` folder structure.*
+*See also: [CMS Dorks](cms-dorks.md), [GitHub Secret-Exposure Dorks](github-dorks.md), and the [Database Dorks overview](index.md) for the full Atdork-DB folder structure.*

@@ -2,11 +2,11 @@
 
 ## Introduction
 
-The **GHDB Scraper** is AtDork's live-fetch module for pulling the latest Google Dorks directly from the [Exploit-DB Google Hacking Database](https://www.exploit-db.com/google-hacking-database). Unlike the [Database Dork](./database-scrapper.md) feature which reads from a bundled static snapshot, the scraper performs real HTTP requests to Exploit-DB's AJAX endpoint and returns the freshest dorks available.
+The **GHDB Scraper** is AtDork's live-fetch module for pulling the latest Google Dorks directly from the [Exploit-DB Google Hacking Database](https://www.exploit-db.com/google-hacking-database). Unlike the [Database Dork](./database-scrapper.md) feature which reads from the static Atdork-DB dork packages, the scraper performs real HTTP requests to Exploit-DB's AJAX endpoint and returns the freshest dorks available.
 
 Use the scraper when you need:
 
-- **Up-to-date dorks** (the bundled snapshot may be days or weeks old)
+- **Up-to-date dorks** (static dork packages may be days or weeks old)
 - **Filtering by category or year** on the live dataset
 - **A quick refresh** of your local database
 - **Export to JSON or TXT** for use with other tools
@@ -100,7 +100,7 @@ atdork --ghdb-scraper
   - inurl:polly/CP
   - "Please re-enter your password It must match exactly"
   - "index of /" ( upload.cfm | upload.asp | upload.php | upload.cgi | upload.jsp | upload.pl )
-  ... dan 7920 dork lainnya (gunakan --ghdb-file untuk simpan semua)
+  ... and 7920 more dorks (use --ghdb-file to save all)
 ```
 
 ### 3. Save All Dorks to a File
@@ -351,10 +351,10 @@ atdork --batch-file dorks/2024_all.txt -r 15 --output-dir results/2024/
 
 ## Troubleshooting
 
-### "Gagal mengambil data GHDB. Cek koneksi atau coba lagi nanti."
+### "Failed to fetch GHDB data. Check your connection or try again later."
 
 ```
-❌ Gagal mengambil data GHDB. Cek koneksi atau coba lagi nanti.
+❌ Failed to fetch GHDB data. Check your connection or try again later.
 ```
 
 **Cause:** The scraper could not fetch data after 3 retries. Common reasons:
@@ -369,9 +369,9 @@ atdork --batch-file dorks/2024_all.txt -r 15 --output-dir results/2024/
 1. Test connectivity: `curl -I https://www.exploit-db.com/google-hacking-database`
 2. Wait a few minutes and retry (rate limits usually clear quickly)
 3. If behind a corporate proxy, set `HTTPS_PROXY` env var before running
-4. As a fallback, use the bundled database: `atdork --list-database-dork`
+4. As a fallback, use the Atdork-DB collections: `atdork --list-database-dork`
 
-### "Response bukan JSON valid (kemungkinan diblokir / format berubah)"
+### "Response is not valid JSON (possibly blocked / format changed)"
 
 **Cause:** Exploit-DB returned HTML instead of JSON — usually a Cloudflare challenge page or a CAPTCHA.
 
@@ -395,12 +395,12 @@ atdork --batch-file dorks/2024_all.txt -r 15 --output-dir results/2024/
 
 **Cause:** This is usually correct behavior — the `recordsTotal` field reflects all dorks on Exploit-DB, but the `data` array may be paginated or filtered by the server.
 
-**Fix:** The scraper fetches a single page (the same one the web UI shows by default). To get all dorks, save to a file and combine with the bundled database:
+**Fix:** The scraper fetches a single page (the same one the web UI shows by default). To get all dorks, save to a file and combine with the Atdork-DB GHDB copy:
 
 ```bash
 atdork --ghdb-scraper --ghdb-file dorks/fresh.txt
-# Combine with bundled
-cat database/09_files_containing_passwords.txt dorks/fresh.txt | sort -u > combined.txt
+# Combine with the Atdork-DB GHDB export
+cat ~/Atdork-DB/@ghdb/09_files_containing_passwords.txt dorks/fresh.txt | sort -u > combined.txt
 ```
 
 ---
@@ -445,7 +445,7 @@ atdork --ghdb-scraper --ghdb-file dorks.txt
 
 ## See Also
 
-- [Database Dork](./database-scrapper.md) — for loading bundled dorks offline
+- [Database Dork](./database-scrapper.md) — for loading Atdork-DB dorks offline
 - [Batch Processing](./batch-processing.md) — for executing scraped dorks as a batch
 - [Template System](./template-system.md) — for YAML-based curated dork collections
 - [Output Formats](./output-formats.md) — for saving scrape results in different formats

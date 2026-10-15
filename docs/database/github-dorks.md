@@ -1,4 +1,6 @@
-# GitHub Secret-Exposure Dorks (`database/github-dorks/`)
+# GitHub Secret-Exposure Dorks (`@github/`)
+
+> **Data location:** these dorks live in the [Atdork-DB](https://github.com/amnottdevv/Atdork-DB) repository under `@folders` (e.g. `@github/github1.txt`). Browse with `atdork search <keyword>`, install with `atdork install <ref>`.
 
 This category is fundamentally different from the SQLi/LFI/RFI/XSS
 categories elsewhere in this database. Those find a *potentially*
@@ -13,7 +15,7 @@ often survive in old commits even after being "removed") for accidental
 credential leaks, not searching the wider internet for other people's keys.
 
 ```
-database/github-dorks/
+@github/
 └── ghdorks.txt   # filename:/extension:/language: searches for common secret file patterns
 ```
 
@@ -47,7 +49,7 @@ HEROKU_API_KEY language:shell
 
 ```bash
 # Scope every search to your own GitHub org/account before running anything
-atdork --database-dork github-dorks/ghdorks --backend google -r 20
+atdork --database-dork @github/ghdorks --backend google -r 20
 ```
 
 Since these are GitHub-specific search operators, run them **scoped to your
@@ -57,7 +59,7 @@ per line) rather than running them unscoped.
 
 ```bash
 # Preview what's in the file before running anything
-atdork --database-dork github-dorks/ghdorks --database-preview
+atdork --database-dork @github/ghdorks --database-preview
 ```
 
 ## If you find a live secret
@@ -93,4 +95,4 @@ The developers and this documentation are not responsible for any use of a disco
 
 ---
 
-*See also: [Bug Bounty Program Discovery Dorks](bug-bounty-dorks.md) for finding the right channel to report anything you find, and the [Database Dorks overview](index.md) for the full `database/` folder structure.*
+*See also: [Bug Bounty Program Discovery Dorks](bug-bounty-dorks.md) for finding the right channel to report anything you find, and the [Database Dorks overview](index.md) for the full Atdork-DB folder structure.*

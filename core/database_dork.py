@@ -1,12 +1,14 @@
 """
 AtDork database dork loader (v1.3.9.5).
 
-Loads dorks from the bundled GHDB database (`database/*.txt`) or from a
-user-extracted copy. Supports:
+Loads dorks from the Atdork-DB repository (package refs such as
+`@ghdb/01_footholds.txt`, resolved through core.package_manager) or from a
+legacy local `database/` directory. Supports:
 
-- Listing available database files (with dork counts)
-- Extracting the bundled database to a local directory
-- Loading dorks by name (with/without .txt extension, with subdirectory paths)
+- Listing available dork files (with dork counts) via the index or a
+  local directory
+- Loading dorks by name (with/without .txt extension, with subdirectory
+  paths, or as package refs like `cve@cve_1.txt`)
 - Combining multiple files via comma
 - Random selection (--database-r)
 
@@ -18,7 +20,7 @@ Usage example (from atdork.py):
         extract_database,
     )
 
-    dorks = load_database_dorks("01_footholds,03_sensitive_directories",
+    dorks = load_database_dorks("@ghdb/01_footholds,@sensitive/sensitive-info-dorks",
                                 random_count=10)
 """
 
@@ -31,6 +33,18 @@ import shutil
 from importlib import resources
 from importlib.resources.abc import Traversable
 from typing import Dict, List, Optional, Union
+
+from core.package_manager import (
+    IndexEntry,
+    PackageError,
+    RefError,
+    installed_path,
+    load_index,
+    parse_ref,
+    resolve_entry,
+    resolve_folder,
+    source_path,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -96,24 +110,15 @@ def _filesystem_root() -> Optional[str]:
     return None
 
 
-def find_database_root(custom_path: Optional[str] = None) -> Union[str, Traversable]:
+def _find_legacy_root(custom_path: Optional[str] = None) -> Optional[Union[str, Traversable]]:
     """
-    Resolve the database root directory.
+    Locate a legacy local `database/` directory (or bundled copy).
 
-    Resolution order:
-      1. custom_path (if provided and exists)
-      2. ./database in CWD (extracted by --extract-database)
-      3. Bundled database/ alongside atdork.py (filesystem)
-      4. Bundled database/ via importlib.resources (installed wheel)
+    Returns None when no local database exists — callers then fall back
+    to the Atdork-DB package index.
 
-    Args:
-        custom_path: Optional override path.
-
-    Returns:
-        Either a str (filesystem path) or a Traversable (importlib.resources).
-
-    Raises:
-        FileNotFoundError: If no database directory can be found.
+    Raises FileNotFoundError only when a custom_path was given explicitly
+    but does not exist.
     """
     if custom_path:
         if not os.path.isdir(custom_path):
@@ -139,10 +144,86 @@ def find_database_root(custom_path: Optional[str] = None) -> Union[str, Traversa
     if bundled is not None:
         return bundled
 
+    return None
+
+
+def find_database_root(custom_path: Optional[str] = None) -> Union[str, Traversable]:
+    """
+    Resolve the legacy database root directory.
+
+    Resolution order:
+      1. custom_path (if provided and exists)
+      2. ./database in CWD (extracted by --extract-database)
+      3. Bundled database/ alongside atdork.py (filesystem)
+      4. Bundled database/ via importlib.resources (installed wheel)
+
+    Args:
+        custom_path: Optional override path.
+
+    Returns:
+        Either a str (filesystem path) or a Traversable (importlib.resources).
+
+    Raises:
+        FileNotFoundError: If no local database directory can be found.
+            (Dork data now lives in the Atdork-DB repository — see
+            core.package_manager.)
+    """
+    root = _find_legacy_root(custom_path)
+    if root is not None:
+        return root
+
     raise FileNotFoundError(
-        "Database directory not found. Run 'atdork --extract-database' to "
-        "extract the bundled GHDB database to the current directory, or "
-        "specify a path with --database-path."
+        "Local database directory not found. Dork data now lives in the "
+        "Atdork-DB repository: clone https://github.com/amnottdevv/Atdork-DB "
+        "or point --db-repo / ATDORK_DB_REPO at an existing checkout. "
+        "'atdork --list-database-dork' lists the available files."
+    )
+
+
+# --------------------------------------------------------------------------- #
+# Atdork-DB index helpers
+# --------------------------------------------------------------------------- #
+
+def _load_index_or_raise() -> List[IndexEntry]:
+    """Load the Atdork-DB index, converting package errors to FileNotFoundError."""
+    try:
+        return load_index()
+    except PackageError as exc:
+        raise FileNotFoundError(str(exc)) from exc
+
+
+def _ref_error(exc: RefError) -> FileNotFoundError:
+    """Convert a package RefError into FileNotFoundError with suggestions."""
+    message = str(exc)
+    if exc.suggestions:
+        message += "\nDid you mean: " + ", ".join(exc.suggestions)
+    return FileNotFoundError(message)
+
+
+def _resolve_dork_file(raw: str, index: List[IndexEntry]):
+    """
+    Resolve one dork spec to (display_ref, filesystem_path).
+
+    Prefers an installed copy in the package store, then the Atdork-DB
+    checkout itself. Raises FileNotFoundError when nothing matches.
+    """
+    try:
+        entry = resolve_entry(raw, index=index)
+    except RefError as exc:
+        raise _ref_error(exc) from exc
+
+    installed = installed_path(entry)
+    if installed.is_file():
+        return entry.ref, str(installed)
+
+    src = source_path(entry)
+    if src.is_file():
+        logger.debug("Reading dork file from Atdork-DB (not installed): %s", entry.ref)
+        return entry.ref, str(src)
+
+    raise FileNotFoundError(
+        f"Dork file '{entry.ref}' is neither installed nor present in "
+        f"Atdork-DB (stale index? run 'atdork index --build')."
     )
 
 
@@ -263,10 +344,14 @@ def load_database_dorks(
 
     Args:
         spec: Comma-separated list of file specs. Each spec may be:
-              - '01_footholds' or '01_footholds.txt' (file in database/ root)
-              - '/db-1/1_none' or 'db-1/1_none' (subdirectory path)
-              - 'subdir/file' (subdirectory path)
-        db_path: Custom database root directory. If None, auto-discovered.
+              - a package ref: '@ghdb/01_footholds', 'c@cve_1.txt'
+              - a whole folder: '@ghdb' (loads every .txt member)
+              - '01_footholds' or '01_footholds.txt' (bare name, matched
+                against the Atdork-DB index or the local database/ root)
+              - '/db-1/1_none' or 'db-1/1_none' (subdirectory path, local
+                database/ root only)
+        db_path: Custom database root directory. If None, auto-discovered
+            (local database/ first, then the Atdork-DB package index).
         random_count: If given, randomly select N dorks from the combined
             set (without replacement).
         seed: Optional random seed for reproducibility.
@@ -275,14 +360,14 @@ def load_database_dorks(
         List of dork query strings.
 
     Raises:
-        FileNotFoundError: If a specified file or the database directory
-            doesn't exist.
+        FileNotFoundError: If a specified file can't be found anywhere, or
+            neither a local database nor Atdork-DB is available.
         ValueError: If a name has invalid format or random_count is invalid.
     """
     if not spec or not spec.strip():
         raise ValueError("Empty database dork spec.")
 
-    root = find_database_root(db_path)
+    root = _find_legacy_root(db_path)
 
     # Parse comma-separated spec
     names = [n.strip() for n in spec.split(",") if n.strip()]
@@ -291,34 +376,84 @@ def load_database_dorks(
 
     all_dorks: List[str] = []
     loaded_files: List[str] = []
+    index: Optional[List[IndexEntry]] = None  # Atdork-DB index, loaded lazily
 
     for raw_name in names:
-        rel_path = _normalize_name(raw_name)
-
-        if _is_traversable(root):
-            # Bundled via importlib.resources — walk the path components
-            traversable = root
-            for part in rel_path.split("/"):
-                traversable = traversable.joinpath(part)
-            if not traversable.is_file():
-                raise FileNotFoundError(
-                    f"Database dork file not found: '{rel_path}'. "
-                    f"Use 'atdork --list-database-dork' to see available files."
-                )
-            dorks = _read_dorks_from_traversable(traversable)
+        if "@" in raw_name:
+            # Package ref (@folder/file, prefix@file, or a whole folder) —
+            # validated by the package manager (path safety, index lookup).
+            if index is None:
+                index = _load_index_or_raise()
+            try:
+                ref = parse_ref(raw_name)
+                if ref.name is None:
+                    # Folder-wide ref ('@cve', 'c@'): load every member.
+                    folder = resolve_folder(raw_name, index=index)
+                    members = [e for e in index
+                               if e.folder == folder
+                               and e.name.lower().endswith(VALID_EXTENSIONS)]
+                    if not members:
+                        raise FileNotFoundError(
+                            f"Folder '@{folder}' has no loadable "
+                            f"{VALID_EXTENSIONS} files (csv/json packages hold "
+                            "structured data — install them with "
+                            "'atdork install' instead)."
+                        )
+                    specs = [e.ref for e in members]
+                else:
+                    specs = [raw_name]
+            except RefError as exc:
+                raise _ref_error(exc) from exc
         else:
-            # Filesystem path
-            full_path = os.path.join(root, rel_path)
-            if not os.path.isfile(full_path):
-                raise FileNotFoundError(
-                    f"Database dork file not found: '{rel_path}'. "
-                    f"Use 'atdork --list-database-dork' to see available files."
-                )
-            dorks = _read_dorks_from_path(full_path)
+            # Legacy-style spec: always validate (traversal / absolute path /
+            # extension) exactly like the local database/ flow does.
+            specs = [raw_name]
 
-        loaded_files.append(rel_path)
-        all_dorks.extend(dorks)
-        logger.debug("Loaded %d dorks from '%s'", len(dorks), rel_path)
+        for spec in specs:
+            if "@" in spec:
+                rel_path, filepath = _resolve_dork_file(spec, index)
+                if not rel_path.lower().endswith(VALID_EXTENSIONS):
+                    raise ValueError(
+                        f"Unsupported extension in '{rel_path}'. Only "
+                        f"{VALID_EXTENSIONS} files can be loaded as dorks "
+                        "(csv/json packages hold structured data — install them "
+                        "with 'atdork install' instead)."
+                    )
+                dorks = _read_dorks_from_path(filepath)
+            else:
+                rel_path = _normalize_name(spec)
+
+                if root is None:
+                    # No local database/ → resolve the bare name via the index.
+                    if index is None:
+                        index = _load_index_or_raise()
+                    lookup = rel_path.replace("\\", "/").split("/")[-1]
+                    rel_path, filepath = _resolve_dork_file(lookup, index)
+                    dorks = _read_dorks_from_path(filepath)
+                elif _is_traversable(root):
+                    # Bundled via importlib.resources — walk the path components
+                    traversable = root
+                    for part in rel_path.split("/"):
+                        traversable = traversable.joinpath(part)
+                    if not traversable.is_file():
+                        raise FileNotFoundError(
+                            f"Database dork file not found: '{rel_path}'. "
+                            f"Use 'atdork --list-database-dork' to see available files."
+                        )
+                    dorks = _read_dorks_from_traversable(traversable)
+                else:
+                    # Filesystem path
+                    full_path = os.path.join(root, rel_path)
+                    if not os.path.isfile(full_path):
+                        raise FileNotFoundError(
+                            f"Database dork file not found: '{rel_path}'. "
+                            f"Use 'atdork --list-database-dork' to see available files."
+                        )
+                    dorks = _read_dorks_from_path(full_path)
+
+            loaded_files.append(rel_path)
+            all_dorks.extend(dorks)
+            logger.debug("Loaded %d dorks from '%s'", len(dorks), rel_path)
 
     # Deduplicate while preserving order
     seen = set()
@@ -374,7 +509,10 @@ def _is_dork_file(filename: str) -> bool:
 
 def list_database_dorks(db_path: Optional[str] = None) -> List[Dict]:
     """
-    List all available database dork files with their dork counts.
+    List all available dork files with their dork counts.
+
+    Prefers a legacy local `database/` directory; otherwise the entries
+    come from the Atdork-DB package index (Index.idn).
 
     Args:
         db_path: Custom database root directory. If None, auto-discovered.
@@ -382,12 +520,31 @@ def list_database_dorks(db_path: Optional[str] = None) -> List[Dict]:
     Returns:
         List of dicts with keys:
             - name: filename (e.g. '01_footholds.txt')
-            - relpath: relative path from db root (e.g. '01_footholds.txt'
-              or 'subdir/file.txt')
+            - relpath: '@folder/file.txt' (index mode) or a relative path
+              from the local db root (legacy mode)
             - count: number of valid dork lines
             - size_bytes: file size in bytes (0 if unknown)
+
+    Raises:
+        FileNotFoundError: When neither a local database nor Atdork-DB
+            with its index is available.
     """
-    root = find_database_root(db_path)
+    root = _find_legacy_root(db_path)
+
+    if root is None:
+        entries = _load_index_or_raise()
+        results = [
+            {
+                "name": e.name,
+                "relpath": e.ref,
+                "count": e.dork_lines,
+                "size_bytes": e.size_bytes,
+            }
+            for e in entries
+        ]
+        results.sort(key=lambda r: r["relpath"])
+        return results
+
     results: List[Dict] = []
 
     if _is_traversable(root):
@@ -478,8 +635,10 @@ def extract_database(
 
     if source_fs is None and source_t is None:
         raise FileNotFoundError(
-            "Bundled database not found. Reinstall atdork or clone the "
-            "repository so the `database/` folder is available."
+            "No local database/ copy is available — dork data now lives in "
+            "the Atdork-DB repository. Clone https://github.com/amnottdevv/"
+            "Atdork-DB (or point --db-repo at it) and use 'atdork install' "
+            "to copy dork files locally."
         )
 
     # Reject extracting onto the source itself

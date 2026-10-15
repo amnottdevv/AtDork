@@ -1,15 +1,17 @@
-# Bing & DuckDuckGo Dorks (`database/bing/`, `database/ddg/`)
+# Bing & DuckDuckGo Dorks (`@bing/`, `@duckduckgo/`)
+
+> **Data location:** these dorks live in the [Atdork-DB](https://github.com/amnottdevv/Atdork-DB) repository under `@folders` (e.g. `@bing/bing1.txt`). Browse with `atdork search <keyword>`, install with `atdork install <ref>`.
 
 Bing and DuckDuckGo support several search operators that Google doesn't
 (or supports differently). This page covers what's unique about each engine
-and how the bundled dork files use those operators.
+and how the dork files use those operators.
 
 ```
-database/
-├── bing/
+Atdork-DB/
+├── @bing/
 │   ├── bing1.txt   # OR groups & contains:
 │   └── bing2.txt   # location:, ip:, domain:, linkfromdomain:, language:, feed:, prefer:
-└── ddg/
+└── @duckduckgo/
     └── ddg1.txt     # Verbatim error strings, !bang shortcuts, OR combos
 ```
 
@@ -17,8 +19,8 @@ Run these with `--backend bing` or `--backend duckduckgo` so AtDork sends the
 query to the right engine:
 
 ```bash
-atdork --database-dork bing/bing1 --backend bing -r 20
-atdork --database-dork ddg/ddg1 --backend duckduckgo -r 20
+atdork --database-dork @bing/bing1 --backend bing -r 20
+atdork --database-dork @duckduckgo/ddg1 --backend duckduckgo -r 20
 ```
 
 ---
@@ -79,8 +81,8 @@ location:Indonesia domain:go.id inurl:?id= contains:sql
 **Usage:**
 
 ```bash
-atdork --database-dork bing/bing1 --backend bing --database-r 15
-atdork --database-dork bing/bing2 --backend bing --database-preview
+atdork --database-dork @bing/bing1 --backend bing --database-r 15
+atdork --database-dork @bing/bing2 --backend bing --database-preview
 ```
 
 ---
@@ -119,7 +121,7 @@ site:.go.id "Error in lines :"
 **Usage:**
 
 ```bash
-atdork --database-dork ddg/ddg1 --backend duckduckgo --database-r 20
+atdork --database-dork @duckduckgo/ddg1 --backend duckduckgo --database-r 20
 ```
 
 ---
@@ -169,4 +171,4 @@ The developers and this documentation are not responsible for misuse. Any legal 
 
 ---
 
-*See also: [Common Dorks](common-dorks.md) for the Google-style SQLi/LFI/XSS/RCE categories, and the [Database Dorks overview](index.md) for the full `database/` folder structure.*
+*See also: [Common Dorks](common-dorks.md) for the Google-style SQLi/LFI/XSS/RCE categories, and the [Database Dorks overview](index.md) for the full Atdork-DB folder structure.*

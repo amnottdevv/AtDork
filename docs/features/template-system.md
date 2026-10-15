@@ -191,8 +191,8 @@ Starting from v1.3.8, templates are included in the installed package. This mean
 
 **Error Example:**
 ```
-Template 'unknown' tidak ditemukan di 'wordlists/templates/'.
-Gunakan --list-templates untuk melihat daftar yang tersedia.
+Template 'unknown' not found in 'wordlists/templates/'.
+Use --list-templates to see the available list.
 ```
 
 ---

@@ -37,7 +37,28 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "output_dir": None,
     "output": None,
     "debug": False,
+    # Package manager (Atdork-DB)
+    "db_repo": None,        # path to the Atdork-DB checkout
+    "db_repo_url": None,    # git URL used by 'atdork update' hint
+    "package_dir": None,    # local package store (default ~/.atdork/packages)
 }
+
+# Last configuration produced by load_config(); lets other modules (package
+# manager, database dork loader) read settings without re-running discovery.
+_CURRENT: Dict[str, Any] = {}
+
+
+def get_setting(key: str, default: Optional[Any] = None) -> Optional[Any]:
+    """
+    Read a single config setting: env ATDORK_<KEY> first, then the last
+    loaded config, then the given default.
+    """
+    env_val = os.environ.get(f"ATDORK_{key.upper()}")
+    if env_val is not None:
+        return env_val
+    if key in _CURRENT:
+        return _CURRENT[key]
+    return default
 
 
 def _load_yaml(filepath: str) -> Optional[Dict[str, Any]]:
@@ -130,5 +151,9 @@ def load_config(filepath: Optional[str] = None) -> Dict[str, Any]:
 
     # Override with environment variables
     config = _merge_with_env(config)
+
+    # Publish for get_setting() so downstream modules see the same config
+    _CURRENT.clear()
+    _CURRENT.update(config)
 
     return config

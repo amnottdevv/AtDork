@@ -239,8 +239,8 @@ If wordlist is missing:
 
 **Error Example:**
 ```
-Error: Wordlist file 'does-not-exist.txt' tidak ditemukan.
-   Sumber yang dicek: paket resource 'wordlists'
+Error: Wordlist file 'does-not-exist.txt' not found.
+   Checked source: package resource 'wordlists'
 ```
 
 **Why this is important:**

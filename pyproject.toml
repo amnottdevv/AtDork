@@ -53,18 +53,11 @@ Homepage = "https://github.com/amnottdevv/atdork"
 # Package discovery & data files
 # ---------------------------------------------------------------------------
 #
-# The `database/` folder contains 89 .txt files spread across 18+ nested
-# subdirectories (Bug Bounty Dorks/, CMS/Wordpress/, Cryptocurrency Dorks/,
-# etc.) â€” WITHOUT __init__.py markers in each subfolder.
-#
-# To bundle every .txt/.md file under database/ (including ones added later
-# in any new subfolder), we use a combination of:
-#   1. `include-package-data = true` â€” auto-include data files for packages
-#   2. Recursive glob patterns in `[tool.setuptools.package-data]`
-#   3. A MANIFEST.in fallback for sdist builds (belt-and-suspenders)
-#
-# This means: drop a new `database/<new_subdir>/<new_file>.txt` and it will
-# be automatically bundled in the next wheel build â€” no config changes needed.
+
+# Dork data lives in the separate Atdork-DB repository
+# (github.com/amnottdevv/Atdork-DB), fetched through the built-in package
+# manager: `atdork install c@cve_1.txt`. This distribution bundles only
+# code plus the built-in wordlists/templates for --filter-vuln/--template.
 
 [tool.setuptools]
 py-modules = ["atdork"]
@@ -72,13 +65,10 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 # Auto-discover all Python packages (folders with __init__.py)
-# Note: database/ subfolders don't have __init__.py, so they're treated
-# as data directories, not packages â€” package-data globs below handle them.
 include = [
     "core*",
     "lib*",
     "wordlists*",
-    "database",
 ]
 exclude = ["tests*", "docs*", "raw*", "assets*"]
 
@@ -88,23 +78,6 @@ wordlists = ["*.txt"]
 
 # Templates: YAML dork collections
 "wordlists.templates" = ["*.yaml", "*.yml"]
-
-# Database: bundled 900K+ dorks across 89 files in nested subfolders.
-# Recursive globs (`**/`) catch ALL .txt/.md files in ANY subfolder,
-# so newly added subdirectories are bundled automatically.
-# Patterns are evaluated against the `database` package root.
-database = [
-    "*.txt",
-    "*.md",
-    "**/*.txt",
-    "**/*.md",
-    "**/**/*.txt",
-    "**/**/*.md",
-    "**/**/**/*.txt",
-    "**/**/**/*.md",
-    "**/**/**/**/*.txt",
-    "**/**/**/**/*.md",
-]
 
 [project.scripts]
 atdork = "atdork:main"

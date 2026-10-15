@@ -6,13 +6,16 @@ Author  : alzzmarket
 GitHub  : github.com/amnottdevv/atdork
 
 Changelog (1.3.9.6):
-  - Bundled dork database expanded to 900K+ dorks across 89 files
-    (Bug Bounty, CCTV, CMS, Carding, Cloud, Cryptocurrency, Gaming,
-     GitHub, LFI/RFI, Misc, Movie, Onion, Search Engines, Shodan,
-     Shopping, exploit-db categories)
+  - Dork data moved out of the tool into the Atdork-DB repository
+    (github.com/amnottdevv/Atdork-DB): 100+ files across themed @folders
+    (exploit-db, ghdb, shodan, censys, cms, cloud, crypto, gaming, movie,
+    onion, bug-bounty, lfi/rfi, and more) plus the Index.idn manifest.
+  - New package manager: atdork install/uninstall/installed/search/
+    update/index. Refs like '@cve/cve_1.txt', 'c@cve_1.txt' or '@cve'
+    work with --batch-file, --database-dork and --list-database-dork.
   - All Database Dork features (introduced in 1.3.9.5) now work
-    transparently with the expanded database, including subfolder
-    navigation, comma combos, and random selection.
+    transparently with the package index, including subfolder
+    navigation, comma combos, folder-wide loads, and random selection.
 
 Changelog (1.3.9.5):
   - Integrated `core/database_dork.py` for loading dorks from the bundled
@@ -60,6 +63,22 @@ from core.database_dork import (
     load_database_dorks,
     list_database_dorks,
     extract_database,
+)
+from core.package_manager import (
+    DBRepoNotFound,
+    IndexNotFound,
+    PackageError,
+    RefError,
+    build_index as build_pkg_index,
+    find_db_repo,
+    install as install_packages,
+    list_installed,
+    load_index,
+    read_index_header,
+    resolve_batch_file,
+    search as search_index,
+    uninstall as uninstall_packages,
+    update_repo,
 )
 from core.post_processor import PostProcessor, extract_urls, extract_vulnerable_urls
 from lib.display import show_banner, display_results
@@ -120,11 +139,40 @@ def build_parser():
     parser = argparse.ArgumentParser(
         prog="atdork",
         description="Atdork – Professional DuckDuckGo metasearch OSINT tool.",
-        epilog='Example: atdork -q "site:gov filetype:pdf" -r 10 -o results.json'
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog=(
+            "Package commands (dork packages from Atdork-DB):\n"
+            "  atdork install <ref>     Install a package (e.g. c@cve_1.txt or @cve)\n"
+            "  atdork uninstall <ref>   Remove an installed package\n"
+            "  atdork installed         List installed packages\n"
+            "  atdork search <keyword>  Search the package index\n"
+            "  atdork update            Pull the latest Atdork-DB data\n"
+            "  atdork index --build     Rebuild Index.idn (repository maintainer)\n"
+            "\n"
+            "Package refs: @cve/cve_1.txt (canonical), c@cve_1.txt (shorthand),\n"
+            "              @cve (whole folder)\n"
+            "\n"
+            'Example: atdork -q "site:gov filetype:pdf" -r 10 -o results.json'
+        ),
     )
     # Konfigurasi
     parser.add_argument("--config", type=str, help="Path to YAML config file.")
     parser.add_argument("--interactive", action="store_true", help="Run interactive mode.")
+
+    # Package manager (Atdork-DB)
+    pkg_group = parser.add_argument_group("package manager (Atdork-DB)")
+    pkg_group.add_argument(
+        "--db-repo", type=str,
+        help="Path to the Atdork-DB checkout (default: auto-discover, or config key 'db_repo').",
+    )
+    pkg_group.add_argument(
+        "--db-repo-url", type=str,
+        help="Git URL of the Atdork-DB repository (default: GitHub amnottdevv/Atdork-DB).",
+    )
+    pkg_group.add_argument(
+        "--package-dir", type=str,
+        help="Local package store directory (default: ~/.atdork/packages).",
+    )
 
     # Opsi utama
     parser.add_argument("-q", "--query", type=str, help="Keyword / dork.")
@@ -229,18 +277,21 @@ def build_parser():
 
     # Database Dork (v1.3.9.5) — NEW
     db_group = parser.add_argument_group(
-        "Database Dork (v1.3.9.5)",
-        "Load dorks from the bundled GHDB database (database/*.txt). "
-        "Examples:\n"
-        "  atdork --extract-database\n"
+        "Database Dork (Atdork-DB packages)",
+        "Load dorks from the Atdork-DB repository (Index.idn). "
+        "Refs: '@ghdb/01_footholds', 'c@cve_1.txt', whole folder '@ghdb', "
+        "or bare names like '01_footholds'. Examples:\n"
         "  atdork --list-database-dork\n"
-        "  atdork --database-dork 01_footholds --database-r 10\n"
-        "  atdork --database-dork 01_footholds,03_sensitive_directories\n"
-        "  atdork --database-dork /db-1/1_none --database-r 5 --database-preview",
+        "  atdork --database-dork @ghdb/01_footholds --database-r 10\n"
+        "  atdork --database-dork @ghdb/01_footholds,03_sensitive_directories\n"
+        "  atdork --database-dork @cve --database-preview\n"
+        "  atdork --database-dork /db-1/1_none --database-path /custom/db "
+        "(legacy local copy)",
     )
     db_group.add_argument(
         "--extract-database", action="store_true",
-        help="Extract bundled database to ./database (or --extract-database-to PATH).",
+        help="Copy a legacy local ./database directory to a destination "
+             "(dork data now lives in the Atdork-DB repository).",
     )
     db_group.add_argument(
         "--extract-database-to", type=str, default=None,
@@ -249,7 +300,7 @@ def build_parser():
     db_group.add_argument(
         "--database-dork-extract", type=str, default=None,
         metavar="PATH",
-        help="Shortcut: extract bundled database to PATH. "
+        help="Shortcut: copy a legacy local database to PATH. "
              "Equivalent to '--extract-database --extract-database-to PATH'. "
              "Use with --force to overwrite. "
              "Example: atdork --database-dork-extract mydork/",
@@ -498,7 +549,7 @@ def _build_cache_params(args) -> Dict[str, Any]:
 # --------------------------------------------------------------------------- #
 
 def _handle_extract_database(args) -> None:
-    """Handle --extract-database: copy bundled database to local directory."""
+    """Handle --extract-database: copy a legacy local ./database directory."""
     dest = args.extract_database_to
     try:
         result_path = extract_database(dest_dir=dest, overwrite=args.force)
@@ -539,10 +590,10 @@ def _handle_list_database_dork(args) -> None:
         sys.exit(1)
 
     if not files:
-        console.print("[yellow]No database dork files found.[/yellow]")
+        console.print("[yellow]No dork files found.[/yellow]")
         console.print(
-            "[dim]Hint: run 'atdork --extract-database' to copy the "
-            "bundled database to the current directory.[/dim]"
+            "[dim]Hint: check --database-path, or rebuild the Atdork-DB "
+            "index with 'atdork index --build'.[/dim]"
         )
         return
 
@@ -864,11 +915,15 @@ def cli_mode(args):
                 custom_queries = [args.query]
             queries.extend(custom_queries)
 
-        # 4. Batch file
+        # 4. Batch file (local path or package ref like @cve/cve_1.txt / c@cve_1.txt)
         if args.batch_file:
             try:
-                file_queries = load_queries_from_file(args.batch_file)
+                batch_path = resolve_batch_file(args.batch_file)
+                file_queries = load_queries_from_file(str(batch_path))
                 queries.extend(file_queries)
+            except PackageError as e:
+                _print_ref_error(e)
+                sys.exit(1)
             except Exception as e:
                 console.print(f"[red]Failed to read batch file: {e}[/red]")
                 sys.exit(1)
@@ -1267,6 +1322,293 @@ def cli_mode(args):
         cache.close()
 
 
+# --------------------------------------------------------------------------- #
+# Package manager CLI (atdork install / uninstall / installed / search / ...)
+# --------------------------------------------------------------------------- #
+
+PACKAGE_COMMANDS = ("install", "uninstall", "installed", "search", "update", "index")
+
+
+def _pretty_path(path) -> str:
+    """Shorten a path under the user's home directory to ~/..."""
+    text = str(path)
+    home = os.path.expanduser("~")
+    if text.startswith(home):
+        return "~" + text[len(home):]
+    return text
+
+
+def _print_ref_error(exc: PackageError) -> None:
+    """Print a package error (with suggestions when available)."""
+    console.print(f"[red]Error: {exc}[/red]")
+    if isinstance(exc, RefError) and exc.suggestions:
+        console.print("[yellow]Did you mean:[/yellow]")
+        for suggestion in exc.suggestions:
+            console.print(f"  [cyan]{suggestion}[/cyan]")
+
+
+def _pkg_install(argv: List[str]) -> int:
+    parser = argparse.ArgumentParser(
+        prog="atdork install",
+        description="Install dork packages from the Atdork-DB repository.",
+    )
+    parser.add_argument(
+        "--force", action="store_true",
+        help="Re-copy even when the installed file is already identical.",
+    )
+    parser.add_argument(
+        "refs", nargs="+", metavar="REF",
+        help="@cve/cve_1.txt, c@cve_1.txt, or a folder ref like @cve",
+    )
+    args_ = parser.parse_args(argv)
+
+    exit_code = 0
+    installed_count = existing_count = total_dorks = 0
+    for ref in args_.refs:
+        try:
+            outcomes = install_packages(ref, force=args_.force)
+        except PackageError as exc:
+            _print_ref_error(exc)
+            exit_code = 1
+            continue
+        for outcome in outcomes:
+            if outcome.status == "exists":
+                existing_count += 1
+                console.print(
+                    f"[dim]• {outcome.entry.ref} — already installed "
+                    f"({outcome.entry.dork_lines} dorks)[/dim]"
+                )
+            else:
+                installed_count += 1
+                total_dorks += outcome.entry.dork_lines
+                verb = "updated" if outcome.status == "updated" else "installed"
+                console.print(
+                    f"[green]✔[/green] {outcome.entry.ref} — {verb} "
+                    f"({outcome.entry.dork_lines} dorks)"
+                )
+    summary_bits = []
+    if installed_count:
+        summary_bits.append(f"{installed_count} installed")
+    if existing_count:
+        summary_bits.append(f"{existing_count} already present")
+    if summary_bits:
+        console.print(
+            f"[bold cyan]Done:[/bold cyan] {', '.join(summary_bits)}"
+            + (f" — {total_dorks} dorks" if total_dorks else "")
+        )
+        console.print(f"[dim]Store: {_pretty_path(get_package_store_hint())}[/dim]")
+    return exit_code
+
+
+def get_package_store_hint() -> str:
+    from core.package_manager import get_package_dir
+    return str(get_package_dir())
+
+
+def _pkg_uninstall(argv: List[str]) -> int:
+    parser = argparse.ArgumentParser(
+        prog="atdork uninstall",
+        description="Remove installed packages from the local store.",
+    )
+    parser.add_argument("refs", nargs="+", metavar="REF", help="Package refs to remove.")
+    args_ = parser.parse_args(argv)
+
+    exit_code = 0
+    for ref in args_.refs:
+        try:
+            removed, missing = uninstall_packages(ref)
+        except PackageError as exc:
+            _print_ref_error(exc)
+            exit_code = 1
+            continue
+        for entry in removed:
+            console.print(f"[green]✔[/green] Removed {entry.ref}")
+        for entry in missing:
+            console.print(f"[dim]• Not installed: {entry.ref}[/dim]")
+        if not removed and not missing:  # pragma: no cover - defensive
+            exit_code = 1
+    return exit_code
+
+
+def _pkg_installed(argv: List[str]) -> int:
+    parser = argparse.ArgumentParser(
+        prog="atdork installed",
+        description="List packages installed in the local store.",
+    )
+    parser.parse_args(argv)
+
+    packages = list_installed()
+    if not packages:
+        console.print("[yellow]No packages installed yet.[/yellow]")
+        console.print(
+            "[dim]Try: atdork install c@cve_1.txt — "
+            "use 'atdork search <keyword>' to browse the index.[/dim]"
+        )
+        return 0
+
+    status_label = {
+        "ok": "[green]up to date[/green]",
+        "modified": "[yellow]modified locally[/yellow]",
+        "orphan": "[dim]not in index[/dim]",
+    }
+    table = Table(
+        title=f"Installed packages ({len(packages)})",
+        title_style="bold cyan",
+        show_lines=False,
+    )
+    table.add_column("Ref", style="cyan", no_wrap=True)
+    table.add_column("Dorks", justify="right", style="green", width=8)
+    table.add_column("Size", justify="right", style="yellow", width=10)
+    table.add_column("Status")
+    for pkg in packages:
+        table.add_row(
+            f"@{pkg.folder}/{pkg.name}",
+            str(pkg.dork_lines),
+            _format_size(pkg.size_bytes),
+            status_label.get(pkg.status, pkg.status),
+        )
+    console.print(table)
+    console.print(f"[dim]Store: {_pretty_path(get_package_store_hint())}[/dim]")
+    return 0
+
+
+def _pkg_search(argv: List[str]) -> int:
+    parser = argparse.ArgumentParser(
+        prog="atdork search",
+        description="Search the Atdork-DB package index (Index.idn).",
+    )
+    parser.add_argument("query", nargs="+", metavar="KEYWORD", help="Keywords to search for.")
+    parser.add_argument("--limit", type=int, default=30, help="Maximum rows to display (default 30).")
+    args_ = parser.parse_args(argv)
+
+    matches = search_index(" ".join(args_.query))
+    if not matches:
+        console.print(f"[yellow]No packages match {' '.join(args_.query)!r}.[/yellow]")
+        console.print("[dim]Tip: folder names count too — try 'atdork search cve'.[/dim]")
+        return 1
+
+    shown = matches[: max(1, args_.limit)]
+    table = Table(
+        title=f"Matches ({len(matches)})",
+        title_style="bold cyan",
+        show_lines=False,
+    )
+    table.add_column("Ref", style="cyan", no_wrap=True)
+    table.add_column("Dorks", justify="right", style="green", width=8)
+    table.add_column("Size", justify="right", style="yellow", width=10)
+    table.add_column("Description")
+    for entry in shown:
+        table.add_row(
+            entry.ref, str(entry.dork_lines),
+            _format_size(entry.size_bytes), entry.description,
+        )
+    console.print(table)
+    if len(matches) > len(shown):
+        console.print(f"[dim]… {len(matches) - len(shown)} more matches (raise --limit).[/dim]")
+    console.print(
+        "[dim]Install with: "
+        f"atdork install {shown[0].ref}[/dim]"
+    )
+    return 0
+
+
+def _pkg_update(argv: List[str]) -> int:
+    parser = argparse.ArgumentParser(
+        prog="atdork update",
+        description="Pull the latest data from the Atdork-DB repository.",
+    )
+    parser.parse_args(argv)
+
+    try:
+        ok, message = update_repo()
+    except PackageError as exc:
+        _print_ref_error(exc)
+        return 1
+    if ok:
+        console.print(f"[green]✔ Atdork-DB updated:[/green] {message}")
+        try:
+            stats = build_pkg_index()
+            console.print(
+                f"[dim]Index refreshed: {stats['entries']} entries, "
+                f"{stats['total_dorks']} dorks.[/dim]"
+            )
+        except PackageError as exc:
+            console.print(f"[yellow]Warning: could not rebuild index: {exc}[/yellow]")
+        return 0
+    console.print(f"[red]Error: update failed:[/red] {message}")
+    return 1
+
+
+def _pkg_index(argv: List[str]) -> int:
+    parser = argparse.ArgumentParser(
+        prog="atdork index",
+        description="Show or rebuild the Atdork-DB index (Index.idn).",
+    )
+    parser.add_argument("--build", action="store_true", help="Rescan @folders and rewrite Index.idn.")
+    parser.add_argument("--repo", type=str, help="Atdork-DB path override.")
+    args_ = parser.parse_args(argv)
+
+    if args_.build:
+        try:
+            stats = build_pkg_index(repo=args_.repo)
+        except PackageError as exc:
+            _print_ref_error(exc)
+            return 1
+        console.print(
+            f"[green]✔ Index rebuilt:[/green] {stats['entries']} entries in "
+            f"{stats['folders']} folders — {stats['total_dorks']} dorks"
+        )
+        console.print(f"[dim]{_pretty_path(stats['path'])}[/dim]")
+        return 0
+
+    try:
+        repo = find_db_repo(args_.repo)
+        header = read_index_header(args_.repo)
+        entries = load_index(repo=args_.repo)
+    except PackageError as exc:
+        _print_ref_error(exc)
+        return 1
+    console.print(f"[bold cyan]Index:[/bold cyan] {_pretty_path(repo / 'Index.idn')}")
+    console.print(
+        f"  entries: {len(entries)}   folders: {len({e.folder for e in entries})}   "
+        f"dorks: {sum(e.dork_lines for e in entries)}"
+    )
+    if header.get("generated"):
+        console.print(f"  generated: {header['generated']}")
+    console.print("[dim]Rebuild with: atdork index --build[/dim]")
+    return 0
+
+
+def package_cli(argv: List[str]) -> int:
+    """Dispatch a package-manager subcommand; returns a process exit code."""
+    if not argv or argv[0] not in PACKAGE_COMMANDS:
+        console.print(
+            "[red]Error: unknown package command.[/red]\n"
+            f"[dim]Available: {', '.join(PACKAGE_COMMANDS)}[/dim]"
+        )
+        return 2
+
+    if argv[0] in ("-h", "--help"):  # pragma: no cover - dispatch filters this
+        return 0
+
+    handlers = {
+        "install": _pkg_install,
+        "uninstall": _pkg_uninstall,
+        "installed": _pkg_installed,
+        "search": _pkg_search,
+        "update": _pkg_update,
+        "index": _pkg_index,
+    }
+    try:
+        return handlers[argv[0]](argv[1:])
+    except PackageError as exc:
+        _print_ref_error(exc)
+        return 1
+    except KeyboardInterrupt:  # pragma: no cover - interactive
+        console.print("\n[yellow]⚠️ Cancelled[/yellow]")
+        return 130
+
+
 def main():
     # 1. Parser minimal khusus untuk --config
     config_parser = argparse.ArgumentParser(add_help=False)
@@ -1293,6 +1635,11 @@ def main():
 
     # Normalisasi kunci: ganti tanda '-' menjadi '_' agar cocok dengan argparse dest
     config = {k.replace('-', '_'): v for k, v in raw_config.items()}
+
+    # --- Package manager subcommands (atdork install / search / ...) ---
+    # Dispatched before the full parser so they don't clash with search flags.
+    if remaining and remaining[0] in PACKAGE_COMMANDS:
+        sys.exit(package_cli(remaining))
 
     # 3. Bangun parser penuh
     parser = build_parser()

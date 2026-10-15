@@ -1,4 +1,6 @@
-# CMS-Specific Dorks (`database/cms/`)
+# CMS-Specific Dorks (`@cms/`)
+
+> **Data location:** these dorks live in the [Atdork-DB](https://github.com/amnottdevv/Atdork-DB) repository under `@folders` (e.g. `@cms/cms1.txt`). Browse with `atdork search <keyword>`, install with `atdork install <ref>`.
 
 Where the `common/` category targets generic parameter patterns across any
 PHP app, this category targets **fingerprints specific to a given
@@ -8,7 +10,7 @@ dorks far more precise: a hit tells you not just "a parameter exists" but
 "this specific CMS is running here, at this version or plugin."
 
 ```
-database/cms/
+@cms/
 ├── joomla/joomla.txt       # Joomla components, admin paths, config exposure
 ├── wordpress/wordpress.txt # WP core paths, plugins, themes, wp-config exposure
 ├── magento/                # Magento admin, API, and config endpoints
@@ -32,7 +34,7 @@ inurl:configuration.php~ site:target.com
 ```
 
 ```bash
-atdork --database-dork cms/joomla/joomla -r 20
+atdork --database-dork @cms/joomla/joomla -r 20
 ```
 
 ## 2. WordPress (`wordpress/wordpress.txt`)
@@ -52,7 +54,7 @@ inurl:xmlrpc.php "Invalid method"
 ```
 
 ```bash
-atdork --database-dork cms/wordpress/wordpress -r 20 --filter-vuln wordpress
+atdork --database-dork @cms/wordpress/wordpress -r 20 --filter-vuln wordpress
 ```
 
 ## 3. Magento (`magento/`)
@@ -72,7 +74,7 @@ inurl:var/log/system.log site:target.com
 ```
 
 ```bash
-atdork --database-dork cms/magento -r 20
+atdork --database-dork @cms/magento -r 20
 ```
 
 ## 4. Laravel (`laravel/`)
@@ -91,7 +93,7 @@ inurl:.env site:target.com filetype:env
 ```
 
 ```bash
-atdork --database-dork cms/laravel -r 20 --filter-vuln laravel
+atdork --database-dork @cms/laravel -r 20 --filter-vuln laravel
 ```
 
 > A live, readable `.env` file is the single most damaging Laravel misconfiguration you'll find this way — it typically contains the app key, DB credentials, mail credentials, and third-party API keys all in one file. Treat a hit here the same way you'd treat any other exposed-secret finding: don't use the credentials, report through the program's disclosure channel. See [GitHub Secret-Exposure Dorks](github-dorks.md) for the same guidance applied to code-hosting leaks.
@@ -100,7 +102,7 @@ atdork --database-dork cms/laravel -r 20 --filter-vuln laravel
 
 ```bash
 # Fingerprint all four CMS types against a scoped target in one batch
-atdork --database-dork cms/joomla/joomla,cms/wordpress/wordpress,cms/magento,cms/laravel \
+atdork --database-dork @cms/joomla/joomla,cms/wordpress/wordpress,cms/magento,cms/laravel \
   -r 40 --format json -o cms_recon.json
 ```
 
@@ -136,4 +138,4 @@ The developers and this documentation are not responsible for misuse. Any legal 
 
 ---
 
-*See also: [Common Dorks](common-dorks.md), [LFI Dorks](lfi-dorks.md) / [RFI Dorks](rfi-dorks.md), [GitHub Secret-Exposure Dorks](github-dorks.md), and the [Database Dorks overview](index.md) for the full `database/` folder structure.*
+*See also: [Common Dorks](common-dorks.md), [LFI Dorks](lfi-dorks.md) / [RFI Dorks](rfi-dorks.md), [GitHub Secret-Exposure Dorks](github-dorks.md), and the [Database Dorks overview](index.md) for the full Atdork-DB folder structure.*

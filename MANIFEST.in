@@ -1,10 +1,8 @@
 # MANIFEST.in — ensures data files are included in sdist (.tar.gz) builds
 # even when setuptools' auto-discovery misses them.
 # Wheel builds use [tool.setuptools.package-data] in pyproject.toml.
-
-# Bundled 900K+ dorks in database/ (recursive — includes all subfolders)
-recursive-include database *.txt
-recursive-include database *.md
+#
+# NOTE: dork data lives in the Atdork-DB repository (package manager).
 
 # Vulnerability signatures & templates
 recursive-include wordlists *.txt

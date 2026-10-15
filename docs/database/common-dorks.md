@@ -1,22 +1,24 @@
-# Common Dorks (`database/common/`)
+# Common Dorks (`@common/`)
 
-The `common/` folder is the core of AtDork's bundled dork database. It groups
+> **Data location:** these dorks live in the [Atdork-DB](https://github.com/amnottdevv/Atdork-DB) repository under `@folders` (e.g. `@common/common1.txt`). Browse with `atdork search <keyword>`, install with `atdork install <ref>`.
+
+The `@common/` folder is the core of AtDork's dork collections. It groups
 everyday web-vulnerability recon patterns into four files, split by
 vulnerability class so you can load exactly the category you need for a given
 engagement.
 
 ```
-database/common/
+@common/
 ├── common1.txt   # SQL Injection & IDOR
 ├── common2.txt   # LFI / RFI & Path Disclosure
 ├── common3.txt   # XSS & HTML Injection
 └── common4.txt   # File Upload Bypass, RCE, Command Injection & SSRF
 ```
 
-Extract the database first if you haven't already:
+Install this collection (optional — refs also work straight from Atdork-DB):
 
 ```bash
-atdork --extract-database
+atdork install @common
 ```
 
 Then browse what's available:
@@ -39,10 +41,10 @@ atdork --list-database-dork
 
 ```bash
 # Load all SQLi/IDOR dorks and run them
-atdork --database-dork common/common1 -r 30
+atdork --database-dork @common/common1 -r 30
 
 # Preview instead of running
-atdork --database-dork common/common1 --database-preview
+atdork --database-dork @common/common1 --database-preview
 ```
 
 ---
@@ -58,7 +60,7 @@ atdork --database-dork common/common1 --database-preview
 **Usage example:**
 
 ```bash
-atdork --database-dork common/common2 -r 20 --filter-vuln lfi
+atdork --database-dork @common/common2 -r 20 --filter-vuln lfi
 ```
 
 ---
@@ -74,7 +76,7 @@ atdork --database-dork common/common2 -r 20 --filter-vuln lfi
 **Usage example:**
 
 ```bash
-atdork --database-dork common/common3 --database-r 15 --database-seed 1
+atdork --database-dork @common/common3 --database-r 15 --database-seed 1
 ```
 
 ---
@@ -90,7 +92,7 @@ atdork --database-dork common/common3 --database-r 15 --database-seed 1
 **Usage example:**
 
 ```bash
-atdork --database-dork common/common4 -r 25 --exec "curl -sI {}"
+atdork --database-dork @common/common4 -r 25 --exec "curl -sI {}"
 ```
 
 ---
@@ -99,10 +101,10 @@ atdork --database-dork common/common4 -r 25 --exec "curl -sI {}"
 
 ```bash
 # SQLi + LFI in one batch
-atdork --database-dork common/common1,common/common2 -r 40 --format json -o recon.json
+atdork --database-dork @common/common1,common/common2 -r 40 --format json -o recon.json
 
 # All 4 categories, random sample of 50 dorks, reproducible via seed
-atdork --database-dork common/common1,common/common2,common/common3,common/common4 \
+atdork --database-dork @common/common1,common/common2,common/common3,common/common4 \
   --database-r 50 --database-seed 7 --database-preview
 ```
 
@@ -138,4 +140,4 @@ The developers and this documentation are not responsible for misuse. Any legal 
 
 ---
 
-*See also: [GHDB Scraper](../ghdb-scraper.md) for dorks scraped directly from Exploit-DB, and the [Database Dorks overview](index.md) for the overall `database/` folder structure.*
+*See also: [GHDB Scraper](../ghdb-scraper.md) for dorks scraped directly from Exploit-DB, and the [Database Dorks overview](index.md) for the overall Atdork-DB folder structure.*

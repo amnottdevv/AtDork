@@ -22,7 +22,7 @@
 - 📊 **Professional output** – Export to JSON, CSV, TXT; SQLite database for history and resume. CSV exports are protected against formula injection.
 - 🎯 **Smart filtering** – Vulnerability signature detection for WordPress, Joomla, SQLi, and more.
 - 📝 **Template system** – Curated YAML‑based dork collections for instant productivity.
-- 🗂️ **Local dork database** – Load pre-built, categorized dork collections straight from disk (see [Database Dorks](#database-dorks) below).
+- 🗂️ **Dork package manager** – Browse, install and run categorized dork collections from the [Atdork-DB](https://github.com/amnottdevv/Atdork-DB) repository: `atdork install c@cve_1.txt`, then `atdork --batch-file c@cve_1.txt` (see [Database Dorks](#database-dorks) below).
 - 🌐 **GHDB scraper** – Pull fresh dorks directly from the public Exploit-DB Google Hacking Database, filterable by category and year.
 - ⚙️ **Highly configurable** – 60+ CLI flags to control every aspect of your search.
 - 🔧 **Post‑processing** – Execute external commands on discovered URLs (`--exec`).
@@ -152,46 +152,52 @@ atdork --template sqli --select 1,3,5 -r 20
 
 ### Database Dorks
 
-AtDork ships with a local, categorized collection of dork files that you can load directly without hitting the network. This is useful for offline prep, reproducible test runs, or building your own batch lists from a known-good set.
+AtDork keeps its pre-built, categorized dork files in the separate [Atdork-DB](https://github.com/amnottdevv/Atdork-DB) repository: one `@folder` per theme plus an `Index.idn` manifest the built-in package manager reads. Nothing to extract — browse the index, install what you need, then use package refs anywhere a dork file is accepted.
 
 ```bash
-# Extract the bundled dork collection into ./database
-atdork --extract-database
+# Browse the package index
+atdork search cve
+atdork index
 
-# Extract to a custom location, overwriting if it already exists
-atdork --extract-database-to mydorks/ --force
+# Install packages (shorthand resolves the folder by unique prefix)
+atdork install c@cve_1.txt
+atdork install @exploit-db            # whole folder
+atdork installed
 
-# List the available files and how many dorks each contains
+# Run an installed package as a batch file
+atdork --batch-file c@cve_1.txt -r 20
+
+# List every dork file with how many dorks it contains
 atdork --list-database-dork
 
 # Load dorks from one file and run them
-atdork --database-dork 01_footholds -r 20
+atdork --database-dork @ghdb/01_footholds -r 20
 
-# Combine multiple files
-atdork --database-dork 01_footholds,03_sensitive_directories -r 20
+# Combine files (bare names still work) or whole folders
+atdork --database-dork @ghdb/01_footholds,03_sensitive_directories -r 20
+atdork --database-dork @cve --database-preview
 
 # Randomly sample N dorks from the combined set (reproducible with a seed)
-atdork --database-dork 01_footholds --database-r 10 --database-seed 42
+atdork --database-dork @ghdb/01_footholds --database-r 10 --database-seed 42
 
-# Preview what would be loaded without running anything
-atdork --database-dork 01_footholds --database-preview
-
-# Point at a custom database root instead of auto-discovery
+# Point at a custom local database root (legacy ./database copies)
 atdork --database-dork subdir/file --database-path /path/to/custom/db
 ```
 
 | Flag | Purpose |
 |------|---------|
-| `--extract-database` | Extract the bundled dork collection to `./database` |
-| `--extract-database-to PATH` | Extract to a custom destination |
-| `--database-dork-extract PATH` | Shortcut for the two flags above |
-| `--force` | Overwrite an existing extraction destination |
 | `--list-database-dork` | List available dork files with counts |
-| `--database-dork SPEC` | Load dorks from file(s); comma-separated, subdirectories supported |
+| `--database-dork SPEC` | Load dorks from file(s)/folder(s); comma-separated, package refs supported |
 | `--database-r N` | Randomly select N dorks from the combined set |
 | `--database-seed N` | Seed for reproducible `--database-r` selection |
-| `--database-path PATH` | Custom database root directory |
+| `--database-path PATH` | Custom local database root directory |
 | `--database-preview` | Preview loaded dorks without executing them |
+| `--extract-database` | Copy a legacy local `./database` directory to a destination |
+| `--extract-database-to PATH` | Custom destination for the copy |
+| `--database-dork-extract PATH` | Shortcut for the two flags above |
+| `--force` | Overwrite an existing extraction destination |
+
+> Package refs: `@cve/cve_1.txt` (canonical), `c@cve_1.txt` (unique folder prefix), `cve_1.txt` (bare name), `@cve` (whole folder). Installed copies live in `~/.atdork/packages/` and are preferred over the checkout; run `atdork update` to pull the latest data and refresh the index.
 
 > The files are organized by topic (web misconfigurations, exposed directories/files, exposed panels, and similar categories relevant to authorized security testing). Run `atdork --list-database-dork` to see exactly what's available in your build.
 
@@ -392,12 +398,12 @@ atdork --batch-file dorks.txt --notify "discord:..." --notify-if-vuln
 | `--list-templates` | List available templates | |
 | `--template-path` | Custom template directory | |
 | `--preview` | Preview template dorks | |
-| `--extract-database` | Extract bundled dork collection to `./database` | |
-| `--extract-database-to` | Custom extraction destination | |
-| `--database-dork-extract` | Shortcut: extract to given path | |
+| `--extract-database` | Copy legacy local `./database` copy | |
+| `--extract-database-to` | Custom copy destination | |
+| `--database-dork-extract` | Shortcut: copy local database to given path | |
 | `--force` | Overwrite existing extraction destination | |
 | `--list-database-dork` | List available database dork files | |
-| `--database-dork` | Load dorks from database file(s) | |
+| `--database-dork` | Load dorks from package ref(s)/file(s) | |
 | `--database-r` | Randomly select N dorks from database | |
 | `--database-seed` | Seed for reproducible `--database-r` | |
 | `--database-path` | Custom database root directory | |
@@ -528,7 +534,7 @@ AtDork automatically loads this file from the current directory. CLI flags overr
 | **CSV opens with formulas** | Update to v1.3.8+ (CSV injection fixed) |
 | **Proxy credentials in logs** | Update to v1.3.8+ (credentials are now redacted) |
 | **Notification not sent** | Check webhook format and URL; ensure no trailing spaces; verify platform credentials |
-| **"Database directory not found"** | Run `atdork --extract-database` first, or pass `--database-path` |
+| **"Database directory not found"** | Clone/point AtDork at Atdork-DB (`atdork search` to verify), or pass `--database-path` for a local copy |
 
 ---
 
@@ -565,7 +571,7 @@ atdork/
 │   ├── storage.py               # File export (TXT/JSON/CSV)
 │   ├── validator.py             # Spam/invalid result filtering
 │   └── redactor.py              # Proxy credential redaction
-├── database/                    # Bundled dork collection (extract with --extract-database)
+├── Atdork-DB (external repo)  # Dork data packages — atdork install / --batch-file <ref>
 ├── wordlists/                   # Vulnerability signatures & templates
 ├── tests/                       # Unit tests (pytest)
 ├── pyproject.toml               # Package configuration
