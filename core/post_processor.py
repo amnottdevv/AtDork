@@ -44,7 +44,7 @@ class PostProcessor:
         on_error: Optional[Callable] = None,
     ):
         if not command or "{}" not in command:
-            raise ValueError("Command harus mengandung placeholder '{}' untuk URL")
+            raise ValueError("Command must contain the '{}' placeholder for the URL")
 
         self.command = command
         self.parallel = max(1, parallel)
@@ -61,15 +61,15 @@ class PostProcessor:
         if self._is_windows:
             template_risk = [c for c in _WINDOWS_SHELL_RISK_CHARS if c in self.command]
             logger.warning(
-                "PostProcessor berjalan di Windows dengan shell=True. "
-                "shlex.quote() hanya menjamin escaping aman untuk shell POSIX "
-                "(bash/sh) — di Windows, karakter seperti & | > < ^ %% pada URL "
-                "hasil scan bisa lolos dan diinterpretasikan langsung oleh cmd.exe "
-                "meskipun sudah 'di-quote'. %s"
-                "Gunakan command template sederhana tanpa pipe/redirect di Windows, "
-                "atau jalankan AtDork via WSL untuk jaminan escaping yang lebih kuat.",
+                "PostProcessor is running on Windows with shell=True. "
+                "shlex.quote() only guarantees safe escaping for POSIX shells "
+                "(bash/sh) — on Windows, characters like & | > < ^ %% in scanned "
+                "URLs can slip through and be interpreted directly by cmd.exe "
+                "even when 'quoted'. %s"
+                "Use a simple command template without pipe/redirect on Windows, "
+                "or run AtDork via WSL for stronger escaping guarantees.",
                 (
-                    f"Command template Anda sendiri mengandung karakter shell ({', '.join(template_risk)}). "
+                    f"Your command template itself contains shell characters ({', '.join(template_risk)}). "
                     if template_risk else ""
                 ),
             )
@@ -126,8 +126,8 @@ class PostProcessor:
                 risky_found = [c for c in _WINDOWS_SHELL_RISK_CHARS if c in url]
                 if risky_found:
                     logger.warning(
-                        "URL mengandung karakter shell Windows (%s), escaping "
-                        "shlex.quote() mungkin tidak cukup melindungi di cmd.exe: %s",
+                        "URL contains Windows shell characters (%s), shlex.quote() "
+                        "escaping may not be enough protection in cmd.exe: %s",
                         ", ".join(risky_found), url[:80],
                     )
 
@@ -154,7 +154,7 @@ class PostProcessor:
                     try:
                         self.on_success(url, result)
                     except Exception as e:
-                        logger.error("Error di on_success callback: %s", e)
+                        logger.error("Error in on_success callback: %s", e)
             else:
                 self.stats["failed"] += 1
                 result["error"] = f"Exit code: {process.returncode}"
@@ -162,26 +162,26 @@ class PostProcessor:
                     try:
                         self.on_error(url, result)
                     except Exception as e:
-                        logger.error("Error di on_error callback: %s", e)
+                        logger.error("Error in on_error callback: %s", e)
 
         except subprocess.TimeoutExpired:
             self.stats["timeout"] += 1
-            result["error"] = f"Timeout setelah {self.timeout}s"
+            result["error"] = f"Timeout after {self.timeout}s"
             if self.on_error:
                 try:
                     self.on_error(url, result)
                 except Exception as e:
-                    logger.error("Error di on_error callback: %s", e)
+                    logger.error("Error in on_error callback: %s", e)
 
         except Exception as e:
             self.stats["failed"] += 1
             result["error"] = str(e)
-            logger.error("Error menjalankan command untuk %s: %s", url[:50], e)
+            logger.error("Error running command for %s: %s", url[:50], e)
             if self.on_error:
                 try:
                     self.on_error(url, result)
                 except Exception as e2:
-                    logger.error("Error di on_error callback: %s", e2)
+                    logger.error("Error in on_error callback: %s", e2)
 
         return result
 
@@ -212,7 +212,7 @@ class PostProcessor:
                         result = future.result(timeout=self.timeout + 5)
                         results.append(result)
                     except TimeoutError:
-                        logger.error("Timeout menunggu hasil untuk %s", url[:50])
+                        logger.error("Timeout waiting for results for %s", url[:50])
                         results.append({
                             "url": url,
                             "success": False,
@@ -220,7 +220,7 @@ class PostProcessor:
                         })
                         self.stats["timeout"] += 1
                     except Exception as e:
-                        logger.error("Error mengambil hasil untuk %s: %s", url[:50], e)
+                        logger.error("Error getting results for %s: %s", url[:50], e)
                         results.append({
                             "url": url,
                             "success": False,
@@ -286,10 +286,10 @@ def extract_vulnerable_urls(
                 urls.append(href)
         return urls
     except ImportError:
-        logger.warning("core.filter_vuln tidak tersedia, mengembalikan semua URL")
+        logger.warning("core.filter_vuln not available, returning all URLs")
         return extract_urls(results)
     except Exception as e:
-        logger.error("Gagal mengekstrak URL rentan: %s", e)
+        logger.error("Failed to extract vulnerable URLs: %s", e)
         return []
 
 

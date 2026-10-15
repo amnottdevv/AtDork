@@ -153,7 +153,7 @@ def test_resolve_filter_arg_unknown_gives_helpful_error():
     with pytest.raises(FileNotFoundError) as exc:
         resolve_filter_arg("wordpres")  # typo
     # pesan error menyebut file yang dicari + sumber yang dicek
-    assert "'wordpres.txt' tidak ditemukan" in str(exc.value)
+    assert "'wordpres.txt' not found" in str(exc.value)
 
 
 def test_filter_vulnerable_splits_results():

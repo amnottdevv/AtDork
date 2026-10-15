@@ -63,7 +63,7 @@ def _get_error_classifier():
         logger.debug("Imported error_classifier from core.case")
         return classify_error, EC
     except ImportError:
-        logger.warning("core.case.error_classifier tidak tersedia, menggunakan fallback")
+        logger.warning("core.case.error_classifier not available, using fallback")
         # Fallback: classify all errors as FATAL for safety
         def fallback_classify(e):
             error_str = str(e).lower()
@@ -92,10 +92,10 @@ def load_queries_from_file(filepath: str) -> List[str]:
                     continue
                 queries.append(line)
     except FileNotFoundError:
-        logger.error("File batch tidak ditemukan: %s", filepath)
+        logger.error("Batch file not found: %s", filepath)
         raise
     except Exception as e:
-        logger.error("Gagal membaca file batch %s: %s", filepath, e)
+        logger.error("Failed to read batch file %s: %s", filepath, e)
         raise
     return queries
 
@@ -105,7 +105,7 @@ def parse_query_string(query_str: str, separator: str = ";") -> List[str]:
     try:
         return [q.strip() for q in query_str.split(separator) if q.strip()]
     except Exception as e:
-        logger.error("Gagal parsing query string: %s", e)
+        logger.error("Failed to parse query string: %s", e)
         return []
 
 
@@ -169,19 +169,19 @@ def build_query_executor(
             recovery_strategy = case_modules.get("recovery_strategy")
             stats_collector = case_modules.get("stats_collector")
         except Exception as e:
-            logger.warning("Gagal mengambil modul case: %s. Melanjutkan tanpa modul case.", e)
+            logger.warning("Failed to load case modules: %s. Continuing without case modules.", e)
 
     # ── Pastikan retry_handler tersedia ──────────────────────────────
     if retry_handler is None and default_retry:
         try:
             from core.case.retry_handler import RetryHandler
             retry_handler = RetryHandler(max_retries=2, base_delay=1.0)
-            logger.info("RetryHandler berhasil dibuat sebagai fallback")
+            logger.info("RetryHandler created successfully as fallback")
         except ImportError:
-            logger.warning("core.case.retry_handler tidak tersedia. Retry dinonaktifkan.")
+            logger.warning("core.case.retry_handler not available. Retry disabled.")
             retry_handler = None
         except Exception as e:
-            logger.warning("Gagal membuat RetryHandler default: %s", e)
+            logger.warning("Failed to create default RetryHandler: %s", e)
             retry_handler = None
 
     # ── FIX HIGH: Import classifier dengan fallback yang lebih robust ──
@@ -199,7 +199,7 @@ def build_query_executor(
             try:
                 current_proxy = proxy_manager.get_proxy()
             except Exception as e:
-                logger.debug("Gagal mengambil proxy: %s", e)
+                logger.debug("Failed to get proxy: %s", e)
                 current_proxy = None
 
         # ── Adaptive delay (sebelum request) ────────────────────────
@@ -207,7 +207,7 @@ def build_query_executor(
             try:
                 adaptive_delay.wait(current_backend)
             except Exception as e:
-                logger.debug("AdaptiveDelay.wait gagal: %s", e)
+                logger.debug("AdaptiveDelay.wait failed: %s", e)
 
         def _notify(results: list, success: bool) -> list:
             """Beritahu pemanggil (untuk penandaan status --resume)."""
@@ -215,7 +215,7 @@ def build_query_executor(
                 try:
                     on_query_done(q, results, success)
                 except Exception as e:
-                    logger.warning("on_query_done gagal untuk '%s': %s", q[:60], e)
+                    logger.warning("on_query_done failed for '%s': %s", q[:60], e)
             return results
 
         def _gate_backend() -> Optional[str]:
@@ -236,19 +236,19 @@ def build_query_executor(
                     if fallback_manager else None
                 )
             except Exception as e:
-                logger.warning("Circuit breaker gate gagal: %s", e)
+                logger.warning("Circuit breaker gate failed: %s", e)
                 return None
 
             if alt:
                 logger.info(
-                    "Circuit OPEN '%s' → beralih ke backend '%s'",
+                    "Circuit OPEN '%s' → switching to backend '%s'",
                     current_backend, alt,
                 )
                 current_backend = alt
                 return None
             return (
-                f"Circuit breaker OPEN untuk backend '{current_backend}' dan tidak ada "
-                f"backend sehat lain — permintaan dibatalkan."
+                f"Circuit breaker OPEN for backend '{current_backend}' and no other "
+                f"healthy backend — request aborted."
             )
 
         # ── Fungsi pencarian yang akan di-retry ──────────────────────
@@ -272,7 +272,7 @@ def build_query_executor(
                 cached = cache.get(q, current_backend, cache_params)
                 if cached is None:
                     logger.debug(
-                        "Cache-only MISS untuk '%s' (%s) → hasil kosong", q[:50], current_backend
+                        "Cache-only MISS for '%s' (%s) → empty results", q[:50], current_backend
                     )
                     return []
                 return cached
@@ -290,10 +290,10 @@ def build_query_executor(
             try:
                 category = classify_error(exception)
             except Exception as e:
-                logger.debug("Error saat classify_error: %s, menggunakan FATAL", e)
+                logger.debug("Error during classify_error: %s, using FATAL", e)
                 category = ErrorCategory.FATAL
 
-            logger.debug("Retry attempt %d setelah error %s: %s", attempt, category, exception)
+            logger.debug("Retry attempt %d after error %s: %s", attempt, category, exception)
 
             # Selalu catat kegagalan ke circuit breaker untuk backend saat ini
             if circuit_breaker:
@@ -305,9 +305,9 @@ def build_query_executor(
                                 opened=circuit_breaker.status(current_backend) == "OPEN"
                             )
                         except Exception as e:
-                            logger.debug("StatsCollector.record_circuit_breaker gagal: %s", e)
+                            logger.debug("StatsCollector.record_circuit_breaker failed: %s", e)
                 except Exception as e:
-                    logger.debug("CircuitBreaker.record_failure gagal: %s", e)
+                    logger.debug("CircuitBreaker.record_failure failed: %s", e)
 
             # Recovery strategy (jika tersedia) – memberikan saran tindakan
             if recovery_strategy:
@@ -319,7 +319,7 @@ def build_query_executor(
                     )
                     logger.debug("Recovery strategy suggests: %s", recovery_action.get("action"))
                 except Exception as e:
-                    logger.warning("RecoveryStrategy.get_action gagal: %s", e)
+                    logger.warning("RecoveryStrategy.get_action failed: %s", e)
 
             # ── Fallback manager ──────────────────────────────────────
             # Keputusan dihitung TERPISAH dari penerapannya agar action
@@ -334,7 +334,7 @@ def build_query_executor(
                         error_category=category,
                     )
                 except Exception as e:
-                    logger.warning("FallbackManager.decide gagal: %s", e)
+                    logger.warning("FallbackManager.decide failed: %s", e)
                     decision = None
 
             if decision:
@@ -342,7 +342,7 @@ def build_query_executor(
                 if action == "switch_backend":
                     new_backend = decision.get("next_backend") or current_backend
                     if new_backend != current_backend:
-                        logger.info("Fallback: ganti backend %s → %s", current_backend, new_backend)
+                        logger.info("Fallback: switching backend %s → %s", current_backend, new_backend)
                         current_backend = new_backend
                 elif action == "rotate_proxy":
                     next_proxy = decision.get("next_proxy")
@@ -350,15 +350,15 @@ def build_query_executor(
                         # Bug lama: next_proxy hanya di-log, tidak pernah
                         # dipakai. Sekarang dipakai oleh search_dork lewat
                         # forced_proxy pada percobaan berikutnya.
-                        logger.info("Fallback: rotasi proxy → %s", redact_proxy_url(next_proxy))
+                        logger.info("Fallback: rotating proxy → %s", redact_proxy_url(next_proxy))
                         current_proxy = next_proxy
                     else:
-                        logger.info("Fallback: rotasi proxy")
+                        logger.info("Fallback: rotating proxy")
                 elif action == "cooldown":
-                    logger.info("Fallback: cooldown, jeda %.0f detik", COOLDOWN_SLEEP_SECONDS)
+                    logger.info("Fallback: cooldown, pausing for %.0f seconds", COOLDOWN_SLEEP_SECONDS)
                     time.sleep(COOLDOWN_SLEEP_SECONDS)
                 elif action == "abort":
-                    reason = decision.get("reason") or "FallbackManager memutuskan abort"
+                    reason = decision.get("reason") or "FallbackManager decided to abort"
                     logger.error("Fallback: abort — %s", reason)
                     raise RetryAbort(reason)
 
@@ -368,14 +368,14 @@ def build_query_executor(
                     status_code = 429 if "429" in str(exception) else 500
                     adaptive_delay.report(current_backend, status_code, False)
                 except Exception as e:
-                    logger.debug("AdaptiveDelay.report gagal: %s", e)
+                    logger.debug("AdaptiveDelay.report failed: %s", e)
 
             # Catat retry ke stats collector
             if stats_collector:
                 try:
                     stats_collector.record_retry(success=False)
                 except Exception as e:
-                    logger.debug("StatsCollector.record_retry gagal: %s", e)
+                    logger.debug("StatsCollector.record_retry failed: %s", e)
 
         # ── Callback saat menyerah ───────────────────────────────────
         def _on_giveup(exception):
@@ -384,19 +384,19 @@ def build_query_executor(
                     status_code = 429 if "429" in str(exception) else 500
                     adaptive_delay.report(current_backend, status_code, False)
                 except Exception as e:
-                    logger.debug("AdaptiveDelay.report gagal: %s", e)
+                    logger.debug("AdaptiveDelay.report failed: %s", e)
             if stats_collector:
                 try:
                     stats_collector.record_fallback(success=False)
                 except Exception as e:
-                    logger.debug("StatsCollector.record_fallback gagal: %s", e)
+                    logger.debug("StatsCollector.record_fallback failed: %s", e)
 
         def _record_backend_failure():
             if stats_collector:
                 try:
                     stats_collector.record_backend(current_backend, 500, False)
                 except Exception as e:
-                    logger.debug("StatsCollector.record_backend gagal: %s", e)
+                    logger.debug("StatsCollector.record_backend failed: %s", e)
 
         # ── Jalankan dengan atau tanpa retry handler ─────────────────
         result: Optional[list] = None
@@ -423,11 +423,11 @@ def build_query_executor(
                 result = None
 
         if error is not None:
-            logger.error("'%s' gagal: %s", q[:60], error)
+            logger.error("'%s' failed: %s", q[:60], error)
             _record_backend_failure()
             if raise_on_error:
                 _notify([], False)
-                raise SearchError(f"Query '{q[:60]}' gagal: {error}") from error
+                raise SearchError(f"Query '{q[:60]}' failed: {error}") from error
             return _notify([], False)
 
         # Sukses → catat ke circuit breaker, adaptive delay, stats collector
@@ -437,19 +437,19 @@ def build_query_executor(
                 if current_proxy:
                     circuit_breaker.record_success(current_proxy)
             except Exception as e:
-                logger.debug("CircuitBreaker.record_success gagal: %s", e)
+                logger.debug("CircuitBreaker.record_success failed: %s", e)
         if adaptive_delay:
             try:
                 adaptive_delay.report(current_backend, 200, len(result) > 0)
             except Exception as e:
-                logger.debug("AdaptiveDelay.report gagal: %s", e)
+                logger.debug("AdaptiveDelay.report failed: %s", e)
         if stats_collector:
             try:
                 stats_collector.record_backend(current_backend, 200, len(result) > 0)
                 if retry_handler:
                     stats_collector.record_retry(success=True)
             except Exception as e:
-                logger.debug("StatsCollector.record_backend/retry gagal: %s", e)
+                logger.debug("StatsCollector.record_backend/retry failed: %s", e)
 
         return _notify(result or [], True)
 
@@ -506,7 +506,7 @@ def run_batch(
     duplicate_count = len(queries) - len(unique_queries)
     if duplicate_count > 0:
         logger.warning(
-            "%d query duplikat terdeteksi di batch, hanya dijalankan sekali per query unik.",
+            "%d duplicate queries detected in batch; each unique query will run only once.",
             duplicate_count,
         )
 
@@ -555,7 +555,7 @@ def run_batch(
                 try:
                     res = execute(q)
                 except Exception as e:
-                    logger.error("'%s' gagal total: %s", q[:60], e)
+                    logger.error("'%s' failed completely: %s", q[:60], e)
                     res = []
                 results[q] = res
                 progress.advance(task)
@@ -572,6 +572,6 @@ def run_batch(
             except ImportError:
                 logger.info(summary)
         except Exception as e:
-            logger.warning("Gagal menampilkan statistik: %s", e)
+            logger.warning("Failed to display statistics: %s", e)
 
     return results

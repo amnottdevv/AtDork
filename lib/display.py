@@ -22,12 +22,12 @@ def show_banner():
 
 def display_results(results, query, highlight=True, no_snippet=False):
     if not results:
-        console.print("[yellow]Tidak ada hasil ditemukan.[/yellow]")
+        console.print("[yellow]No results found.[/yellow]")
         return
 
-    console.print(f"\n[bold cyan]Hasil untuk:[/bold cyan] {query}\n")
+    console.print(f"\n[bold cyan]Results for:[/bold cyan] {query}\n")
     for idx, res in enumerate(results, 1):
-        title = res.get("title", "Tidak ada judul").strip()
+        title = res.get("title", "No title").strip()
         url = res.get("href", "").strip()
         snippet = (res.get("body", "") or "").strip()
 
@@ -37,7 +37,7 @@ def display_results(results, query, highlight=True, no_snippet=False):
         console.print(f"[bold yellow]{idx}.[/bold yellow] [green]{title}[/green]")
         console.print(f"   [blue]URL:[/blue] {url}")
         if not no_snippet and snippet:
-            console.print(f"   [dim]Cuplikan:[/dim] {snippet}")
+            console.print(f"   [dim]Snippet:[/dim] {snippet}")
         console.print("   " + "-" * 50)
 
-    console.print(f"\n[green]Total: {len(results)} hasil[/green]")
+    console.print(f"\n[green]Total: {len(results)} results[/green]")

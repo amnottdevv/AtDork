@@ -66,7 +66,7 @@ class AdaptiveDelay:
             wait_time = max(0.0, required - elapsed)
 
         if wait_time > 0:
-            logger.debug("AdaptiveDelay: menunggu %.2fs untuk %s", wait_time, backend)
+            logger.debug("AdaptiveDelay: waiting %.2fs for %s", wait_time, backend)
             time.sleep(wait_time)
 
         with self._lock:
@@ -97,7 +97,7 @@ class AdaptiveDelay:
                     new_delay = min(old_delay * self.backoff_factor, self.max_delay)
                     self._delays[backend] = new_delay
                     logger.info(
-                        "AdaptiveDelay: %s delay naik %.2fs → %.2fs (rate limit)",
+                        "AdaptiveDelay: %s delay increased %.2fs → %.2fs (rate limit)",
                         backend, old_delay, new_delay,
                     )
                 elif status_code == 200 and has_results:
@@ -106,11 +106,11 @@ class AdaptiveDelay:
                     if new_delay < old_delay:
                         self._delays[backend] = new_delay
                         logger.debug(
-                            "AdaptiveDelay: %s delay turun %.2fs → %.2fs (success)",
+                            "AdaptiveDelay: %s delay decreased %.2fs → %.2fs (success)",
                             backend, old_delay, new_delay,
                         )
             except Exception as e:
-                logger.error("Error saat menyesuaikan delay untuk %s: %s", backend, e)
+                logger.error("Error adjusting delay for %s: %s", backend, e)
 
     def get_delay(self, backend: str) -> float:
         """Dapatkan delay saat ini untuk backend."""
@@ -126,7 +126,7 @@ class AdaptiveDelay:
             delay = self._delays[backend]
 
             if not history:
-                return f"Backend '{backend}': belum ada data."
+                return f"Backend '{backend}': no data yet."
 
             total = len(history)
             rate_limited = sum(1 for _, sc, _ in history if sc == 429)
@@ -177,4 +177,4 @@ class AdaptiveDelay:
         with self._lock:
             self._delays[backend] = self.base_delay
             self._last_request[backend] = 0.0
-            logger.info("AdaptiveDelay: %s direset ke %.2fs", backend, self.base_delay)
+            logger.info("AdaptiveDelay: %s reset to %.2fs", backend, self.base_delay)

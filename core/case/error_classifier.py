@@ -31,13 +31,13 @@ def classify_error(exception: Exception) -> str:
         Salah satu string dari ErrorCategory.
     """
     if not isinstance(exception, Exception):
-        logger.warning("classify_error dipanggil dengan non‑Exception: %s", type(exception))
+        logger.warning("classify_error called with non‑Exception: %s", type(exception))
         return ErrorCategory.FATAL
 
     try:
         msg = str(exception).lower()
     except Exception as e:
-        logger.error("Gagal mengambil pesan exception: %s", e)
+        logger.error("Failed to get exception message: %s", e)
         msg = ""
 
     # ── 1. Rate limit ──────────────────────────────────────────────
@@ -58,7 +58,7 @@ def classify_error(exception: Exception) -> str:
     if any(kw in msg for kw in (
         "proxy", "socks", "connection refused", "tunnel",
         "cannot connect", "cooldown", "no proxy",
-        "tidak ada proxy", "semua proxy", "strict mode",
+        "all proxies", "strict mode",
         "proxy authentication", "407", "auth required",
     )):
         return ErrorCategory.PROXY_FAIL

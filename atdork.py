@@ -120,21 +120,21 @@ def build_parser():
     parser = argparse.ArgumentParser(
         prog="atdork",
         description="Atdork – Professional DuckDuckGo metasearch OSINT tool.",
-        epilog='Contoh: atdork -q "site:gov filetype:pdf" -r 10 -o hasil.json'
+        epilog='Example: atdork -q "site:gov filetype:pdf" -r 10 -o results.json'
     )
     # Konfigurasi
     parser.add_argument("--config", type=str, help="Path to YAML config file.")
-    parser.add_argument("--interactive", action="store_true", help="Jalankan mode interaktif.")
+    parser.add_argument("--interactive", action="store_true", help="Run interactive mode.")
 
     # Opsi utama
-    parser.add_argument("-q", "--query", type=str, help="Kata kunci / dork.")
-    parser.add_argument("-r", "--max-results", type=int, default=20, help="Jumlah hasil maksimum (1-100).")
+    parser.add_argument("-q", "--query", type=str, help="Keyword / dork.")
+    parser.add_argument("-r", "--max-results", type=int, default=20, help="Maximum number of results (1-100).")
 
     # Parameter pencarian
-    parser.add_argument("--region", type=str, default="us-en", help="Region pencarian.")
+    parser.add_argument("--region", type=str, default="us-en", help="Search region.")
     parser.add_argument("--safesearch", type=str, default="moderate", choices=["on","moderate","off"])
     parser.add_argument("--timelimit", type=str, default=None, choices=["d","w","m","y"])
-    parser.add_argument("--backend", type=str, default="auto", help="Backend mesin pencari.")
+    parser.add_argument("--backend", type=str, default="auto", help="Search engine backend.")
 
     # Request tuning
     parser.add_argument("--user-agent", type=str, help="Custom User-Agent.")
@@ -145,40 +145,40 @@ def build_parser():
     # Proxy
     parser.add_argument("--proxy", type=str, help="Proxy URL (comma-separated).")
     parser.add_argument("--proxy-file", type=str)
-    parser.add_argument("--tor", action="store_true", help="Gunakan Tor SOCKS5.")
+    parser.add_argument("--tor", action="store_true", help="Use Tor SOCKS5.")
     parser.add_argument("--proxy-cooldown", type=int, default=60)
-    parser.add_argument("--strict", action="store_true", help="Jangan fallback ke direct.")
+    parser.add_argument("--strict", action="store_true", help="Do not fallback to direct.")
     parser.add_argument("--max-failures", type=int, default=3)
 
     # Multi-threading
-    parser.add_argument("--concurrency", type=int, default=1, help="Jumlah thread paralel untuk batch (1 = sekuensial).")
+    parser.add_argument("--concurrency", type=int, default=1, help="Number of parallel threads for batch (1 = sequential).")
 
     # Batch
     parser.add_argument("--batch-file", type=str)
     parser.add_argument("--batch-separator", type=str, default=";")
 
     # Output
-    parser.add_argument("-o", "--output", type=str, help="Simpan hasil ke file.")
+    parser.add_argument("-o", "--output", type=str, help="Save results to file.")
     parser.add_argument("--output-dir", type=str)
     parser.add_argument("--format", type=str, choices=["txt","json","csv"], default="txt")
     parser.add_argument("--no-snippet", action="store_true")
-    parser.add_argument("-v", "--verbose", action="store_true", help="Tampilkan hasil pencarian ke layar dalam mode batch.")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Display search results on screen in batch mode.")
 
     # Validasi (legacy)
-    parser.add_argument("--no-validate", action="store_true", help="Matikan semua filter validasi.")
-    parser.add_argument("--strict-filter", action="store_true", help="Filter ketat (title≥5, desc≥10, spam on, url all).")
+    parser.add_argument("--no-validate", action="store_true", help="Disable all validation filters.")
+    parser.add_argument("--strict-filter", action="store_true", help="Strict filter (title≥5, desc≥10, spam on, url all).")
 
     # Validasi granular
     parser.add_argument("--validate-url", type=str, default="all",
                         choices=["only", "path", "params", "all", "false"],
-                        help="Mode validasi URL.")
+                        help="URL validation mode.")
     parser.add_argument("--validate-title", type=str, default="5",
-                        help="Panjang minimal judul (integer) atau 'false' untuk matikan.")
+                        help="Minimum title length (integer) or 'false' to disable.")
     parser.add_argument("--validate-desc", type=str, default="10",
-                        help="Panjang minimal deskripsi (integer) atau 'false' untuk matikan.")
+                        help="Minimum description length (integer) or 'false' to disable.")
     parser.add_argument("--validate-spam", type=str, default="true",
                         choices=["true", "false"],
-                        help="Aktifkan/matikan filter spam.")
+                        help="Enable/disable spam filter.")
 
     # Filter kerentanan
     parser.add_argument("--filter-vuln", type=str, help="Filter platform (e.g., wordpress).")
@@ -188,44 +188,44 @@ def build_parser():
     parser.add_argument("--no-verify", action="store_true")
 
     # Logging
-    parser.add_argument("--log-file", type=str, default="atdork.log", help="Path file log.")
+    parser.add_argument("--log-file", type=str, default="atdork.log", help="Log file path.")
 
     # Database (SQLite history/dedup)
     parser.add_argument("--db-path", type=str, default="atdork.db", help="Path SQLite database.")
-    parser.add_argument("--resume", action="store_true", help="Resume batch yang tertunda.")
-    parser.add_argument("--history", action="store_true", help="Tampilkan riwayat pencarian.")
-    parser.add_argument("--no-dedup", action="store_true", help="Nonaktifkan deduplikasi global.")
-    parser.add_argument("--export-db", type=str, help="Export database ke file (json/csv).")
+    parser.add_argument("--resume", action="store_true", help="Resume pending batch queries.")
+    parser.add_argument("--history", action="store_true", help="Show search history.")
+    parser.add_argument("--no-dedup", action="store_true", help="Disable global deduplication.")
+    parser.add_argument("--export-db", type=str, help="Export database to file (json/csv).")
 
     # Case modules (v1.3.5)
-    parser.add_argument("--resilient", action="store_true", help="Aktifkan mode tahan banting (circuit breaker, fallback).")
-    parser.add_argument("--adaptive-delay", action="store_true", help="Gunakan delay adaptif berdasarkan respons backend.")
-    parser.add_argument("--ip-guard", action="store_true", help="Deteksi kebocoran IP selama pencarian (butuh --proxy/--proxy-file/--tor; pakai --strict untuk berhenti saat bocor).")
+    parser.add_argument("--resilient", action="store_true", help="Enable resilient mode (circuit breaker, fallback).")
+    parser.add_argument("--adaptive-delay", action="store_true", help="Use adaptive delay based on backend response.")
+    parser.add_argument("--ip-guard", action="store_true", help="Detect IP leaks during search (requires --proxy/--proxy-file/--tor; use --strict to stop on leak).")
 
     # Post-Processor (v1.3.6)
-    parser.add_argument("--exec", type=str, help="Jalankan command untuk setiap URL hasil (gunakan {} untuk URL).")
-    parser.add_argument("--exec-on-vuln", type=str, help="Jalankan command hanya pada URL rentan (wajib --filter-vuln).")
-    parser.add_argument("--exec-parallel", type=int, default=1, help="Jumlah proses paralel untuk --exec.")
-    parser.add_argument("--exec-timeout", type=int, default=30, help="Timeout per command dalam detik.")
+    parser.add_argument("--exec", type=str, help="Run command for each result URL (use {} for the URL).")
+    parser.add_argument("--exec-on-vuln", type=str, help="Run command only on vulnerable URLs (requires --filter-vuln).")
+    parser.add_argument("--exec-parallel", type=int, default=1, help="Number of parallel processes for --exec.")
+    parser.add_argument("--exec-timeout", type=int, default=30, help="Timeout per command in seconds.")
 
     # Cache (v1.3.7)
-    parser.add_argument("--cache", action="store_true", help="Aktifkan caching hasil pencarian (berlaku untuk mode single & batch).")
-    parser.add_argument("--cache-db", type=str, default="atdork_cache.db", help="Path database cache.")
-    parser.add_argument("--cache-ttl", type=int, default=24, help="TTL cache dalam jam (default: 24).")
-    parser.add_argument("--cache-only", action="store_true", help="Hanya gunakan cache, jangan lakukan pencarian baru.")
-    parser.add_argument("--clear-cache", action="store_true", help="Hapus semua cache sebelum memulai.")
+    parser.add_argument("--cache", action="store_true", help="Enable search result caching (applies to single & batch mode).")
+    parser.add_argument("--cache-db", type=str, default="atdork_cache.db", help="Cache database path.")
+    parser.add_argument("--cache-ttl", type=int, default=24, help="Cache TTL in hours (default: 24).")
+    parser.add_argument("--cache-only", action="store_true", help="Use cache only, do not perform new searches.")
+    parser.add_argument("--clear-cache", action="store_true", help="Clear all cache before starting.")
 
     # Notifications (v1.3.9)
-    parser.add_argument("--notify", type=str, help="Kirim notifikasi ke platform:webhook (discord:, slack:, telegram:).")
-    parser.add_argument("--notify-if-vuln", action="store_true", help="Hanya kirim notifikasi jika ada hasil rentan.")
+    parser.add_argument("--notify", type=str, help="Send notifications to platform:webhook (discord:, slack:, telegram:).")
+    parser.add_argument("--notify-if-vuln", action="store_true", help="Only send notifications if there are vulnerable results.")
 
     # Template Dork
-    parser.add_argument("--template", type=str, help="Nama template dork.")
-    parser.add_argument("--target", type=str, help="Target domain untuk substitusi {target} di template.")
-    parser.add_argument("--select", type=str, help="Pilih dork tertentu dari template (contoh: 1,3,5).")
-    parser.add_argument("--list-templates", action="store_true", help="Tampilkan daftar template yang tersedia.")
-    parser.add_argument("--template-path", type=str, help="Path ke folder template.")
-    parser.add_argument("--preview", action="store_true", help="Pratinjau isi template tanpa menjalankannya.")
+    parser.add_argument("--template", type=str, help="Dork template name.")
+    parser.add_argument("--target", type=str, help="Target domain for {target} substitution in templates.")
+    parser.add_argument("--select", type=str, help="Select specific dorks from a template (e.g.: 1,3,5).")
+    parser.add_argument("--list-templates", action="store_true", help="Show list of available templates.")
+    parser.add_argument("--template-path", type=str, help="Path to the template folder.")
+    parser.add_argument("--preview", action="store_true", help="Preview template contents without running it.")
 
     # Database Dork (v1.3.9.5) — NEW
     db_group = parser.add_argument_group(
@@ -289,28 +289,28 @@ def build_parser():
     ghdb_group = parser.add_argument_group("GHDB Scraper")
     ghdb_group.add_argument(
         "--ghdb-scraper", action="store_true",
-        help="Jalankan mode GHDB scraper (ambil dork dari Exploit-DB Google Hacking Database).",
+        help="Run GHDB scraper mode (fetch dorks from Exploit-DB Google Hacking Database).",
     )
     ghdb_group.add_argument(
         "--ghdb-file", type=str, default=None,
-        help="Simpan hasil dork GHDB ke file. Format auto-detect dari ekstensi (.json atau .txt).",
+        help="Save GHDB dork results to a file. Format is auto-detected from the extension (.json or .txt).",
     )
     ghdb_group.add_argument(
         "--ghdb-categories", type=str, default=None,
-        help="Filter kategori GHDB, pisahkan dengan koma. Bisa nama (partial match, mis. 'password') "
-             "atau ID numerik (mis. '9,12').",
+        help="Filter GHDB categories, comma-separated. Accepts names (partial match, e.g. 'password') "
+             "or numeric IDs (e.g. '9,12').",
     )
     ghdb_group.add_argument(
         "--ghdb-years", type=str, default=None,
-        help="Filter tahun publikasi dork GHDB. Contoh: '2024' atau '2020-2023,2024'.",
+        help="Filter GHDB dork publication years. Example: '2024' or '2020-2023,2024'.",
     )
     ghdb_group.add_argument(
         "--ghdb-r", type=int, default=None,
-        help="Batasi jumlah total dork GHDB yang diambil/disimpan (setelah filter kategori/tahun).",
+        help="Limit the total number of GHDB dorks fetched/saved (after category/year filters).",
     )
     ghdb_group.add_argument(
         "--ghdb-list-categories", action="store_true",
-        help="Tampilkan daftar kategori GHDB beserta jumlah dork per kategori, lalu keluar.",
+        help="Show GHDB categories with dork counts per category, then exit.",
     )
 
     parser.add_argument("--debug", action="store_true")
@@ -384,8 +384,8 @@ def _setup_case_modules(args, proxy_manager) -> dict:
         # (bila ada proxy) dan check() dipanggil via _verify_ip_guard().
         if not proxy_manager:
             console.print(
-                "[yellow]⚠️ --ip-guard membutuhkan --proxy/--proxy-file/--tor "
-                "untuk memantau kebocoran; dilewati.[/yellow]"
+                "[yellow]⚠️ --ip-guard requires --proxy/--proxy-file/--tor "
+                "to monitor leaks; skipped.[/yellow]"
             )
         else:
             try:
@@ -397,17 +397,17 @@ def _setup_case_modules(args, proxy_manager) -> dict:
                         modules["ip_guard"].establish_baseline(first_proxy)
                     else:
                         console.print(
-                            "[yellow]⚠️ Tidak ada proxy sehat untuk baseline IP Guard; "
-                            "IP Guard dinonaktifkan.[/yellow]"
+                            "[yellow]⚠️ No healthy proxy for IP Guard baseline; "
+                            "IP Guard disabled.[/yellow]"
                         )
                         modules["ip_guard"] = None
                 else:
                     console.print(
-                        "[yellow]⚠️ Tidak dapat menentukan IP asli (semua provider IP-check "
-                        "gagal); IP Guard dinonaktifkan.[/yellow]"
+                        "[yellow]⚠️ Unable to determine real IP (all IP-check "
+                        "providers failed); IP Guard disabled.[/yellow]"
                     )
             except Exception as e:
-                console.print(f"[yellow]⚠️ Gagal menginisialisasi IP Guard: {e}[/yellow]")
+                console.print(f"[yellow]⚠️ Failed to initialize IP Guard: {e}[/yellow]")
 
     return modules
 
@@ -439,20 +439,20 @@ def _verify_ip_guard(
         try:
             proxy = proxy_manager.get_proxy()
         except Exception as e:
-            logger.debug("IPGuard[%s]: gagal mengambil proxy untuk cek: %s", phase, e)
+            logger.debug("IPGuard[%s]: failed to get proxy for check: %s", phase, e)
             proxy = None
 
     try:
         ok, panic, warnings = ip_guard.enforce(proxy)
     except Exception as e:
-        console.print(f"[yellow]⚠️ IP Guard gagal dijalankan ({phase}): {e}[/yellow]")
+        console.print(f"[yellow]⚠️ IP Guard failed to run ({phase}): {e}[/yellow]")
         return True, ""
 
     if stats_collector:
         try:
             stats_collector.record_ip_guard(check=True, leak=not ok)
         except Exception as e:
-            logger.debug("StatsCollector.record_ip_guard gagal: %s", e)
+            logger.debug("StatsCollector.record_ip_guard failed: %s", e)
 
     for w in warnings:
         console.print(f"[yellow]⚠️ IP Guard({phase}): {w}[/yellow]")
@@ -539,10 +539,10 @@ def _handle_list_database_dork(args) -> None:
         sys.exit(1)
 
     if not files:
-        console.print("[yellow]Tidak ada file database dork ditemukan.[/yellow]")
+        console.print("[yellow]No database dork files found.[/yellow]")
         console.print(
-            "[dim]Hint: jalankan 'atdork --extract-database' untuk menyalin "
-            "database bundled ke direktori saat ini.[/dim]"
+            "[dim]Hint: run 'atdork --extract-database' to copy the "
+            "bundled database to the current directory.[/dim]"
         )
         return
 
@@ -688,19 +688,19 @@ def _collect_database_queries(args) -> List[str]:
 
 def interactive_mode(db: Database):
     show_banner()
-    query = Prompt.ask("[bold yellow]Masukkan keyword/dork[/bold yellow]").strip()
+    query = Prompt.ask("[bold yellow]Enter keyword/dork[/bold yellow]").strip()
     if not query:
-        console.print("[red]Query kosong. Keluar.[/red]")
+        console.print("[red]Empty query. Exiting.[/red]")
         return
 
-    max_res_str = Prompt.ask("[bold yellow]Jumlah maksimal hasil[/bold yellow]", default="20")
+    max_res_str = Prompt.ask("[bold yellow]Maximum number of results[/bold yellow]", default="20")
     try:
         max_results = int(max_res_str)
         max_results = max(1, min(100, max_results))
     except ValueError:
         max_results = 20
 
-    console.print("\n[bold cyan]🔍 Memulai pencarian...[/bold cyan]")
+    console.print("\n[bold cyan]🔍 Starting search...[/bold cyan]")
     if db:
         db.add_query(query, STATUS_PENDING)
     try:
@@ -708,7 +708,7 @@ def interactive_mode(db: Database):
     except SearchError as e:
         if db:
             db.add_query(query, STATUS_FAILED)
-        console.print(f"[red]Gagal: {e}[/red]")
+        console.print(f"[red]Failed: {e}[/red]")
         return
 
     if results:
@@ -716,7 +716,7 @@ def interactive_mode(db: Database):
         results = filter_results(results)
         stats = get_filter_stats(original, len(results))
         if stats["removed"] > 0:
-            console.print(f"[dim]Filter: {stats['removed']} hasil spam/invalid dihapus.[/dim]")
+            console.print(f"[dim]Filter: {stats['removed']} spam/invalid results removed.[/dim]")
 
     if db:
         qid = db.add_query(query, STATUS_COMPLETED)
@@ -724,9 +724,9 @@ def interactive_mode(db: Database):
 
     display_results(results, query)
 
-    if results and Prompt.ask("[yellow]Simpan hasil ke file? (y/n)[/yellow]", choices=["y","n"], default="n") == "y":
+    if results and Prompt.ask("[yellow]Save results to file? (y/n)[/yellow]", choices=["y","n"], default="n") == "y":
         path = save_results(results, query, output_format="txt")
-        console.print(f"[green]✅ Disimpan ke: {path}[/green]")
+        console.print(f"[green]✅ Saved to: {path}[/green]")
 
 
 def cli_mode(args):
@@ -775,9 +775,9 @@ def cli_mode(args):
     if args.list_templates:
         templates = list_available_templates(args.template_path or "wordlists/templates")
         if not templates:
-            console.print("[yellow]Tidak ada template ditemukan.[/yellow]")
+            console.print("[yellow]No templates found.[/yellow]")
         else:
-            console.print("[bold cyan]Template Dorks Tersedia:[/bold cyan]")
+            console.print("[bold cyan]Available Dork Templates:[/bold cyan]")
             for t in templates:
                 console.print(f"  [green]{t['name']}[/green] - {t['description']}")
         if db: db.close()
@@ -803,9 +803,9 @@ def cli_mode(args):
     if args.history and db:
         rows = db.get_all_queries()
         if not rows:
-            console.print("[yellow]Belum ada riwayat pencarian.[/yellow]")
+            console.print("[yellow]No search history yet.[/yellow]")
         else:
-            console.print("[bold cyan]Riwayat Pencarian:[/bold cyan]")
+            console.print("[bold cyan]Search History:[/bold cyan]")
             for qid, text, status in rows:
                 # '\[' agar Rich tidak menelan status sebagai markup tag
                 # (dahulu "[completed]" hilang dari layar tanpa disadari).
@@ -820,7 +820,7 @@ def cli_mode(args):
             db.export_to_json(out)
         else:
             db.export_to_csv(out)
-        console.print(f"[green]✅ Database diekspor ke: {out}[/green]")
+        console.print(f"[green]✅ Database exported to: {out}[/green]")
         if db: db.close()
         return
 
@@ -828,11 +828,11 @@ def cli_mode(args):
     if args.resume and db:
         pending = db.get_pending_queries()
         if not pending:
-            console.print("[yellow]Tidak ada query yang tertunda.[/yellow]")
+            console.print("[yellow]No pending queries.[/yellow]")
             if db: db.close()
             return
         queries = [q[1] for q in pending]
-        console.print(f"[bold cyan]Resume mode: {len(queries)} query tertunda[/bold cyan]")
+        console.print(f"[bold cyan]Resume mode: {len(queries)} pending queries[/bold cyan]")
     else:
         queries = []
 
@@ -870,11 +870,11 @@ def cli_mode(args):
                 file_queries = load_queries_from_file(args.batch_file)
                 queries.extend(file_queries)
             except Exception as e:
-                console.print(f"[red]Gagal membaca file batch: {e}[/red]")
+                console.print(f"[red]Failed to read batch file: {e}[/red]")
                 sys.exit(1)
 
     if not queries:
-        console.print("[red]Error: Tidak ada query yang diberikan. Gunakan -q, --template, --database-dork, atau --batch-file.[/red]")
+        console.print("[red]Error: No query provided. Use -q, --template, --database-dork, or --batch-file.[/red]")
         sys.exit(1)
 
     # Proxy manager
@@ -885,7 +885,7 @@ def cli_mode(args):
                 proxy_arg=args.proxy, proxy_file=args.proxy_file, enable_tor=args.tor,
                 cooldown=args.proxy_cooldown, strict=args.strict, max_failures=args.max_failures,
             )
-            console.print("[dim]Proxy manager diinisialisasi.[/dim]")
+            console.print("[dim]Proxy manager initialized.[/dim]")
         except ValueError as e:
             console.print(f"[red]Proxy manager error: {e}[/red]")
             sys.exit(1)
@@ -968,7 +968,7 @@ def cli_mode(args):
             batch_results[q] = filter_results(batch_results[q], **val_kwargs)
             total_removed += old - len(batch_results[q])
         if total_removed:
-            console.print(f"[dim]Filter: {total_removed} hasil dihapus.[/dim]")
+            console.print(f"[dim]Filter: {total_removed} results removed.[/dim]")
 
         if args.filter_vuln:
             total_vuln = 0
@@ -976,7 +976,7 @@ def cli_mode(args):
                 vuln, safe, _ = _apply_vulnerability_filter(batch_results[q], args.filter_vuln)
                 total_vuln += len(vuln)
                 batch_results[q] = vuln
-            console.print(f"[bold red]🔴 {total_vuln} hasil berpotensi rentan ({args.filter_vuln}).[/bold red]")
+            console.print(f"[bold red]🔴 {total_vuln} potentially vulnerable results ({args.filter_vuln}).[/bold red]")
 
         if db:
             for q, results in batch_results.items():
@@ -993,7 +993,7 @@ def cli_mode(args):
                     db.add_results_batch(qid, results)
 
         total_hits = sum(len(v) for v in batch_results.values())
-        console.print(f"\n[green]Batch selesai. Total {total_hits} hasil.[/green]")
+        console.print(f"\n[green]Batch finished. Total {total_hits} results.[/green]")
 
         # Post-processing: --exec (semua URL)
         if args.exec:
@@ -1073,7 +1073,7 @@ def cli_mode(args):
             else:
                 with open(args.output, "w", encoding="utf-8") as f:
                     json.dump(batch_results, f, indent=2, ensure_ascii=False)
-            console.print(f"[green]✅ Disimpan ke: {args.output}[/green]")
+            console.print(f"[green]✅ Saved to: {args.output}[/green]")
         elif args.output_dir:
             os.makedirs(args.output_dir, exist_ok=True)
             used_names: Dict[str, int] = {}
@@ -1106,7 +1106,7 @@ def cli_mode(args):
                         f.write(f"Query: {q}\n\n")
                         for i, r in enumerate(res, 1):
                             f.write(f"[{i}] {r.get('title','')}\n{r.get('href','')}\n{r.get('body','')}\n\n")
-            console.print(f"[green]✅ Batch disimpan di folder: {args.output_dir}[/green]")
+            console.print(f"[green]✅ Batch saved to folder: {args.output_dir}[/green]")
 
         if case_modules.get("adaptive_delay"):
             console.print("\n[bold cyan]Rate Limiter Recommendations:[/bold cyan]")
@@ -1154,7 +1154,7 @@ def cli_mode(args):
             sys.exit(1)
 
         if args.cache_only and not results:
-            console.print("[yellow]Cache MISS — dan --cache-only aktif. Tidak ada hasil.[/yellow]")
+            console.print("[yellow]Cache MISS — and --cache-only is enabled. No results.[/yellow]")
             if db: db.close()
             if cache: cache.close()
             return
@@ -1165,11 +1165,11 @@ def cli_mode(args):
         results = filter_results(results, **val_kwargs)
         stats = get_filter_stats(original, len(results))
         if stats["removed"]:
-            console.print(f"[dim]Filter: {stats['removed']} hasil dihapus.[/dim]")
+            console.print(f"[dim]Filter: {stats['removed']} results removed.[/dim]")
 
         if args.filter_vuln:
             vuln, safe, _ = _apply_vulnerability_filter(results, args.filter_vuln)
-            console.print(f"[bold red]🔴 Rentan: {len(vuln)}[/bold red] | [green]🟢 Aman: {len(safe)}[/green]")
+            console.print(f"[bold red]🔴 Vulnerable: {len(vuln)}[/bold red] | [green]🟢 Safe: {len(safe)}[/green]")
             results = vuln
 
         if db and not args.no_dedup:
@@ -1178,7 +1178,7 @@ def cli_mode(args):
             for r in results:
                 if not db.is_duplicate(r.get("href","")):
                     unique_results.append(r)
-            console.print(f"[dim]Deduplikasi: {original_len - len(unique_results)} dihapus.[/dim]")
+            console.print(f"[dim]Deduplication: {original_len - len(unique_results)} removed.[/dim]")
             results = unique_results
             qid = db.add_query(q, STATUS_COMPLETED)
             db.add_results_batch(qid, results)
@@ -1236,11 +1236,11 @@ def cli_mode(args):
 
         if args.output:
             save_results(results, q, output_path=args.output, output_format=args.format)
-            console.print(f"[green]✅ Disimpan ke: {args.output}[/green]")
+            console.print(f"[green]✅ Saved to: {args.output}[/green]")
         elif args.output_dir:
             os.makedirs(args.output_dir, exist_ok=True)
             path = save_results(results, q, output_dir=args.output_dir, output_format=args.format)
-            console.print(f"[green]✅ Disimpan ke: {path}[/green]")
+            console.print(f"[green]✅ Saved to: {path}[/green]")
 
         if case_modules.get("adaptive_delay"):
             console.print("\n[bold cyan]Rate Limiter Recommendations:[/bold cyan]")
@@ -1278,7 +1278,7 @@ def main():
     #    tanpa --config, file config & env var diabaikan total).
     raw_config = {}
     if config_args.config and not os.path.isfile(config_args.config):
-        console.print(f"[red]Error: File config tidak ditemukan: {config_args.config}[/red]")
+        console.print(f"[red]Error: Config file not found: {config_args.config}[/red]")
         sys.exit(1)
 
     try:
@@ -1286,10 +1286,10 @@ def main():
         if isinstance(loaded, dict):
             raw_config = loaded
         elif loaded is not None:
-            console.print("[yellow]Warning: Config file tidak menghasilkan dictionary, menggunakan default.[/yellow]")
+            console.print("[yellow]Warning: Config file did not yield a dictionary, using defaults.[/yellow]")
     except Exception as e:
         console.print(f"[red]Error loading config file: {e}[/red]")
-        console.print("[yellow]Melanjutkan dengan nilai default...[/yellow]")
+        console.print("[yellow]Continuing with default values...[/yellow]")
 
     # Normalisasi kunci: ganti tanda '-' menjadi '_' agar cocok dengan argparse dest
     config = {k.replace('-', '_'): v for k, v in raw_config.items()}
@@ -1302,7 +1302,7 @@ def main():
     filtered_config = {k: v for k, v in config.items() if k in valid_dests}
     if len(filtered_config) < len(config):
         ignored = set(config.keys()) - set(filtered_config.keys())
-        console.print(f"[dim]Kunci config tidak dikenal diabaikan: {', '.join(ignored)}[/dim]")
+        console.print(f"[dim]Unknown config keys ignored: {', '.join(ignored)}[/dim]")
 
     parser.set_defaults(**filtered_config)
 
@@ -1355,7 +1355,7 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
-        console.print("\n[yellow]⚠️ Dibatalkan[/yellow]")
+        console.print("\n[yellow]⚠️ Cancelled[/yellow]")
         sys.exit(0)
     except Exception as e:
         console.print(f"[red]Unexpected error: {e}[/red]")

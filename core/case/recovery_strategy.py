@@ -58,13 +58,13 @@ class RecoveryStrategy:
         try:
             if error_category == ErrorCategory.TRANSIENT:
                 result["action"] = RecoveryAction.RETRY_WITH_BACKOFF
-                result["metadata"]["reason"] = "Error sementara, coba lagi dengan jeda."
+                result["metadata"]["reason"] = "Transient error, retry after a delay."
 
             elif error_category == ErrorCategory.RATE_LIMIT:
                 self.circuit_breaker.record_failure(backend)
                 result["action"] = RecoveryAction.SWITCH_BACKEND
                 result["metadata"]["reason"] = (
-                    f"Backend {backend} terkena rate limit. Beralih ke backend lain."
+                    f"Backend {backend} hit rate limit. Switching to another backend."
                 )
 
             elif error_category == ErrorCategory.BLOCKED:
@@ -73,26 +73,26 @@ class RecoveryStrategy:
                     self.circuit_breaker.record_failure(proxy)
                 result["action"] = RecoveryAction.SWITCH_BACKEND
                 result["metadata"]["reason"] = (
-                    f"Backend {backend} memblokir permintaan. Ganti backend dan/atau proxy."
+                    f"Backend {backend} is blocking requests. Switch backend and/or proxy."
                 )
 
             elif error_category == ErrorCategory.PROXY_FAIL:
                 if proxy:
                     self.circuit_breaker.record_failure(proxy)
                 result["action"] = RecoveryAction.ROTATE_PROXY
-                result["metadata"]["reason"] = "Proxy gagal. Rotasi ke proxy lain."
+                result["metadata"]["reason"] = "Proxy failed. Rotating to another proxy."
 
             elif error_category == ErrorCategory.FATAL:
                 result["action"] = RecoveryAction.ABORT
-                result["metadata"]["reason"] = "Error fatal, tidak dapat dipulihkan."
+                result["metadata"]["reason"] = "Fatal error, unrecoverable."
 
             else:
                 result["action"] = RecoveryAction.ABORT
-                result["metadata"]["reason"] = f"Kategori error tidak dikenal: {error_category}"
+                result["metadata"]["reason"] = f"Unknown error category: {error_category}"
 
         except Exception as e:
-            logger.error("Error di RecoveryStrategy.get_action(): %s", e)
+            logger.error("Error in RecoveryStrategy.get_action(): %s", e)
             result["action"] = RecoveryAction.ABORT
-            result["metadata"]["reason"] = f"Kesalahan internal RecoveryStrategy: {e}"
+            result["metadata"]["reason"] = f"Internal RecoveryStrategy error: {e}"
 
         return result

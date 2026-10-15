@@ -50,8 +50,8 @@ def _find_template_file(name: str, template_dir: str) -> Union[str, Traversable]
     if isinstance(root, str):
         if not os.path.isdir(root):
             raise FileNotFoundError(
-                f"Direktori template tidak ditemukan: '{root}'. "
-                "Pastikan folder 'wordlists/templates/' ada atau gunakan --template-path."
+                f"Template directory not found: '{root}'. "
+                "Make sure the 'wordlists/templates/' folder exists or use --template-path."
             )
 
         for ext in VALID_EXTENSIONS:
@@ -65,8 +65,8 @@ def _find_template_file(name: str, template_dir: str) -> Union[str, Traversable]
                 return resource
 
     raise FileNotFoundError(
-        f"Template '{name}' tidak ditemukan di '{template_dir}'. "
-        "Gunakan --list-templates untuk melihat daftar yang tersedia."
+        f"Template '{name}' not found in '{template_dir}'. "
+        "Use --list-templates to see the available list."
     )
 
 
@@ -83,30 +83,30 @@ def _parse_template(filepath: Union[str, Traversable]) -> Dict:
         with stream as f:
             data = yaml.safe_load(f)
     except yaml.YAMLError as exc:
-        raise ValueError(f"Format YAML di template '{filename}' tidak valid: {exc}") from exc
+        raise ValueError(f"Invalid YAML format in template '{filename}': {exc}") from exc
     except Exception as exc:
-        raise ValueError(f"Tidak dapat membaca template '{filename}': {exc}") from exc
+        raise ValueError(f"Unable to read template '{filename}': {exc}") from exc
 
     if not isinstance(data, dict):
         raise ValueError(
-            f"Template '{filename}' harus berisi mapping YAML, bukan {type(data).__name__}."
+            f"Template '{filename}' must contain a YAML mapping, not {type(data).__name__}."
         )
 
     targeted = data.get("targeted", [])
     generic = data.get("generic", [])
     if not targeted and not generic:
         raise ValueError(
-            f"Template '{data.get('name', filename)}' tidak memiliki dork (targeted maupun generic)."
+            f"Template '{data.get('name', filename)}' has no dorks (targeted or generic)."
         )
 
     if not isinstance(targeted, list):
-        logger.warning("'targeted' bukan list, diabaikan.")
+        logger.warning("'targeted' is not a list, ignoring.")
         data["targeted"] = []
     else:
         data["targeted"] = [str(item) for item in targeted if item]
 
     if not isinstance(generic, list):
-        logger.warning("'generic' bukan list, diabaikan.")
+        logger.warning("'generic' is not a list, ignoring.")
         data["generic"] = []
     else:
         data["generic"] = [str(item) for item in generic if item]
@@ -126,8 +126,8 @@ def _render_dorks(template: Dict, target: Optional[str] = None) -> List[str]:
             dorks.extend([dork.replace("{target}", target) for dork in template["targeted"]])
         else:
             logger.warning(
-                "Template '%s' memiliki dork bertarget, tetapi --target tidak diberikan. "
-                "Dork targeted akan diabaikan.",
+                "Template '%s' has targeted dorks, but --target was not provided. "
+                "Targeted dorks will be ignored.",
                 template.get("name", "unknown"),
             )
 
@@ -135,8 +135,8 @@ def _render_dorks(template: Dict, target: Optional[str] = None) -> List[str]:
 
     if not dorks:
         raise ValueError(
-            f"Tidak ada dork yang tersedia untuk template '{template.get('name')}'. "
-            "Periksa kembali isi template atau berikan --target."
+            f"No dorks available for template '{template.get('name')}'. "
+            "Check the template contents again or provide --target."
         )
 
     return dorks
@@ -150,11 +150,11 @@ def _select_dorks(dorks: List[str], select_str: str) -> List[str]:
     for part in select_str.split(","):
         part = part.strip()
         if not part.isdigit():
-            raise ValueError(f"Format select tidak valid: '{part}' bukan angka.")
+            raise ValueError(f"Invalid select format: '{part}' is not a number.")
         idx = int(part)
         if idx < 1 or idx > len(dorks):
             raise ValueError(
-                f"Indeks select tidak valid: {idx}. Template ini memiliki {len(dorks)} dork (1-{len(dorks)})."
+                f"Invalid select index: {idx}. This template has {len(dorks)} dorks (1-{len(dorks)})."
             )
         indices.append(idx - 1)
 
@@ -192,7 +192,7 @@ def list_available_templates(template_dir: str = DEFAULT_TEMPLATE_DIR) -> List[D
                 "file": _display_template_path(entry),
             })
         except Exception as exc:
-            logger.warning("Gagal membaca template %s: %s", _display_template_path(entry), exc)
+            logger.warning("Failed to read template %s: %s", _display_template_path(entry), exc)
             available.append({
                 "name": name,
                 "description": f"(error: {exc})",

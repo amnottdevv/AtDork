@@ -40,9 +40,9 @@ class FallbackManager:
         proxy_manager=None
     ):
         if not backends:
-            raise ValueError("Daftar backend tidak boleh kosong")
+            raise ValueError("Backend list must not be empty")
         if not circuit_breaker:
-            raise ValueError("CircuitBreaker wajib disediakan")
+            raise ValueError("CircuitBreaker is required")
 
         self.backends = backends
         self.circuit_breaker = circuit_breaker
@@ -62,7 +62,7 @@ class FallbackManager:
         try:
             return self.proxy_manager.get_proxy()
         except Exception as e:
-            logger.warning("Gagal mengambil proxy: %s", e)
+            logger.warning("Failed to get proxy: %s", e)
             return None
 
     def healthy_backend(self, exclude: Optional[str] = None) -> Optional[str]:
@@ -116,10 +116,10 @@ class FallbackManager:
                 if healthy:
                     result["action"] = FallbackAction.SWITCH_BACKEND
                     result["next_backend"] = healthy
-                    result["reason"] = f"Backend {current_backend} rate‑limited, beralih ke {healthy}"
+                    result["reason"] = f"Backend {current_backend} rate‑limited, switching to {healthy}"
                 else:
                     result["action"] = FallbackAction.COOLDOWN
-                    result["reason"] = f"Semua backend rate‑limited, cooldown diperlukan"
+                    result["reason"] = f"All backends rate‑limited, cooldown required"
                 return result
 
             # 2. Blocked → ganti backend + rotasi proxy
@@ -134,7 +134,7 @@ class FallbackManager:
                 result["action"] = FallbackAction.SWITCH_BACKEND
                 result["next_backend"] = healthy_backend or self.backends[0]
                 result["next_proxy"] = healthy_proxy
-                result["reason"] = f"Backend {current_backend} memblokir, beralih"
+                result["reason"] = f"Backend {current_backend} blocking, switching"
                 return result
 
             # 3. Proxy fail → rotasi proxy
@@ -147,25 +147,25 @@ class FallbackManager:
                 if healthy_proxy:
                     result["action"] = FallbackAction.ROTATE_PROXY
                     result["next_proxy"] = healthy_proxy
-                    result["reason"] = "Proxy gagal, rotasi ke proxy lain"
+                    result["reason"] = "Proxy failed, rotating to another proxy"
                 else:
                     result["action"] = FallbackAction.COOLDOWN
-                    result["reason"] = "Semua proxy gagal, cooldown diperlukan"
+                    result["reason"] = "All proxies failed, cooldown required"
                 return result
 
             # 4. Transient → retry
             if error_category == ErrorCategory.TRANSIENT:
                 result["action"] = FallbackAction.RETRY
-                result["reason"] = "Error sementara, retry"
+                result["reason"] = "Transient error, retry"
                 return result
 
             # 5. Fatal → abort
             result["action"] = FallbackAction.ABORT
-            result["reason"] = f"Error fatal: tidak dapat dipulihkan"
+            result["reason"] = f"Fatal error: unrecoverable"
             return result
 
         except Exception as e:
-            logger.error("Error di FallbackManager.decide(): %s", e)
+            logger.error("Error in FallbackManager.decide(): %s", e)
             result["action"] = FallbackAction.ABORT
-            result["reason"] = f"Kesalahan internal FallbackManager: {e}"
+            result["reason"] = f"Internal FallbackManager error: {e}"
             return result

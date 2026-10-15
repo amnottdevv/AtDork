@@ -78,22 +78,22 @@ class RetryHandler:
 
                 # Jika error fatal, jangan retry
                 if category == ErrorCategory.FATAL:
-                    logger.error("Error fatal, tidak retry: %s", e)
+                    logger.error("Fatal error, not retrying: %s", e)
                     if on_giveup:
                         try:
                             on_giveup(e)
                         except Exception as cb_err:
-                            logger.error("Error di on_giveup callback: %s", cb_err)
+                            logger.error("Error in on_giveup callback: %s", cb_err)
                     return None, e
 
                 # Jika ini percobaan terakhir, menyerah
                 if attempt >= self.max_retries:
-                    logger.error("Retry maksimal (%d) tercapai: %s", self.max_retries, e)
+                    logger.error("Max retries (%d) reached: %s", self.max_retries, e)
                     if on_giveup:
                         try:
                             on_giveup(e)
                         except Exception as cb_err:
-                            logger.error("Error di on_giveup callback: %s", cb_err)
+                            logger.error("Error in on_giveup callback: %s", cb_err)
                     return None, e
 
                 # Hitung delay
@@ -102,7 +102,7 @@ class RetryHandler:
                     delay = delay * random.uniform(0.5, 1.5)
 
                 logger.warning(
-                    "Percobaan %d/%d gagal (%s), retry dalam %.1fs...",
+                    "Attempt %d/%d failed (%s), retrying in %.1fs...",
                     attempt + 1, self.max_retries, category, delay,
                 )
 
@@ -112,15 +112,15 @@ class RetryHandler:
                         on_retry(attempt + 1, e)
                     except RetryAbort as abort:
                         # Keputusan abort dari FallbackManager → berhenti, jangan retry.
-                        logger.error("Retry dihentikan (abort): %s", abort)
+                        logger.error("Retry aborted: %s", abort)
                         if on_giveup:
                             try:
                                 on_giveup(abort)
                             except Exception as cb_err:
-                                logger.error("Error di on_giveup callback: %s", cb_err)
+                                logger.error("Error in on_giveup callback: %s", cb_err)
                         return None, abort
                     except Exception as cb_err:
-                        logger.error("Error di on_retry callback: %s", cb_err)
+                        logger.error("Error in on_retry callback: %s", cb_err)
 
                 time.sleep(delay)
 

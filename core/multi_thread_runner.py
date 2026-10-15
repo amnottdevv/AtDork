@@ -93,9 +93,9 @@ def run_batch_multithread(
                                 res = future.result()
                                 results[q] = res
                                 consecutive_failures = 0
-                                logger.debug(f"'{q[:60]}' -> {len(res)} hasil")
+                                logger.debug(f"'{q[:60]}' -> {len(res)} results")
                             except Exception as e:
-                                logger.error(f"'{q[:60]}' gagal: {e}")
+                                logger.error(f"'{q[:60]}' failed: {e}")
                                 results[q] = []
                                 consecutive_failures += 1
 
@@ -105,8 +105,8 @@ def run_batch_multithread(
                             # Cek apakah perlu fallback
                             if fallback_sequential and consecutive_failures >= max_consecutive_failures:
                                 logger.warning(
-                                    f"{consecutive_failures} kegagalan berturut-turut, "
-                                    "menurunkan ke mode sequential."
+                                    f"{consecutive_failures} consecutive failures, "
+                                    "degrading to sequential mode."
                                 )
                                 # Batalkan semua future yang belum selesai
                                 for f in future_to_query:
@@ -132,15 +132,15 @@ def run_batch_multithread(
                 remaining = [q for q in queries if q not in results]
                 if not remaining:
                     break
-                logger.info(f"Melanjutkan {len(remaining)} query secara sequential.")
+                logger.info(f"Continuing {len(remaining)} queries sequentially.")
                 progress.update(task, description=f"[yellow]Sequential fallback ({len(remaining)} queries)...")
                 for q in remaining:
                     try:
                         res = search_dork(q, **kwargs)
                         results[q] = res
-                        logger.debug(f"'{q[:60]}' -> {len(res)} hasil")
+                        logger.debug(f"'{q[:60]}' -> {len(res)} results")
                     except Exception as e:
-                        logger.error(f"'{q[:60]}' gagal: {e}")
+                        logger.error(f"'{q[:60]}' failed: {e}")
                         results[q] = []
                     with _progress_lock:
                         progress.advance(task)

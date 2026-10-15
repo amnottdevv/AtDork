@@ -63,10 +63,10 @@ class Database:
                 self._conn.execute("PRAGMA journal_mode=WAL")   # performa & concurrent
                 self._conn.execute("PRAGMA foreign_keys = ON")
             except sqlite3.DatabaseError as e:
-                logger.error(f"Database error saat membuka {self.db_path}: {e}")
+                logger.error(f"Database error while opening {self.db_path}: {e}")
                 raise
             except OSError as e:
-                logger.error(f"OS error saat mengakses database {self.db_path}: {e}")
+                logger.error(f"OS error while accessing database {self.db_path}: {e}")
                 raise
         return self._conn
 
@@ -76,7 +76,7 @@ class Database:
             try:
                 self._conn.close()
             except Exception as e:
-                logger.warning(f"Error saat menutup database connection: {e}")
+                logger.warning(f"Error while closing database connection: {e}")
             finally:
                 self._conn = None
 
@@ -86,9 +86,9 @@ class Database:
             conn = self._connect()
             conn.executescript(SQL_CREATE_TABLES)
             conn.commit()
-            logger.debug("Database siap di %s", self.db_path)
+            logger.debug("Database ready at %s", self.db_path)
         except Exception as e:
-            logger.error(f"Gagal menginisialisasi database: {e}")
+            logger.error(f"Failed to initialize database: {e}")
             raise
 
     # ── Query Management ──────────────────────────────────────────────
@@ -126,11 +126,11 @@ class Database:
             return query_id
         except sqlite3.DatabaseError as e:
             conn.rollback()
-            logger.error(f"Database error saat add_query: {e}")
+            logger.error(f"Database error in add_query: {e}")
             raise
         except Exception as e:
             conn.rollback()
-            logger.error(f"Unexpected error saat add_query: {e}")
+            logger.error(f"Unexpected error in add_query: {e}")
             raise
 
     def update_query_status(self, query_id: int, status: str):
@@ -143,7 +143,7 @@ class Database:
             )
             conn.commit()
         except sqlite3.DatabaseError as e:
-            logger.error(f"Database error saat update_query_status: {e}")
+            logger.error(f"Database error in update_query_status: {e}")
             raise
 
     def get_pending_queries(self) -> List[Tuple[int, str]]:
@@ -156,7 +156,7 @@ class Database:
             ).fetchall()
             return [(r[0], r[1]) for r in rows]
         except sqlite3.DatabaseError as e:
-            logger.error(f"Database error saat get_pending_queries: {e}")
+            logger.error(f"Database error in get_pending_queries: {e}")
             return []
 
     def get_all_queries(self) -> List[Tuple[int, str, str]]:
@@ -168,7 +168,7 @@ class Database:
             ).fetchall()
             return [(r[0], r[1], r[2]) for r in rows]
         except sqlite3.DatabaseError as e:
-            logger.error(f"Database error saat get_all_queries: {e}")
+            logger.error(f"Database error in get_all_queries: {e}")
             return []
 
     # ── Result Management ─────────────────────────────────────────────
@@ -203,7 +203,7 @@ class Database:
             # Duplikat
             return False
         except sqlite3.DatabaseError as e:
-            logger.error(f"Database error saat add_result: {e}")
+            logger.error(f"Database error in add_result: {e}")
             return False
 
     def add_results_batch(self, query_id: int, results: List[Dict[str, Any]]) -> int:
@@ -214,7 +214,7 @@ class Database:
                 if self.add_result(query_id, res):
                     count += 1
             except Exception as e:
-                logger.warning(f"Error saat add_result dalam batch: {e}")
+                logger.warning(f"Error in add_result within batch: {e}")
                 continue
         return count
 
@@ -238,7 +238,7 @@ class Database:
                 results.append(data)
             return results
         except sqlite3.DatabaseError as e:
-            logger.error(f"Database error saat get_results_by_query: {e}")
+            logger.error(f"Database error in get_results_by_query: {e}")
             return []
 
     def get_all_results(self) -> Dict[int, List[Dict[str, Any]]]:
@@ -262,7 +262,7 @@ class Database:
                 data.setdefault(qid, []).append(item)
             return data
         except sqlite3.DatabaseError as e:
-            logger.error(f"Database error saat get_all_results: {e}")
+            logger.error(f"Database error in get_all_results: {e}")
             return {}
 
     # ── Deduplication ─────────────────────────────────────────────────
@@ -276,7 +276,7 @@ class Database:
             ).fetchone()
             return row[0] > 0
         except sqlite3.DatabaseError as e:
-            logger.error(f"Database error saat is_duplicate: {e}")
+            logger.error(f"Database error in is_duplicate: {e}")
             return False
 
     # ── Export ────────────────────────────────────────────────────────
@@ -289,12 +289,12 @@ class Database:
             serializable = {str(k): v for k, v in data.items()}
             with open(output_path, "w", encoding="utf-8") as f:
                 json.dump(serializable, f, indent=2, ensure_ascii=False)
-            logger.info("Database diekspor ke %s", output_path)
+            logger.info("Database exported to %s", output_path)
         except IOError as e:
-            logger.error(f"IO error saat export_to_json: {e}")
+            logger.error(f"IO error in export_to_json: {e}")
             raise
         except Exception as e:
-            logger.error(f"Error saat export_to_json: {e}")
+            logger.error(f"Error in export_to_json: {e}")
             raise
 
     def export_to_csv(self, output_path: str) -> None:
@@ -309,12 +309,12 @@ class Database:
                 writer = csv.writer(f)
                 writer.writerow(["query", "title", "href", "body"])
                 writer.writerows(rows)
-            logger.info("Database diekspor ke %s", output_path)
+            logger.info("Database exported to %s", output_path)
         except IOError as e:
-            logger.error(f"IO error saat export_to_csv: {e}")
+            logger.error(f"IO error in export_to_csv: {e}")
             raise
         except Exception as e:
-            logger.error(f"Error saat export_to_csv: {e}")
+            logger.error(f"Error in export_to_csv: {e}")
             raise
 
     # ── Maintenance ──────────────────────────────────────────────────
@@ -323,7 +323,7 @@ class Database:
         """Optimalkan ukuran database dengan error handling."""
         try:
             self._connect().execute("VACUUM")
-            logger.info("Database vacuum selesai")
+            logger.info("Database vacuum completed")
         except sqlite3.DatabaseError as e:
-            logger.error(f"Database error saat vacuum: {e}")
+            logger.error(f"Database error in vacuum: {e}")
             raise

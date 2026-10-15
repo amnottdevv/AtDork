@@ -260,7 +260,7 @@ def search_dork(
                 # Query tanpa hasil → bukan error, langsung ke backend berikutnya
                 if isinstance(search_error, EmptyResultsError):
                     logger.info(
-                        "Backend %s tidak punya hasil untuk query ini, coba backend berikutnya.",
+                        "Backend %s has no results for this query, trying the next backend.",
                         backend_name,
                     )
                     break
@@ -286,7 +286,7 @@ def search_dork(
     # yang sah. Ini penting agar query tanpa hasil tidak ditandai "failed"
     # dan terus-menerus diulang oleh --resume.
     if isinstance(last_error, EmptyResultsError):
-        logger.info("Tidak ada hasil untuk query '%s' di semua backend.", query[:50])
+        logger.info("No results for query '%s' on any backend.", query[:50])
         return []
 
     raise SearchError(

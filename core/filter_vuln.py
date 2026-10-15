@@ -46,8 +46,8 @@ def _resource_exists(filename: str, wordlist_dir: str) -> bool:
 
 def _describe_wordlist_source(wordlist_dir: str) -> str:
     if _is_default_wordlist_dir(wordlist_dir):
-        return f"paket resource '{WORDLIST_PACKAGE}'"
-    return f"direktori '{os.path.abspath(wordlist_dir)}'"
+        return f"package resource '{WORDLIST_PACKAGE}'"
+    return f"directory '{os.path.abspath(wordlist_dir)}'"
 
 
 def resolve_filter_arg(filter_arg: str, wordlist_dir: str = DEFAULT_WORDLIST_DIR) -> Tuple[str, str, str]:
@@ -75,8 +75,8 @@ def resolve_filter_arg(filter_arg: str, wordlist_dir: str = DEFAULT_WORDLIST_DIR
             return base_name, filter_type, filepath
 
     error_msg = [
-        f"Error: Wordlist file '{filename}' tidak ditemukan.",
-        f"   Sumber yang dicek: {_describe_wordlist_source(wordlist_dir)}",
+        f"Wordlist file '{filename}' not found.",
+        f"   Checked source: {_describe_wordlist_source(wordlist_dir)}",
     ]
 
     if filter_arg.endswith("-link"):
@@ -84,13 +84,13 @@ def resolve_filter_arg(filter_arg: str, wordlist_dir: str = DEFAULT_WORDLIST_DIR
         base_filename = f"{base}.txt"
         if _resource_exists(base_filename, wordlist_dir):
             error_msg.append(
-                f"   Tip: Ditemukan '{base_filename}'. Apakah maksud Anda '--filter-vuln {base}'?"
+                f"   Tip: Found '{base_filename}'. Did you mean '--filter-vuln {base}'?"
             )
     else:
         link_filename = f"{filter_arg}-link.txt"
         if _resource_exists(link_filename, wordlist_dir):
             error_msg.append(
-                f"   Tip: Ditemukan '{link_filename}'. Apakah maksud Anda '--filter-vuln {filter_arg}-link'?"
+                f"   Tip: Found '{link_filename}'. Did you mean '--filter-vuln {filter_arg}-link'?"
             )
 
     raise FileNotFoundError("\n".join(error_msg))
@@ -104,11 +104,11 @@ def load_wordlist(path: str) -> List[re.Pattern]:
         package, resource_name = _parse_package_resource(path)
         resource = resources.files(package).joinpath(resource_name)
         if not resource.is_file():
-            raise FileNotFoundError(f"Wordlist tidak ditemukan: {path}")
+            raise FileNotFoundError(f"Wordlist not found: {path}")
         stream = resource.open("r", encoding="utf-8")
     else:
         if not os.path.isfile(path):
-            raise FileNotFoundError(f"Wordlist tidak ditemukan: {path}")
+            raise FileNotFoundError(f"Wordlist not found: {path}")
         stream = open(path, "r", encoding="utf-8")
 
     patterns = []
@@ -120,9 +120,9 @@ def load_wordlist(path: str) -> List[re.Pattern]:
             try:
                 patterns.append(re.compile(line, re.IGNORECASE))
             except re.error as exc:
-                logger.warning("Pola regex tidak valid di %s: %s (%s)", path, line, exc)
+                logger.warning("Invalid regex pattern in %s: %s (%s)", path, line, exc)
 
-    logger.info("Dimuat %d pola dari %s", len(patterns), path)
+    logger.info("Loaded %d patterns from %s", len(patterns), path)
     return patterns
 
 
@@ -162,7 +162,7 @@ def filter_vulnerable(
         filter_arg = kwargs["platform"]
 
     if not isinstance(results, list):
-        logger.warning("filter_vulnerable: results bukan list, mengembalikan kosong.")
+        logger.warning("filter_vulnerable: results is not a list, returning empty.")
         return [], [], "unknown"
 
     if not results:
@@ -181,7 +181,7 @@ def filter_vulnerable(
             safe.append(res)
 
     logger.info(
-        "Filter %s (tipe %s): %d rentan, %d aman dari %d total hasil",
+        "Filter %s (type %s): %d vulnerable, %d safe out of %d total results",
         filter_arg,
         filter_type,
         len(vulnerable),

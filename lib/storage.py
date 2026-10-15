@@ -50,7 +50,7 @@ def save_results(
             try:
                 os.makedirs(output_dir, exist_ok=True)
             except OSError as e:
-                logger.error(f"Gagal membuat direktori {output_dir}: {e}")
+                logger.error(f"Failed to create directory {output_dir}: {e}")
                 raise
         filename = f"dork_{timestamp}.{output_format}"
         path = os.path.join(output_dir or ".", filename)
@@ -65,19 +65,19 @@ def save_results(
         elif fmt == "csv":
             _save_csv(path, results)
         else:
-            raise ValueError(f"Format tidak didukung: {fmt}")
+            raise ValueError(f"Unsupported format: {fmt}")
         
-        logger.info(f"Hasil disimpan ke {path}")
+        logger.info(f"Results saved to {path}")
         return path
         
     except IOError as e:
-        logger.error(f"IO error saat menyimpan file {path}: {e}")
+        logger.error(f"IO error while saving file {path}: {e}")
         raise
     except OSError as e:
-        logger.error(f"OS error saat menyimpan file {path}: {e}")
+        logger.error(f"OS error while saving file {path}: {e}")
         raise
     except Exception as e:
-        logger.error(f"Error tidak terduga saat menyimpan file {path}: {e}")
+        logger.error(f"Unexpected error while saving file {path}: {e}")
         raise
 
 
@@ -102,10 +102,10 @@ def _save_txt(path: str, results: list, query: str) -> None:
                 f.write(f"    SNIPPET: {res.get('body', 'N/A')}\n")
                 f.write("-" * 80 + "\n")
     except IOError as e:
-        logger.error(f"IO error saat menyimpan TXT {path}: {e}")
+        logger.error(f"IO error while saving TXT {path}: {e}")
         raise
     except Exception as e:
-        logger.error(f"Error saat menyimpan TXT {path}: {e}")
+        logger.error(f"Error while saving TXT {path}: {e}")
         raise
 
 
@@ -120,13 +120,13 @@ def _save_json(path: str, results: list) -> None:
         with open(path, "w", encoding="utf-8") as f:
             json.dump(results, f, indent=2, ensure_ascii=False)
     except IOError as e:
-        logger.error(f"IO error saat menyimpan JSON {path}: {e}")
+        logger.error(f"IO error while saving JSON {path}: {e}")
         raise
     except (TypeError, ValueError) as e:
-        logger.error(f"JSON serialization error saat menyimpan {path}: {e}")
+        logger.error(f"JSON serialization error while saving {path}: {e}")
         raise
     except Exception as e:
-        logger.error(f"Error saat menyimpan JSON {path}: {e}")
+        logger.error(f"Error while saving JSON {path}: {e}")
         raise
 
 
@@ -149,11 +149,11 @@ def _save_csv(path: str, results: list) -> None:
                         "body": res.get("body", ""),
                     })
                 except (ValueError, TypeError) as e:
-                    logger.warning(f"Error menulis row ke CSV: {e}")
+                    logger.warning(f"Error writing row to CSV: {e}")
                     continue
     except IOError as e:
-        logger.error(f"IO error saat menyimpan CSV {path}: {e}")
+        logger.error(f"IO error while saving CSV {path}: {e}")
         raise
     except Exception as e:
-        logger.error(f"Error saat menyimpan CSV {path}: {e}")
+        logger.error(f"Error while saving CSV {path}: {e}")
         raise

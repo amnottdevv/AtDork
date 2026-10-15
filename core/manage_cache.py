@@ -13,6 +13,7 @@ import sqlite3
 import json
 import logging
 import threading
+import time
 from typing import Optional, Dict, Any, List, Tuple
 
 logger = logging.getLogger(__name__)
@@ -67,9 +68,29 @@ class SearchCache:
                 self._conn = sqlite3.connect(
                     self.db_path, check_same_thread=False, timeout=10.0
                 )
-                self._conn.execute("PRAGMA journal_mode=WAL")
                 self._conn.row_factory = sqlite3.Row
+                self._enable_wal(self._conn)
             return self._conn
+
+    @staticmethod
+    def _enable_wal(conn: sqlite3.Connection) -> None:
+        # WAL promotion needs an exclusive lock. When several threads open a
+        # brand-new cache DB at the same time, SQLite may raise
+        # "database is locked" immediately instead of honoring the busy
+        # timeout. Retry briefly, then fall back to the default journal mode —
+        # the cache still works, just without WAL concurrency.
+        for attempt in range(3):
+            try:
+                conn.execute("PRAGMA journal_mode=WAL")
+                return
+            except sqlite3.OperationalError as exc:
+                if attempt == 2:
+                    logger.debug(
+                        "WAL mode unavailable (%s); using default journal mode",
+                        exc,
+                    )
+                else:
+                    time.sleep(0.05 * (attempt + 1))
 
     def close(self):
         with self._lock:
@@ -82,7 +103,7 @@ class SearchCache:
         with self._lock:
             conn.executescript(SQL_CREATE_TABLE)
             conn.commit()
-        logger.debug("Cache database siap di %s", self.db_path)
+        logger.debug("Cache database ready at %s", self.db_path)
 
     def _normalize_params(self, params: Dict[str, Any]) -> str:
         if not params:
@@ -122,14 +143,14 @@ class SearchCache:
                 )
                 conn.commit()
             except Exception as e:
-                logger.warning("Gagal update hit_count: %s", e)
+                logger.warning("Failed to update hit_count: %s", e)
 
         try:
             results = json.loads(row["results"])
             logger.debug("Cache HIT: %s (%s) - hit #%d", query[:50], engine, row["hit_count"])
             return results
         except json.JSONDecodeError:
-            logger.warning("Cache corrupt untuk %s (%s)", query[:50], engine)
+            logger.warning("Cache corrupt for %s (%s)", query[:50], engine)
             return None
 
     def set(
@@ -163,7 +184,7 @@ class SearchCache:
                 logger.debug("Cache SET: %s (%s) - %d results", query[:50], engine, len(results))
                 return True
             except Exception as e:
-                logger.error("Gagal menyimpan cache: %s", e)
+                logger.error("Failed to save cache: %s", e)
                 return False
 
     def get_or_set(
@@ -198,7 +219,7 @@ class SearchCache:
             Hasil pencarian (dari cache atau dari ``fetch_func``).
         """
         if not callable(fetch_func):
-            raise TypeError("fetch_func harus callable")
+            raise TypeError("fetch_func must be callable")
 
         with self._lock:
             cached = self.get(query, engine, params)

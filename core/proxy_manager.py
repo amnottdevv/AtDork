@@ -76,7 +76,7 @@ class ProxyManager:
         valid = [p for p in proxies if is_valid_proxy(p)]
         invalid_count = len(proxies) - len(valid)
         if invalid_count > 0:
-            logger.warning(f"{invalid_count} proxy tidak valid dan diabaikan.")
+            logger.warning(f"{invalid_count} invalid proxies ignored.")
 
         self._proxies = valid
         self._lock = threading.Lock()
@@ -90,10 +90,10 @@ class ProxyManager:
         self._stats = {}          # proxy -> {'success': int, 'failure': int, 'consecutive_fails': int}
 
         if not self._proxies and strict:
-            raise ValueError("strict=True tetapi tidak ada proxy valid tersedia.")
+            raise ValueError("strict=True but no valid proxy is available.")
 
         if not self._proxies:
-            logger.warning("ProxyManager dibuat tanpa proxy valid, akan menggunakan koneksi langsung.")
+            logger.warning("ProxyManager created without valid proxies; falling back to direct connection.")
 
     @property
     def proxies(self) -> list:
@@ -110,12 +110,12 @@ class ProxyManager:
     def add_proxy(self, proxy: str):
         """Tambah proxy ke pool secara dinamis (jika valid dan belum ada)."""
         if not is_valid_proxy(proxy):
-            logger.warning(f"Proxy tidak valid, diabaikan: {proxy}")
+            logger.warning(f"Invalid proxy, ignored: {proxy}")
             return
         with self._lock:
             if proxy not in self._proxies:
                 self._proxies.append(proxy)
-                logger.info(f"Proxy ditambahkan: {redact_proxy_url(proxy)}")
+                logger.info(f"Proxy added: {redact_proxy_url(proxy)}")
 
     def remove_proxy(self, proxy: str):
         """Hapus proxy dari pool secara manual."""
@@ -124,7 +124,7 @@ class ProxyManager:
                 self._proxies.remove(proxy)
                 self._banned_until.pop(proxy, None)
                 self._stats.pop(proxy, None)
-                logger.info(f"Proxy dihapus: {redact_proxy_url(proxy)}")
+                logger.info(f"Proxy removed: {redact_proxy_url(proxy)}")
 
     def _init_stats(self, proxy: str):
         if proxy and proxy not in self._stats:
@@ -138,7 +138,7 @@ class ProxyManager:
         with self._lock:
             if not self._proxies:
                 if self._strict:
-                    raise RuntimeError("Tidak ada proxy tersedia (strict mode).")
+                    raise RuntimeError("No proxy available (strict mode).")
                 return None
 
             now = time.time()
@@ -152,7 +152,7 @@ class ProxyManager:
 
             # Semua proxy dalam cooldown
             if self._strict:
-                raise RuntimeError("Semua proxy sedang dalam cooldown (strict mode).")
+                raise RuntimeError("All proxies are in cooldown (strict mode).")
             return None  # fallback ke koneksi langsung
 
     def report_failure(self, proxy: str):
@@ -167,14 +167,14 @@ class ProxyManager:
             # Cooldown
             until = time.time() + self._cooldown
             self._banned_until[proxy] = until
-            logger.debug(f"Proxy {redact_proxy_url(proxy)} cooldown sampai {until:.0f}")
+            logger.debug(f"Proxy {redact_proxy_url(proxy)} cooldown until {until:.0f}")
 
             # Cek apakah harus dihapus permanen
             if self._max_failures > 0 and self._stats[proxy]['consecutive_fails'] >= self._max_failures:
                 self._proxies.remove(proxy)
                 self._banned_until.pop(proxy, None)
                 del self._stats[proxy]
-                logger.warning(f"Proxy {redact_proxy_url(proxy)} dihapus permanen setelah {self._max_failures} kegagalan berturut-turut.")
+                logger.warning(f"Proxy {redact_proxy_url(proxy)} permanently removed after {self._max_failures} consecutive failures.")
 
     def report_success(self, proxy: str):
         """Catat keberhasilan, reset cooldown & consecutive fails."""
@@ -251,22 +251,22 @@ def create_proxy_manager(
         try:
             file_proxies = load_proxies_from_file(proxy_file)
             proxies.update(file_proxies)
-            logger.info(f"{len(file_proxies)} proxy dimuat dari {proxy_file}")
+            logger.info(f"{len(file_proxies)} proxies loaded from {proxy_file}")
         except Exception as e:
-            logger.error(f"Gagal membaca file proxy: {e}")
+            logger.error(f"Failed to read proxy file: {e}")
 
     if proxy_arg:
         string_proxies = load_proxies_from_string(proxy_arg)
         proxies.update(string_proxies)
-        logger.info(f"{len(string_proxies)} proxy dari argumen --proxy")
+        logger.info(f"{len(string_proxies)} proxies from the --proxy argument")
 
     if enable_tor:
         tor_proxy = "socks5h://127.0.0.1:9050"
         if _check_tor_socks_port():
             proxies.add(tor_proxy)
-            logger.info("Tor SOCKS5 tersedia, ditambahkan ke pool.")
+            logger.info("Tor SOCKS5 available, added to pool.")
         else:
-            logger.warning("Tor diaktifkan tetapi port 9050 tidak tersedia.")
+            logger.warning("Tor is enabled but port 9050 is not available.")
 
     proxy_list = list(proxies)
     return ProxyManager(

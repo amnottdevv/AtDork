@@ -46,24 +46,24 @@ def _fetch_ghdb_json(timeout: int = 10, max_retries: int = 3) -> Optional[dict]:
             logger.info("Requesting GHDB (attempt %d/%d): %s", attempt, max_retries, GHDB_URL)
             response = requests.get(GHDB_URL, headers=HEADERS, timeout=timeout)
         except requests.exceptions.SSLError:
-            logger.warning("SSL error, mencoba ulang tanpa verifikasi sertifikat")
+            logger.warning("SSL error, retrying without certificate verification")
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
             try:
                 response = requests.get(GHDB_URL, headers=HEADERS, timeout=timeout, verify=False)
             except requests.exceptions.RequestException as e:
-                logger.warning("Request gagal (attempt %d): %s", attempt, e)
+                logger.warning("Request failed (attempt %d): %s", attempt, e)
         except requests.exceptions.RequestException as e:
-            logger.warning("Request gagal (attempt %d): %s", attempt, e)
+            logger.warning("Request failed (attempt %d): %s", attempt, e)
 
         if response is not None:
             if response.status_code != 200:
-                logger.warning("Status code bukan 200: %s", response.status_code)
+                logger.warning("Status code is not 200: %s", response.status_code)
             else:
                 try:
                     return response.json()
                 except ValueError:
                     logger.warning(
-                        "Response bukan JSON valid (kemungkinan diblokir / format berubah)"
+                        "Response is not valid JSON (possibly blocked / format changed)"
                     )
 
         if attempt < max_retries:
@@ -105,11 +105,11 @@ def fetch_all_dorks() -> Optional[Dict[str, Any]]:
     """
     json_response = _fetch_ghdb_json()
     if json_response is None:
-        logger.error("Gagal mengambil data GHDB setelah beberapa percobaan")
+        logger.error("Failed to fetch GHDB data after several attempts")
         return None
 
     if "recordsTotal" not in json_response or "data" not in json_response:
-        logger.error("Struktur JSON tidak sesuai ekspektasi (field recordsTotal/data hilang)")
+        logger.error("Unexpected JSON structure (recordsTotal/data fields missing)")
         return None
 
     total_dorks = json_response["recordsTotal"]
@@ -119,7 +119,7 @@ def fetch_all_dorks() -> Optional[Dict[str, Any]]:
     for dork in raw_dorks:
         text = _extract_dork_text(dork.get("url_title", ""))
         if not text:
-            logger.warning("Dork id=%s tidak bisa diparsing, dilewati", dork.get("id"))
+            logger.warning("Dork id=%s could not be parsed, skipping", dork.get("id"))
             continue
 
         category = dork.get("category", {}) or {}
@@ -193,11 +193,11 @@ def _parse_years_arg(years_arg: str) -> Set[int]:
                     start, end = end, start
                 years.update(range(start, end + 1))
             else:
-                logger.warning("Format range tahun tidak valid, dilewati: '%s'", token)
+                logger.warning("Invalid year range format, skipping: '%s'", token)
         elif token.isdigit():
             years.add(int(token))
         else:
-            logger.warning("Format tahun tidak valid, dilewati: '%s'", token)
+            logger.warning("Invalid year format, skipping: '%s'", token)
     return years
 
 
@@ -264,7 +264,7 @@ def save_dorks(dorks: List[dict], output_file: str) -> bool:
         try:
             os.makedirs(output_dir, exist_ok=True)
         except OSError as e:
-            logger.error("Gagal membuat folder '%s': %s", output_dir, e)
+            logger.error("Failed to create folder '%s': %s", output_dir, e)
             return False
 
     try:
@@ -287,7 +287,7 @@ def save_dorks(dorks: List[dict], output_file: str) -> bool:
                     f.write(f"{d['text']}\n")
         return True
     except OSError as e:
-        logger.error("Gagal menulis file '%s': %s", output_file, e)
+        logger.error("Failed to write file '%s': %s", output_file, e)
         return False
 
 
@@ -326,18 +326,18 @@ def run_ghdb_scraper(
         else:
             print(msg)
 
-    _out("[bold cyan]🔍 Mengambil data GHDB dari Exploit-DB...[/bold cyan]" if console else "Mengambil data GHDB dari Exploit-DB...")
+    _out("[bold cyan]🔍 Fetching GHDB data from Exploit-DB...[/bold cyan]" if console else "Fetching GHDB data from Exploit-DB...")
 
     data = fetch_all_dorks()
     if data is None:
-        _out("[red]❌ Gagal mengambil data GHDB. Cek koneksi atau coba lagi nanti.[/red]" if console else "Gagal mengambil data GHDB.")
+        _out("[red]❌ Failed to fetch GHDB data. Check your connection or try again later.[/red]" if console else "Failed to fetch GHDB data.")
         return False
 
     all_dorks = data["dorks"]
 
     if list_categories:
         summary = summarize_categories(all_dorks)
-        _out(f"[bold cyan]Kategori GHDB yang tersedia ({len(summary)} kategori):[/bold cyan]" if console else f"Kategori GHDB yang tersedia ({len(summary)} kategori):")
+        _out(f"[bold cyan]Available GHDB categories ({len(summary)} categories):[/bold cyan]" if console else f"Available GHDB categories ({len(summary)} categories):")
         for cat in summary:
             _out(f"  [green]{cat['cat_id']:>2}[/green] - {cat['cat_title']} ({cat['count']} dork)" if console else f"  {cat['cat_id']:>2} - {cat['cat_title']} ({cat['count']} dork)")
         return True
@@ -350,27 +350,27 @@ def run_ghdb_scraper(
     )
 
     _out(
-        f"[green]✅ Ditemukan {len(filtered)} dork[/green] (dari total {data['total_dorks']} di GHDB)"
+        f"[green]✅ Found {len(filtered)} dorks[/green] (out of {data['total_dorks']} total in GHDB)"
         if console
-        else f"Ditemukan {len(filtered)} dork (dari total {data['total_dorks']} di GHDB)"
+        else f"Found {len(filtered)} dorks (out of {data['total_dorks']} total in GHDB)"
     )
 
     if not filtered:
-        _out("[yellow]⚠️ Tidak ada dork yang cocok dengan filter yang diberikan.[/yellow]" if console else "Tidak ada dork yang cocok dengan filter yang diberikan.")
+        _out("[yellow]⚠️ No dorks matched the given filters.[/yellow]" if console else "No dorks matched the given filters.")
         return True
 
     if output_file:
         success = save_dorks(filtered, output_file)
         if success:
-            _out(f"[green]💾 Disimpan ke: {output_file}[/green]" if console else f"Disimpan ke: {output_file}")
+            _out(f"[green]💾 Saved to: {output_file}[/green]" if console else f"Saved to: {output_file}")
         else:
-            _out(f"[red]❌ Gagal menyimpan ke: {output_file}[/red]" if console else f"Gagal menyimpan ke: {output_file}")
+            _out(f"[red]❌ Failed to save to: {output_file}[/red]" if console else f"Failed to save to: {output_file}")
             return False
     else:
         preview = filtered[:20]
         for d in preview:
             _out(f"  - {d['text']}")
         if len(filtered) > 20:
-            _out(f"  ... dan {len(filtered) - 20} dork lainnya (gunakan --ghdb-file untuk simpan semua)")
+            _out(f"  ... and {len(filtered) - 20} more dorks (use --ghdb-file to save all)")
 
     return True

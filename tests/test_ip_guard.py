@@ -32,7 +32,7 @@ def test_check_detects_real_ip_leak():
         safe, warnings = g.check(PROXY_URL)  # IP yang terlihat = IP asli → bocor
     assert safe is False
     assert g.leak_detected is True
-    assert any("bocor" in w.lower() or "asli" in w.lower() for w in warnings)
+    assert any("leak" in w.lower() or "real ip" in w.lower() for w in warnings)
 
 
 def test_enforce_strict_stops_on_leak():

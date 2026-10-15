@@ -20,6 +20,33 @@ CONSOLE_FORMAT = "%(message)s"
 FILE_FORMAT = "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
 FILE_DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
+# Pustaka pihak ketiga yang berisik di level INFO/DEBUG (mis. primp menulis
+# "response: <url> <status>" untuk setiap request HTTP).
+NOISY_LOGGERS = frozenset({
+    "primp",
+    "ddgs",
+    "httpx",
+    "httpcore",
+    "urllib3",
+    "requests",
+    "hickory_net",
+})
+
+
+class ConsoleNoiseFilter(logging.Filter):
+    """Suppress third-party INFO/DEBUG chatter on the console only.
+
+    Warnings and errors from these loggers still pass, and the full
+    messages remain in the log file (the filter is attached to the
+    console handler, not to the loggers themselves).
+    """
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        top_level = record.name.split(".", 1)[0]
+        if top_level in NOISY_LOGGERS:
+            return record.levelno >= logging.WARNING
+        return True
+
 
 def setup_logging(
     debug: bool = False,
@@ -61,6 +88,10 @@ def setup_logging(
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(console_level)
     console_handler.setFormatter(logging.Formatter(CONSOLE_FORMAT))
+    # Redam chatter pihak ketiga di console (tetap utuh di file log).
+    # Pada mode DEBUG kita sengaja membiarkannya lewat untuk troubleshooting.
+    if console_level > logging.DEBUG:
+        console_handler.addFilter(ConsoleNoiseFilter())
     root.addHandler(console_handler)
 
     # ── File Handler (Rotating) ─────────────────────────────────────────
@@ -87,6 +118,6 @@ def setup_logging(
             root.addHandler(file_handler)
         except (OSError, PermissionError) as e:
             # Fallback: hanya console logging
-            root.warning("Tidak dapat membuka file log %s: %s", log_file, e)
+            root.warning("Cannot open log file %s: %s", log_file, e)
 
     return root

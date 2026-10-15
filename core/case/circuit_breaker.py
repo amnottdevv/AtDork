@@ -32,9 +32,9 @@ class CircuitBreaker:
 
     def __init__(self, threshold: int = 3, cooldown: float = 120.0):
         if threshold < 1:
-            raise CircuitBreakerError("threshold harus >= 1")
+            raise CircuitBreakerError("threshold must be >= 1")
         if cooldown <= 0:
-            raise CircuitBreakerError("cooldown harus > 0")
+            raise CircuitBreakerError("cooldown must be > 0")
 
         self.threshold = threshold
         self.cooldown = cooldown
@@ -50,7 +50,7 @@ class CircuitBreaker:
             try:
                 return [k for k, v in self._open_until.items() if now < v]
             except Exception as e:
-                logger.error("Gagal mendapatkan daftar open circuits: %s", e)
+                logger.error("Failed to get open circuits list: %s", e)
                 return []
 
     def allow(self, key: str) -> bool:
@@ -58,7 +58,7 @@ class CircuitBreaker:
         Periksa apakah permintaan ke resource 'key' diizinkan.
         """
         if not isinstance(key, str) or not key:
-            logger.warning("allow() dipanggil dengan key tidak valid: %s", key)
+            logger.warning("allow() called with invalid key: %s", key)
             return False
 
         try:
@@ -69,13 +69,13 @@ class CircuitBreaker:
                     return True  # HALF_OPEN
                 return False
         except Exception as e:
-            logger.error("Error di allow(%s): %s", key, e)
+            logger.error("Error in allow(%s): %s", key, e)
             return False
 
     def record_failure(self, key: str):
         """Catat kegagalan. Jika mencapai threshold, buka sirkuit."""
         if not isinstance(key, str) or not key:
-            logger.warning("record_failure() dipanggil dengan key tidak valid: %s", key)
+            logger.warning("record_failure() called with invalid key: %s", key)
             return
 
         try:
@@ -84,25 +84,25 @@ class CircuitBreaker:
                 if self._failures[key] >= self.threshold:
                     self._open_until[key] = time.time() + self.cooldown
                     logger.warning(
-                        "Circuit Breaker OPEN untuk '%s' (%d kegagalan, cooldown %.0fs)",
+                        "Circuit Breaker OPEN for '%s' (%d failures, cooldown %.0fs)",
                         key, self._failures[key], self.cooldown
                     )
         except Exception as e:
-            logger.error("Error di record_failure(%s): %s", key, e)
+            logger.error("Error in record_failure(%s): %s", key, e)
 
     def record_success(self, key: str):
         """Catat keberhasilan. Tutup sirkuit (reset kegagalan)."""
         if not isinstance(key, str) or not key:
-            logger.warning("record_success() dipanggil dengan key tidak valid: %s", key)
+            logger.warning("record_success() called with invalid key: %s", key)
             return
 
         try:
             with self._lock:
                 self._failures[key] = 0
                 self._open_until.pop(key, None)
-                logger.debug("Circuit Breaker CLOSED untuk '%s'", key)
+                logger.debug("Circuit Breaker CLOSED for '%s'", key)
         except Exception as e:
-            logger.error("Error di record_success(%s): %s", key, e)
+            logger.error("Error in record_success(%s): %s", key, e)
 
     def status(self, key: str) -> str:
         """Kembalikan status sirkuit untuk resource tertentu."""
@@ -117,5 +117,5 @@ class CircuitBreaker:
                     return "HALF_OPEN"
                 return "OPEN"
         except Exception as e:
-            logger.error("Error di status(%s): %s", key, e)
+            logger.error("Error in status(%s): %s", key, e)
             return "ERROR"
