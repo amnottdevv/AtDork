@@ -579,6 +579,13 @@ atdork/
 ```
 
 ---
+Database dork : https://amnottdevv.github.io/Atdork-DB/
+**use example :**
+```bash
+atdork install common@common1.txt
+# or search dork database
+atdork search cve
+```
 
 ## Ethical Use & Disclaimer
 
