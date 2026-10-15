@@ -1,21 +1,31 @@
 #!/usr/bin/env python3
 """
 Atdork - Professional OSINT Tool
-Version : 1.3.9.6
+Version : 1.3.9.7
 Author  : alzzmarket
 GitHub  : github.com/amnottdevv/atdork
 
-Changelog (1.3.9.6):
+Changelog (1.3.9.7):
   - Dork data moved out of the tool into the Atdork-DB repository
     (github.com/amnottdevv/Atdork-DB): 100+ files across themed @folders
     (exploit-db, ghdb, shodan, censys, cms, cloud, crypto, gaming, movie,
     onion, bug-bounty, lfi/rfi, and more) plus the Index.idn manifest.
+    The distribution is code-only now (data is fetched via install).
   - New package manager: atdork install/uninstall/installed/search/
     update/index. Refs like '@cve/cve_1.txt', 'c@cve_1.txt' or '@cve'
     work with --batch-file, --database-dork and --list-database-dork.
   - All Database Dork features (introduced in 1.3.9.5) now work
     transparently with the package index, including subfolder
     navigation, comma combos, folder-wide loads, and random selection.
+
+Changelog (1.3.9.6):
+  - Bundled dork database expanded to 900K+ dorks across 89 files
+    (Bug Bounty, CCTV, CMS, Carding, Cloud, Cryptocurrency, Gaming,
+     GitHub, LFI/RFI, Misc, Movie, Onion, Search Engines, Shodan,
+     Shopping, exploit-db categories)
+  - All Database Dork features (introduced in 1.3.9.5) now work
+    transparently with the expanded database, including subfolder
+    navigation, comma combos, and random selection.
 
 Changelog (1.3.9.5):
   - Integrated `core/database_dork.py` for loading dorks from the bundled
@@ -110,7 +120,7 @@ from core.manage_cache import SearchCache
 # Notification
 from core.notification import send_batch_summary
 
-VERSION = "1.3.9.6"
+VERSION = "1.3.9.7"
 
 console = Console()
 logger = logging.getLogger("atdork")

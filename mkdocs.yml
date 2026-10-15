@@ -76,6 +76,7 @@ nav:
           - database and history : features/database-history.md
           - cache system : features/cache-system.md
           - notification : features/notification.md
+          - package manager : features/package-manager.md
           - database dork : features/database-scrapper.md
           - ghdb scrapper : features/ghdb-scrapper.md
   - Reference:
