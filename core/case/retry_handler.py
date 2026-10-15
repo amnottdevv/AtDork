@@ -12,6 +12,16 @@ from core.case.error_classifier import ErrorCategory, classify_error
 logger = logging.getLogger(__name__)
 
 
+class RetryAbort(Exception):
+    """
+    Dilempar dari callback ``on_retry`` untuk menghentikan retry secara paksa.
+
+    Dipakai oleh FallbackManager ketika keputusannya adalah ``ABORT`` (error
+    fatal / semua resource terbuka). Tanpa exception khusus ini, keputusan
+    abort tertelan oleh ``except`` umum dan retry tetap berjalan.
+    """
+
+
 class RetryHandler:
     """
     Menjalankan fungsi dengan mekanisme retry cerdas.
@@ -100,6 +110,15 @@ class RetryHandler:
                 if on_retry:
                     try:
                         on_retry(attempt + 1, e)
+                    except RetryAbort as abort:
+                        # Keputusan abort dari FallbackManager → berhenti, jangan retry.
+                        logger.error("Retry dihentikan (abort): %s", abort)
+                        if on_giveup:
+                            try:
+                                on_giveup(abort)
+                            except Exception as cb_err:
+                                logger.error("Error di on_giveup callback: %s", cb_err)
+                        return None, abort
                     except Exception as cb_err:
                         logger.error("Error di on_retry callback: %s", cb_err)
 

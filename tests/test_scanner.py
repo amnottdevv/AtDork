@@ -75,9 +75,65 @@ def test_search_dork_success(mock_ddgs_success):
 
 
 def test_search_dork_empty_results(mock_ddgs_empty):
-    """Should raise EmptyResultsError when no results are returned."""
-    with pytest.raises(SearchError):
-        search_dork("test query", max_results=5)
+    """Query tanpa hasil = hasil kosong yang sah, BUKAN error.
+
+    Perubahan kontrak (v1.3.9.6): dahulu raise SearchError, sehingga query
+    tanpa hasil ditandai 'failed' dan diulang terus oleh --resume.
+    """
+    assert search_dork("test query", max_results=5) == []
+
+
+def test_search_dork_ddgs_raises_no_results(mock_ddgs_success):
+    """ddgs 9.x melempar DDGSException('No results found.') — harus dianggap
+    hasil kosong, bukan kegagalan."""
+    instance = mock_ddgs_success.return_value
+    instance.text.side_effect = Exception("No results found.")
+    assert search_dork("test query", max_results=5) == []
+
+
+def test_search_dork_empty_then_success_on_fallback():
+    """Backend pertama kosong → lanjut ke backend berikutnya yang punya hasil."""
+    call_count = [0]
+
+    def side_effect(*args, **kwargs):
+        call_count[0] += 1
+        if call_count[0] == 1:
+            return []  # backend pertama tidak punya hasil
+        return [{"title": "Ada", "href": "https://found.com", "body": "OK"}]
+
+    with patch("core.scanner.DDGS") as mock_ddgs:
+        instance = MagicMock()
+        instance.text.side_effect = side_effect
+        mock_ddgs.return_value = instance
+        results = search_dork("test", backend="bing", fallback_backends=True, retries=0)
+    assert results[0]["href"] == "https://found.com"
+
+
+def test_search_dork_forced_proxy(mock_ddgs_success):
+    """forced_proxy (keputusan rotasi FallbackManager) dipakai untuk attempt pertama."""
+    results = search_dork(
+        "test query", max_results=5, forced_proxy="http://forced:9999"
+    )
+    assert len(results) == 2
+    assert mock_ddgs_success.call_args.kwargs["proxy"] == "http://forced:9999"
+
+
+def test_search_dork_forced_proxy_without_manager_keeps_proxy_on_retry(mock_ddgs_success):
+    """Tanpa proxy_manager, retry tidak diam-diam jatuh ke direct connection."""
+    call_count = [0]
+
+    def side_effect(*args, **kwargs):
+        call_count[0] += 1
+        if call_count[0] == 1:
+            raise Exception("Proxy tunnel failed")
+        return [{"title": "OK", "href": "https://ok.com", "body": "OK"}]
+
+    instance = mock_ddgs_success.return_value
+    instance.text.side_effect = side_effect
+    results = search_dork("test query", forced_proxy="http://forced:9999", retries=1)
+    assert len(results) == 1
+    # attempt kedua tetap memakai forced_proxy (bukan None/direct)
+    assert mock_ddgs_success.call_args.kwargs["proxy"] == "http://forced:9999"
 
 
 def test_search_dork_rate_limit(mock_ddgs_rate_limit):

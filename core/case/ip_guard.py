@@ -224,6 +224,26 @@ class IPGuard:
             logger.error("Error di check(): %s", e)
             return False, [f"Pengecekan IP gagal: {e}"]
 
+    def enforce(self, proxy_url: Optional[str] = None) -> Tuple[bool, Optional[str], List[str]]:
+        """
+        Jalankan check() lalu terapkan aturan ``strict``.
+
+        Returns:
+            (ok_to_continue, panic_message, warnings)
+            - ``ok_to_continue`` = False HANYA bila ada bukti nyata kebocoran IP
+              (IP asli terlihat publik) dan ``strict`` aktif.
+            - Gagal memeriksa IP (semua provider IP-check down / network error)
+              TIDAK dianggap bocor — cukup jadi warning, agar provider eksternal
+              yang sedang mati tidak mematikan seluruh tool.
+        """
+        safe, warnings = self.check(proxy_url)
+        with self._lock:
+            leaked = self.leak_detected
+        if leaked and self.strict:
+            logger.error("IPGuard: kebocoran terdeteksi dan strict=True → berhenti.")
+            return False, self.panic_message(), warnings
+        return True, None, warnings
+
     # ── Pesan Error ────────────────────────────────────────────────────
     def panic_message(self) -> str:
         """Pesan error lengkap saat kebocoran terdeteksi."""

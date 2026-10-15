@@ -7,7 +7,7 @@ import sqlite3
 import json
 import csv
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any, Tuple
 
 logger = logging.getLogger(__name__)
@@ -101,7 +101,7 @@ class Database:
         Raises:
             sqlite3.Error: Jika ada error database
         """
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         conn = self._connect()
         try:
             cursor = conn.execute(
@@ -139,7 +139,7 @@ class Database:
             conn = self._connect()
             conn.execute(
                 "UPDATE queries SET status = ?, updated_at = ? WHERE id = ?",
-                (status, datetime.utcnow().isoformat(), query_id)
+                (status, datetime.now(timezone.utc).isoformat(), query_id)
             )
             conn.commit()
         except sqlite3.DatabaseError as e:
@@ -179,10 +179,10 @@ class Database:
         Mengabaikan duplikat (href yang sama untuk query_id yang sama).
         Mengembalikan True jika data baru disimpan.
         """
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         conn = self._connect()
         try:
-            conn.execute(
+            cursor = conn.execute(
                 "INSERT OR IGNORE INTO results (query_id, title, href, body, raw_json, created_at) "
                 "VALUES (?, ?, ?, ?, ?, ?)",
                 (
@@ -195,7 +195,10 @@ class Database:
                 )
             )
             conn.commit()
-            return True
+            # rowcount == 0 berarti UNIQUE(query_id, href) menolak baris ini →
+            # duplikat. (Bug lama: selalu return True sehingga dedup tidak
+            # pernah terdeteksi dan is_duplicate()/stats jadi salah.)
+            return cursor.rowcount > 0
         except sqlite3.IntegrityError:
             # Duplikat
             return False

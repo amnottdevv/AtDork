@@ -36,8 +36,9 @@ import os
 import json
 import logging
 import random
+import threading
 from datetime import datetime
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Tuple
 
 from rich.console import Console
 from rich.prompt import Prompt
@@ -46,7 +47,12 @@ from pyfiglet import Figlet
 
 from core.config import load_config
 from core.scanner import search_dork, SearchError
-from core.batch_runner import load_queries_from_file, parse_query_string, run_batch
+from core.batch_runner import (
+    load_queries_from_file,
+    parse_query_string,
+    run_batch,
+    build_query_executor,
+)
 from core.proxy_manager import create_proxy_manager
 from core.filter_vuln import filter_vulnerable
 from core.template_dork import load_template_dorks, list_available_templates
@@ -59,7 +65,12 @@ from core.post_processor import PostProcessor, extract_urls, extract_vulnerable_
 from lib.display import show_banner, display_results
 from lib.storage import save_results
 from lib.validator import filter_results, get_filter_stats
-from core.database import Database
+from core.database import (
+    Database,
+    STATUS_PENDING,
+    STATUS_COMPLETED,
+    STATUS_FAILED,
+)
 from core.logger import setup_logging
 
 # GHDB Scraper (Exploit-DB Google Hacking Database)
@@ -67,7 +78,7 @@ from core.ghdb_scraper import run_ghdb_scraper
 
 # Case modules
 from core.case.circuit_breaker import CircuitBreaker
-from core.case.ip_guard import IPGuard
+from core.case.ip_guard import IPGuard, IPGuardError
 from core.case.fallback_manager import FallbackManager
 from core.case.retry_handler import RetryHandler
 from core.case.adaptive_delay import AdaptiveDelay
@@ -83,6 +94,7 @@ from core.notification import send_batch_summary
 VERSION = "1.3.9.6"
 
 console = Console()
+logger = logging.getLogger("atdork")
 
 
 def _show_ascii_banner():
@@ -188,7 +200,7 @@ def build_parser():
     # Case modules (v1.3.5)
     parser.add_argument("--resilient", action="store_true", help="Aktifkan mode tahan banting (circuit breaker, fallback).")
     parser.add_argument("--adaptive-delay", action="store_true", help="Gunakan delay adaptif berdasarkan respons backend.")
-    parser.add_argument("--ip-guard", action="store_true", help="Aktifkan deteksi kebocoran IP (wajib dengan --strict).")
+    parser.add_argument("--ip-guard", action="store_true", help="Deteksi kebocoran IP selama pencarian (butuh --proxy/--proxy-file/--tor; pakai --strict untuk berhenti saat bocor).")
 
     # Post-Processor (v1.3.6)
     parser.add_argument("--exec", type=str, help="Jalankan command untuk setiap URL hasil (gunakan {} untuk URL).")
@@ -197,7 +209,7 @@ def build_parser():
     parser.add_argument("--exec-timeout", type=int, default=30, help="Timeout per command dalam detik.")
 
     # Cache (v1.3.7)
-    parser.add_argument("--cache", action="store_true", help="Aktifkan caching hasil pencarian.")
+    parser.add_argument("--cache", action="store_true", help="Aktifkan caching hasil pencarian (berlaku untuk mode single & batch).")
     parser.add_argument("--cache-db", type=str, default="atdork_cache.db", help="Path database cache.")
     parser.add_argument("--cache-ttl", type=int, default=24, help="TTL cache dalam jam (default: 24).")
     parser.add_argument("--cache-only", action="store_true", help="Hanya gunakan cache, jangan lakukan pencarian baru.")
@@ -365,18 +377,87 @@ def _setup_case_modules(args, proxy_manager) -> dict:
             base_delay=1.0, max_delay=60.0, backoff_factor=2.0, recovery_factor=0.9
         )
 
-    if args.ip_guard and args.strict:
-        try:
-            real_ip = IPGuard.get_public_ip()
-            if real_ip:
-                modules["ip_guard"] = IPGuard(real_ip, strict=True)
-                if proxy_manager:
+    if args.ip_guard:
+        # Bug lama: --ip-guard hanya diproses bila --strict juga aktif, dan
+        # hasilnya tidak pernah dipakai sama sekali (IPGuard.check() tidak
+        # pernah dipanggil di alur mana pun). Sekarang guard dibuat selalu
+        # (bila ada proxy) dan check() dipanggil via _verify_ip_guard().
+        if not proxy_manager:
+            console.print(
+                "[yellow]⚠️ --ip-guard membutuhkan --proxy/--proxy-file/--tor "
+                "untuk memantau kebocoran; dilewati.[/yellow]"
+            )
+        else:
+            try:
+                real_ip = IPGuard.get_public_ip()
+                if real_ip:
+                    modules["ip_guard"] = IPGuard(real_ip, strict=args.strict)
                     first_proxy = proxy_manager.get_proxy()
-                    modules["ip_guard"].establish_baseline(first_proxy)
-        except Exception as e:
-            console.print(f"[yellow]⚠️ Gagal menginisialisasi IP Guard: {e}[/yellow]")
+                    if first_proxy:
+                        modules["ip_guard"].establish_baseline(first_proxy)
+                    else:
+                        console.print(
+                            "[yellow]⚠️ Tidak ada proxy sehat untuk baseline IP Guard; "
+                            "IP Guard dinonaktifkan.[/yellow]"
+                        )
+                        modules["ip_guard"] = None
+                else:
+                    console.print(
+                        "[yellow]⚠️ Tidak dapat menentukan IP asli (semua provider IP-check "
+                        "gagal); IP Guard dinonaktifkan.[/yellow]"
+                    )
+            except Exception as e:
+                console.print(f"[yellow]⚠️ Gagal menginisialisasi IP Guard: {e}[/yellow]")
 
     return modules
+
+
+def _verify_ip_guard(
+    ip_guard,
+    proxy_manager,
+    stats_collector=None,
+    phase: str = "pre-run",
+) -> Tuple[bool, str]:
+    """
+    Jalankan pengecekan IP Guard (bug lama: check() tidak pernah dipanggil).
+
+    Args:
+        ip_guard: Instance IPGuard atau None.
+        proxy_manager: ProxyManager yang akan dipakai untuk pengecekan.
+        stats_collector: StatsCollector opsional (untuk mencatat leak ke statistik).
+        phase: Label fase pengecekan (untuk pesan: pre-run / post-run).
+
+    Returns:
+        (ok_to_continue, panic_message). ``ok_to_continue`` False hanya bila
+        ada bukti nyata kebocoran IP dan mode strict aktif.
+    """
+    if not ip_guard:
+        return True, ""
+
+    proxy = None
+    if proxy_manager:
+        try:
+            proxy = proxy_manager.get_proxy()
+        except Exception as e:
+            logger.debug("IPGuard[%s]: gagal mengambil proxy untuk cek: %s", phase, e)
+            proxy = None
+
+    try:
+        ok, panic, warnings = ip_guard.enforce(proxy)
+    except Exception as e:
+        console.print(f"[yellow]⚠️ IP Guard gagal dijalankan ({phase}): {e}[/yellow]")
+        return True, ""
+
+    if stats_collector:
+        try:
+            stats_collector.record_ip_guard(check=True, leak=not ok)
+        except Exception as e:
+            logger.debug("StatsCollector.record_ip_guard gagal: %s", e)
+
+    for w in warnings:
+        console.print(f"[yellow]⚠️ IP Guard({phase}): {w}[/yellow]")
+
+    return ok, (panic or "")
 
 
 def _setup_cache(args) -> Optional[SearchCache]:
@@ -620,9 +701,13 @@ def interactive_mode(db: Database):
         max_results = 20
 
     console.print("\n[bold cyan]🔍 Memulai pencarian...[/bold cyan]")
+    if db:
+        db.add_query(query, STATUS_PENDING)
     try:
         results = search_dork(query, max_results=max_results)
     except SearchError as e:
+        if db:
+            db.add_query(query, STATUS_FAILED)
         console.print(f"[red]Gagal: {e}[/red]")
         return
 
@@ -634,7 +719,7 @@ def interactive_mode(db: Database):
             console.print(f"[dim]Filter: {stats['removed']} hasil spam/invalid dihapus.[/dim]")
 
     if db:
-        qid = db.add_query(query, "completed")
+        qid = db.add_query(query, STATUS_COMPLETED)
         db.add_results_batch(qid, results)
 
     display_results(results, query)
@@ -722,7 +807,9 @@ def cli_mode(args):
         else:
             console.print("[bold cyan]Riwayat Pencarian:[/bold cyan]")
             for qid, text, status in rows:
-                console.print(f"  [green]#{qid}[/green] [{status}] {text[:80]}")
+                # '\[' agar Rich tidak menelan status sebagai markup tag
+                # (dahulu "[completed]" hilang dari layar tanpa disadari).
+                console.print(f"  [green]#{qid}[/green] \\[{status}] {text[:80]}")
         if db: db.close()
         return
 
@@ -810,6 +897,18 @@ def cli_mode(args):
     cache = _setup_cache(args)
     cache_params = _build_cache_params(args) if cache else None
 
+    # IP Guard: pengecekan SEBELUM pencarian (bug lama: check() tidak pernah
+    # dipanggil sama sekali — --ip-guard hanya jadi pajangan).
+    ok, panic = _verify_ip_guard(
+        case_modules.get("ip_guard"), proxy_manager,
+        case_modules.get("stats_collector"), phase="pre-run",
+    )
+    if not ok:
+        if db: db.close()
+        if cache: cache.close()
+        console.print(panic)
+        sys.exit(3)
+
     # Parameter scanner
     scanner_kwargs = {
         "max_results": args.max_results, "timeout": args.timeout, "retries": args.retries,
@@ -824,11 +923,32 @@ def cli_mode(args):
     # Jalankan batch atau single query
     if len(queries) > 1 or args.resume:
         console.print(f"[bold cyan]Batch mode: {len(queries)} query[/bold cyan]")
+
+        # Tandai SEMUA query sebagai 'pending' sebelum dieksekusi (bug lama:
+        # status tak pernah 'pending' sehingga --resume tidak pernah menemukan
+        # apa pun). Kalau proses mati di tengah, baris ini yang disimpan.
+        if db:
+            for pending_q in dict.fromkeys(queries):
+                db.add_query(pending_q, STATUS_PENDING)
+
+        # Pelacak status per query (dipanggil dari thread batch → dikunci).
+        success_map: Dict[str, bool] = {}
+        success_lock = threading.Lock()
+
+        def _on_query_done(query, results, success):
+            with success_lock:
+                success_map[query] = success
+
         try:
             batch_results = run_batch(
                 queries=queries,
                 case_modules=case_modules,
                 concurrency=args.concurrency,
+                cache=cache,
+                cache_params=cache_params,
+                cache_ttl=args.cache_ttl,
+                cache_only=args.cache_only,
+                on_query_done=_on_query_done,
                 **scanner_kwargs
             )
         except Exception as e:
@@ -860,8 +980,17 @@ def cli_mode(args):
 
         if db:
             for q, results in batch_results.items():
-                qid = db.add_query(q, "completed")
-                db.add_results_batch(qid, results)
+                # Query gagal (exception) → 'failed' agar diulang oleh --resume;
+                # query sukses (termasuk yang 0 hasil) → 'completed' + simpan hasil.
+                succeeded = success_map.get(q, bool(results))
+                if args.cache_only and succeeded and not results:
+                    # MISS di --cache-only: tidak ada yang benar-benar diambil,
+                    # biarkan 'pending' supaya bisa diisi oleh --resume nanti
+                    # (tanpa --cache-only).
+                    continue
+                qid = db.add_query(q, STATUS_COMPLETED if succeeded else STATUS_FAILED)
+                if succeeded:
+                    db.add_results_batch(qid, results)
 
         total_hits = sum(len(v) for v in batch_results.values())
         console.print(f"\n[green]Batch selesai. Total {total_hits} hasil.[/green]")
@@ -918,15 +1047,50 @@ def cli_mode(args):
                 )
 
         if args.output:
-            with open(args.output, "w", encoding="utf-8") as f:
-                json.dump(batch_results, f, indent=2, ensure_ascii=False)
+            # Hormati --format: ekstensi .json/.csv dipakai bila cocok, selain
+            # itu ikuti --format (bug lama: -o di mode batch SELALU JSON).
+            ext = os.path.splitext(args.output)[1].lower()
+            fmt = {".json": "json", ".csv": "csv"}.get(ext, args.format)
+            if fmt == "csv":
+                import csv
+                with open(args.output, "w", newline="", encoding="utf-8") as f:
+                    writer = csv.DictWriter(f, fieldnames=["query", "title", "href", "body"])
+                    writer.writeheader()
+                    for q, res in batch_results.items():
+                        for row in res:
+                            writer.writerow({
+                                "query": q,
+                                "title": row.get("title", ""),
+                                "href": row.get("href", ""),
+                                "body": row.get("body", ""),
+                            })
+            elif fmt == "txt":
+                with open(args.output, "w", encoding="utf-8") as f:
+                    for q, res in batch_results.items():
+                        f.write(f"Query: {q}\n\n")
+                        for i, r in enumerate(res, 1):
+                            f.write(f"[{i}] {r.get('title','')}\n{r.get('href','')}\n{r.get('body','')}\n\n")
+            else:
+                with open(args.output, "w", encoding="utf-8") as f:
+                    json.dump(batch_results, f, indent=2, ensure_ascii=False)
             console.print(f"[green]✅ Disimpan ke: {args.output}[/green]")
         elif args.output_dir:
             os.makedirs(args.output_dir, exist_ok=True)
+            used_names: Dict[str, int] = {}
             for q, res in batch_results.items():
                 safe_name = "".join(c if c.isalnum() or c in " _-()" else "_" for c in q)[:50]
-                fname = f"{safe_name}.{args.format}"
+                # Nama unik: dua query yang hanya beda setelah karakter ke-50
+                # tidak boleh saling menimpa file-nya.
+                seen = used_names.get(safe_name, 0) + 1
+                used_names[safe_name] = seen
+                base = safe_name if seen == 1 else f"{safe_name}_{seen}"
+                fname = f"{base}.{args.format}"
                 fpath = os.path.join(args.output_dir, fname)
+                while os.path.exists(fpath):
+                    seen += 1
+                    used_names[safe_name] = seen
+                    fname = f"{safe_name}_{seen}.{args.format}"
+                    fpath = os.path.join(args.output_dir, fname)
                 if args.format == "json":
                     with open(fpath, "w", encoding="utf-8") as f:
                         json.dump(res, f, indent=2, ensure_ascii=False)
@@ -953,39 +1117,47 @@ def cli_mode(args):
         q = queries[0]
         console.print(f"[bold cyan]🔍 Searching for:[/bold cyan] {q}")
 
-        backend_for_rate = scanner_kwargs.get("backend", "auto")
-        if case_modules.get("adaptive_delay"):
-            case_modules["adaptive_delay"].wait(backend_for_rate)
+        if db:
+            db.add_query(q, STATUS_PENDING)
+
+        def _record_status(query, results, success):
+            """Tandai status query tunggal segera setelah eksekusi selesai."""
+            if not db:
+                return
+            if success and not results and args.cache_only:
+                # MISS di --cache-only → biarkan 'pending', belum ada yang
+                # benar-benar diambil (bukan 'completed', bukan 'failed').
+                return
+            db.add_query(query, STATUS_COMPLETED if success else STATUS_FAILED)
+
+        # Satu executor yang sama dengan mode batch: cache, resilient
+        # (circuit breaker/fallback/retry), adaptive delay, dan status --resume
+        # semuanya ikut terpakai di mode single-query (bug lama: path ini
+        # sendiri-sendiri, cache-nya crash, dan modul case diabaikan).
+        executor = build_query_executor(
+            scanner_kwargs,
+            case_modules,
+            cache=cache,
+            cache_params=cache_params,
+            cache_ttl=args.cache_ttl,
+            cache_only=args.cache_only,
+            on_query_done=_record_status,
+            raise_on_error=True,
+        )
 
         try:
-            if cache and not args.cache_only:
-                results = cache.get_or_set(
-                    q, backend_for_rate,
-                    search_dork,
-                    params=cache_params,
-                    ttl_hours=args.cache_ttl,
-                    query=q, **scanner_kwargs
-                )
-            elif cache and args.cache_only:
-                results = cache.get(q, backend_for_rate, cache_params)
-                if results is None:
-                    console.print("[yellow]Cache MISS — dan --cache-only aktif. Tidak ada hasil.[/yellow]")
-                    if db: db.close()
-                    if cache: cache.close()
-                    return
-            else:
-                results = search_dork(query=q, **scanner_kwargs)
-
-            if case_modules.get("adaptive_delay"):
-                case_modules["adaptive_delay"].report(backend_for_rate, 200, len(results) > 0)
+            results = executor(q)
         except Exception as e:
-            if case_modules.get("adaptive_delay"):
-                if "429" in str(e):
-                    case_modules["adaptive_delay"].report(backend_for_rate, 429, False)
-                else:
-                    case_modules["adaptive_delay"].report(backend_for_rate, 500, False)
             console.print(f"[red]Search failed: {e}[/red]")
+            if db: db.close()
+            if cache: cache.close()
             sys.exit(1)
+
+        if args.cache_only and not results:
+            console.print("[yellow]Cache MISS — dan --cache-only aktif. Tidak ada hasil.[/yellow]")
+            if db: db.close()
+            if cache: cache.close()
+            return
 
         display_results(results, q, no_snippet=args.no_snippet)
 
@@ -1008,10 +1180,10 @@ def cli_mode(args):
                     unique_results.append(r)
             console.print(f"[dim]Deduplikasi: {original_len - len(unique_results)} dihapus.[/dim]")
             results = unique_results
-            qid = db.add_query(q, "completed")
+            qid = db.add_query(q, STATUS_COMPLETED)
             db.add_results_batch(qid, results)
         elif db:
-            qid = db.add_query(q, "completed")
+            qid = db.add_query(q, STATUS_COMPLETED)
             db.add_results_batch(qid, results)
 
         # Post-processing: --exec (semua URL)
@@ -1075,6 +1247,20 @@ def cli_mode(args):
             for backend, rec in case_modules["adaptive_delay"].all_recommendations().items():
                 console.print(f"  [yellow]{backend}[/yellow]: {rec}")
 
+    # IP Guard: verifikasi lagi SETELAH semua pencarian selesai — kebocoran
+    # baru terlihat saat/ setelah request keluar lewat proxy.
+    ok, panic = _verify_ip_guard(
+        case_modules.get("ip_guard"), proxy_manager,
+        case_modules.get("stats_collector"), phase="post-run",
+    )
+    if not ok:
+        if db:
+            db.close()
+        if cache:
+            cache.close()
+        console.print(panic)
+        sys.exit(3)
+
     if db:
         db.close()
     if cache:
@@ -1087,18 +1273,23 @@ def main():
     config_parser.add_argument("--config", type=str, default=None)
     config_args, remaining = config_parser.parse_known_args()
 
-    # 2. Muat konfigurasi dengan penanganan error
+    # 2. Muat konfigurasi SELALU (auto-discover atdork.yaml/AtDork.yaml di CWD
+    #    + env ATDORK_*), bukan hanya saat --config diberikan (bug lama:
+    #    tanpa --config, file config & env var diabaikan total).
     raw_config = {}
-    if config_args.config:
-        try:
-            loaded = load_config(config_args.config)
-            if isinstance(loaded, dict):
-                raw_config = loaded
-            elif loaded is not None:
-                console.print("[yellow]Warning: Config file tidak menghasilkan dictionary, menggunakan default.[/yellow]")
-        except Exception as e:
-            console.print(f"[red]Error loading config file: {e}[/red]")
-            console.print("[yellow]Melanjutkan dengan nilai default...[/yellow]")
+    if config_args.config and not os.path.isfile(config_args.config):
+        console.print(f"[red]Error: File config tidak ditemukan: {config_args.config}[/red]")
+        sys.exit(1)
+
+    try:
+        loaded = load_config(config_args.config)
+        if isinstance(loaded, dict):
+            raw_config = loaded
+        elif loaded is not None:
+            console.print("[yellow]Warning: Config file tidak menghasilkan dictionary, menggunakan default.[/yellow]")
+    except Exception as e:
+        console.print(f"[red]Error loading config file: {e}[/red]")
+        console.print("[yellow]Melanjutkan dengan nilai default...[/yellow]")
 
     # Normalisasi kunci: ganti tanda '-' menjadi '_' agar cocok dengan argparse dest
     config = {k.replace('-', '_'): v for k, v in raw_config.items()}

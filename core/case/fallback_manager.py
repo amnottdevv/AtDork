@@ -65,6 +65,19 @@ class FallbackManager:
             logger.warning("Gagal mengambil proxy: %s", e)
             return None
 
+    def healthy_backend(self, exclude: Optional[str] = None) -> Optional[str]:
+        """
+        API publik: backend pertama yang circuit-nya tidak OPEN.
+
+        Dipakai oleh circuit breaker gate di batch_runner untuk mengalihkan
+        request menjauh dari backend yang sedang terbuka.
+        """
+        return self._get_healthy_backend(exclude=exclude)
+
+    def healthy_proxy(self) -> Optional[str]:
+        """API publik: proxy sehat berikutnya (None bila tidak ada proxy_manager)."""
+        return self._get_healthy_proxy()
+
     def decide(
         self,
         current_backend: str,

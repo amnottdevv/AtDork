@@ -2,16 +2,22 @@
 Atdork - Batch Query Runner (Robust with Case Modules)
 Menjalankan banyak dork sekaligus dengan progress bar, retry cerdas,
 adaptive delay, fallback manager, circuit breaker, recovery strategy,
-stats collector, dan concurrency.
+stats collector, concurrency, dan cache.
 
 Semua interaksi dengan modul case/ dilindungi try-except agar
 kegagalan di satu modul tidak merusak seluruh batch.
+
+Arsitektur (v1.3.9.6):
+    build_query_executor() membangun satu *executor* per-query yang dipakai
+    OLEH run_batch() sekaligus oleh mode single-query di atdork.py, sehingga
+    cache, resilient (circuit breaker/fallback/retry), adaptive delay, dan
+    callback status (--resume) berjalan konsisten di kedua mode.
 """
 
 import logging
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import List, Dict, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from rich.progress import (
     Progress,
@@ -21,9 +27,20 @@ from rich.progress import (
     TimeElapsedColumn,
 )
 
-from core.scanner import search_dork
+from core.scanner import search_dork, SearchError
+from lib.redactor import redact_proxy_url
+
+try:
+    from core.case.retry_handler import RetryAbort
+except ImportError:  # pragma: no cover - modul case di repo selalu ada
+    class RetryAbort(Exception):  # type: ignore[no-redef]
+        """Fallback RetryAbort bila core.case.retry_handler tidak tersedia."""
 
 logger = logging.getLogger(__name__)
+
+# Durasi jeda saat FallbackManager memutuskan action "cooldown" (semua backend
+# sedang rate-limited). Dipisah jadi konstanta agar bisa dioverride di test.
+COOLDOWN_SLEEP_SECONDS = 30.0
 
 
 # FIX HIGH: Define error classification fallback as a proper class
@@ -60,7 +77,7 @@ def _get_error_classifier():
                 return ErrorCategory.TRANSIENT
             else:
                 return ErrorCategory.FATAL
-        
+
         return fallback_classify, ErrorCategory
 
 
@@ -92,47 +109,49 @@ def parse_query_string(query_str: str, separator: str = ";") -> List[str]:
         return []
 
 
-def run_batch(
-    queries: List[str],
+# --------------------------------------------------------------------------- #
+# Query executor (dipakai batch & single-query)
+# --------------------------------------------------------------------------- #
+
+def build_query_executor(
+    search_kwargs: Dict[str, Any],
     case_modules: Optional[Dict] = None,
-    concurrency: int = 1,
-    **search_kwargs,
-) -> Dict[str, list]:
+    *,
+    cache=None,
+    cache_params: Optional[Dict[str, Any]] = None,
+    cache_ttl: int = 24,
+    cache_only: bool = False,
+    on_query_done: Optional[Callable[[str, list, bool], None]] = None,
+    raise_on_error: bool = False,
+    default_retry: bool = True,
+) -> Callable[[str], List[Dict[str, Any]]]:
     """
-    Jalankan pencarian untuk setiap query dengan dukungan modul case.
+    Bangun executor untuk menjalankan satu query pencarian.
 
     Args:
-        queries: Daftar query.
-        case_modules: Dictionary berisi instance modul case (circuit_breaker, fallback_manager,
-                     retry_handler, adaptive_delay, recovery_strategy, stats_collector).
-        concurrency: Jumlah thread paralel (1 = sekuensial).
-        **search_kwargs: Parameter untuk search_dork (max_results, timeout, proxy_manager, dll).
+        search_kwargs: Parameter untuk search_dork (max_results, timeout,
+            proxy_manager, region, backend, dll).
+        case_modules: Dict instance modul case (circuit_breaker,
+            fallback_manager, retry_handler, adaptive_delay, recovery_strategy,
+            stats_collector).
+        cache: Instance SearchCache opsional (dipakai untuk mode single-query
+            dan batch sekaligus — perbaikan: sebelumnya cache hanya dipakai di
+            mode single-query dan itu pun crash).
+        cache_params: Parameter kunci cache (region, safesearch, dll).
+        cache_ttl: TTL cache dalam jam.
+        cache_only: Bila True, hanya layani dari cache (MISS → hasil kosong).
+        on_query_done: Callback (query, results, success) yang dipanggil tepat
+            sekali setiap query selesai — dipakai atdork.py untuk menandai
+            status pending/completed/failed di SQLite (--resume).
+        raise_on_error: Bila True, kegagalan total dilempar sebagai SearchError
+            (mode single-query perlu exit code 1); bila False dikembalikan [].
+        default_retry: Buat RetryHandler default bila case_modules tidak
+            menyediakan (perilaku lama run_batch).
 
     Returns:
-        Dictionary {query: [list of result dicts]}. Query yang gagal bernilai list kosong.
-
-    Catatan:
-        Jika `queries` mengandung duplikat (baris yang sama persis muncul lebih
-        dari sekali), duplikat tersebut hanya akan dieksekusi SEKALI. Ini untuk
-        menghindari pemborosan request/rate-limit karena mencari dork yang identik
-        berkali-kali — hasilnya akan tetap sama untuk query yang sama persis.
+        Callable query -> list hasil. Query gagal bernilai [] (atau raise
+        SearchError bila raise_on_error=True).
     """
-    results: Dict[str, list] = {}
-    if not queries:
-        return results
-
-    
-    # kemunculan pertama sekaligus membuang duplikat.
-    unique_queries = list(dict.fromkeys(queries))
-    duplicate_count = len(queries) - len(unique_queries)
-    if duplicate_count > 0:
-        logger.warning(
-            "%d query duplikat terdeteksi di batch, hanya dijalankan sekali per query unik.",
-            duplicate_count,
-        )
-
-    total = len(unique_queries)
-
     # ── Ambil modul case dengan aman ─────────────────────────────────
     circuit_breaker = None
     fallback_manager = None
@@ -153,7 +172,7 @@ def run_batch(
             logger.warning("Gagal mengambil modul case: %s. Melanjutkan tanpa modul case.", e)
 
     # ── Pastikan retry_handler tersedia ──────────────────────────────
-    if retry_handler is None:
+    if retry_handler is None and default_retry:
         try:
             from core.case.retry_handler import RetryHandler
             retry_handler = RetryHandler(max_retries=2, base_delay=1.0)
@@ -168,8 +187,7 @@ def run_batch(
     # ── FIX HIGH: Import classifier dengan fallback yang lebih robust ──
     classify_error, ErrorCategory = _get_error_classifier()
 
-    # ── Fungsi eksekusi per query ────────────────────────────────────
-    def _execute_single(q: str) -> list:
+    def execute(q: str) -> List[Dict[str, Any]]:
         """Eksekusi satu query dengan proteksi penuh terhadap error modul case."""
         backend = search_kwargs.get("backend", "auto")
         current_backend = backend
@@ -191,15 +209,84 @@ def run_batch(
             except Exception as e:
                 logger.debug("AdaptiveDelay.wait gagal: %s", e)
 
+        def _notify(results: list, success: bool) -> list:
+            """Beritahu pemanggil (untuk penandaan status --resume)."""
+            if on_query_done:
+                try:
+                    on_query_done(q, results, success)
+                except Exception as e:
+                    logger.warning("on_query_done gagal untuk '%s': %s", q[:60], e)
+            return results
+
+        def _gate_backend() -> Optional[str]:
+            """
+            Pintu circuit breaker sebelum request.
+
+            Returns None bila boleh lanjut, atau string alasan bila semua
+            backend dalam kondisi OPEN (fail-fast, jangan di-hammer).
+            """
+            nonlocal current_backend
+            if circuit_breaker is None:
+                return None
+            try:
+                if circuit_breaker.allow(current_backend):
+                    return None
+                alt = (
+                    fallback_manager.healthy_backend(exclude=current_backend)
+                    if fallback_manager else None
+                )
+            except Exception as e:
+                logger.warning("Circuit breaker gate gagal: %s", e)
+                return None
+
+            if alt:
+                logger.info(
+                    "Circuit OPEN '%s' → beralih ke backend '%s'",
+                    current_backend, alt,
+                )
+                current_backend = alt
+                return None
+            return (
+                f"Circuit breaker OPEN untuk backend '{current_backend}' dan tidak ada "
+                f"backend sehat lain — permintaan dibatalkan."
+            )
+
         # ── Fungsi pencarian yang akan di-retry ──────────────────────
-        def _do_search():
+        def _fetch_results():
+            reason = _gate_backend()
+            if reason:
+                raise SearchError(reason)
             # Hapus 'backend' dari kwargs agar tidak bentrok dengan argumen eksplisit
             kwargs = {k: v for k, v in search_kwargs.items() if k != 'backend'}
-            return search_dork(q, backend=current_backend, **kwargs)
+            # forced_proxy: terapkan proxy yang sudah dipilih/dirotasi oleh
+            # keputusan FallbackManager (bug lama: proxy yang diambil diabaikan).
+            return search_dork(
+                q, backend=current_backend, forced_proxy=current_proxy, **kwargs
+            )
+
+        def _do_search():
+            """Cache-aware wrapper di sekitar _fetch_results (berlaku untuk batch & single)."""
+            if cache is None:
+                return _fetch_results()
+            if cache_only:
+                cached = cache.get(q, current_backend, cache_params)
+                if cached is None:
+                    logger.debug(
+                        "Cache-only MISS untuk '%s' (%s) → hasil kosong", q[:50], current_backend
+                    )
+                    return []
+                return cached
+            return cache.get_or_set(
+                q,
+                current_backend,
+                _fetch_results,
+                params=cache_params,
+                ttl_hours=cache_ttl,
+            )
 
         # ── Callback saat retry ──────────────────────────────────────
         def _on_retry(attempt, exception):
-            nonlocal current_backend
+            nonlocal current_backend, current_proxy
             try:
                 category = classify_error(exception)
             except Exception as e:
@@ -214,14 +301,15 @@ def run_batch(
                     circuit_breaker.record_failure(current_backend)
                     if stats_collector:
                         try:
-                            stats_collector.record_circuit_breaker(opened=circuit_breaker.status(current_backend) == "OPEN")
+                            stats_collector.record_circuit_breaker(
+                                opened=circuit_breaker.status(current_backend) == "OPEN"
+                            )
                         except Exception as e:
                             logger.debug("StatsCollector.record_circuit_breaker gagal: %s", e)
                 except Exception as e:
                     logger.debug("CircuitBreaker.record_failure gagal: %s", e)
 
             # Recovery strategy (jika tersedia) – memberikan saran tindakan
-            recovery_action = None
             if recovery_strategy:
                 try:
                     recovery_action = recovery_strategy.get_action(
@@ -233,7 +321,11 @@ def run_batch(
                 except Exception as e:
                     logger.warning("RecoveryStrategy.get_action gagal: %s", e)
 
-            # Fallback manager
+            # ── Fallback manager ──────────────────────────────────────
+            # Keputusan dihitung TERPISAH dari penerapannya agar action
+            # "abort" tidak lagi tertelan oleh except blok ini (bug lama:
+            # `raise exception` ada di dalam try yang sama → retry tetap jalan).
+            decision = None
             if fallback_manager and circuit_breaker:
                 try:
                     decision = fallback_manager.decide(
@@ -241,21 +333,34 @@ def run_batch(
                         current_proxy=current_proxy,
                         error_category=category,
                     )
-                    action = decision.get("action")
-                    if action == "switch_backend":
-                        new_backend = decision.get("next_backend", current_backend)
-                        logger.info("Fallback: ganti backend %s → %s", current_backend, new_backend)
-                        current_backend = new_backend
-                    elif action == "rotate_proxy":
-                        logger.info("Fallback: rotasi proxy")
-                    elif action == "cooldown":
-                        logger.info("Fallback: cooldown, jeda 30 detik")
-                        time.sleep(30)
-                    elif action == "abort":
-                        logger.error("Fallback: abort, tidak bisa melanjutkan")
-                        raise exception
                 except Exception as e:
                     logger.warning("FallbackManager.decide gagal: %s", e)
+                    decision = None
+
+            if decision:
+                action = decision.get("action")
+                if action == "switch_backend":
+                    new_backend = decision.get("next_backend") or current_backend
+                    if new_backend != current_backend:
+                        logger.info("Fallback: ganti backend %s → %s", current_backend, new_backend)
+                        current_backend = new_backend
+                elif action == "rotate_proxy":
+                    next_proxy = decision.get("next_proxy")
+                    if next_proxy:
+                        # Bug lama: next_proxy hanya di-log, tidak pernah
+                        # dipakai. Sekarang dipakai oleh search_dork lewat
+                        # forced_proxy pada percobaan berikutnya.
+                        logger.info("Fallback: rotasi proxy → %s", redact_proxy_url(next_proxy))
+                        current_proxy = next_proxy
+                    else:
+                        logger.info("Fallback: rotasi proxy")
+                elif action == "cooldown":
+                    logger.info("Fallback: cooldown, jeda %.0f detik", COOLDOWN_SLEEP_SECONDS)
+                    time.sleep(COOLDOWN_SLEEP_SECONDS)
+                elif action == "abort":
+                    reason = decision.get("reason") or "FallbackManager memutuskan abort"
+                    logger.error("Fallback: abort — %s", reason)
+                    raise RetryAbort(reason)
 
             # Adaptive delay laporkan error
             if adaptive_delay:
@@ -276,7 +381,8 @@ def run_batch(
         def _on_giveup(exception):
             if adaptive_delay:
                 try:
-                    adaptive_delay.report(current_backend, 500, False)
+                    status_code = 429 if "429" in str(exception) else 500
+                    adaptive_delay.report(current_backend, status_code, False)
                 except Exception as e:
                     logger.debug("AdaptiveDelay.report gagal: %s", e)
             if stats_collector:
@@ -285,7 +391,17 @@ def run_batch(
                 except Exception as e:
                     logger.debug("StatsCollector.record_fallback gagal: %s", e)
 
+        def _record_backend_failure():
+            if stats_collector:
+                try:
+                    stats_collector.record_backend(current_backend, 500, False)
+                except Exception as e:
+                    logger.debug("StatsCollector.record_backend gagal: %s", e)
+
         # ── Jalankan dengan atau tanpa retry handler ─────────────────
+        result: Optional[list] = None
+        error: Optional[BaseException] = None
+
         if retry_handler:
             try:
                 result, final_error = retry_handler.execute(
@@ -293,74 +409,120 @@ def run_batch(
                     on_retry=_on_retry,
                     on_giveup=_on_giveup,
                 )
-                if final_error:
-                    logger.error("'%s' gagal setelah retry: %s", q[:60], final_error)
-                    if stats_collector:
-                        try:
-                            stats_collector.record_backend(current_backend, 500, False)
-                        except Exception as e:
-                            logger.debug("StatsCollector.record_backend gagal: %s", e)
-                    return []
-
-                # Sukses → catat ke circuit breaker, adaptive delay, stats collector
-                if circuit_breaker:
-                    try:
-                        circuit_breaker.record_success(current_backend)
-                        if current_proxy:
-                            circuit_breaker.record_success(current_proxy)
-                    except Exception as e:
-                        logger.debug("CircuitBreaker.record_success gagal: %s", e)
-                if adaptive_delay:
-                    try:
-                        adaptive_delay.report(current_backend, 200, len(result) > 0)
-                    except Exception as e:
-                        logger.debug("AdaptiveDelay.report gagal: %s", e)
-                if stats_collector:
-                    try:
-                        stats_collector.record_backend(current_backend, 200, len(result) > 0)
-                        stats_collector.record_retry(success=True)
-                    except Exception as e:
-                        logger.debug("StatsCollector.record_backend/retry gagal: %s", e)
-                return result
-            except Exception as e:
-                logger.error("'%s' gagal tak terduga: %s", q[:60], e)
-                if stats_collector:
-                    try:
-                        stats_collector.record_backend(current_backend, 500, False)
-                    except Exception:
-                        pass
-                return []
+                if final_error is not None:
+                    error = final_error
+                    result = None
+            except Exception as e:  # kegagalan tak terduga dari modul case
+                error = e
+                result = None
         else:
-            # Tanpa retry handler → langsung panggil search_dork
             try:
-                kwargs = {k: v for k, v in search_kwargs.items() if k != 'backend'}
-                result = search_dork(q, backend=current_backend, **kwargs)
-                if adaptive_delay:
-                    try:
-                        adaptive_delay.report(current_backend, 200, len(result) > 0)
-                    except Exception:
-                        pass
-                if circuit_breaker:
-                    try:
-                        circuit_breaker.record_success(current_backend)
-                        if current_proxy:
-                            circuit_breaker.record_success(current_proxy)
-                    except Exception:
-                        pass
-                if stats_collector:
-                    try:
-                        stats_collector.record_backend(current_backend, 200, len(result) > 0)
-                    except Exception:
-                        pass
-                return result
+                result = _do_search()
             except Exception as e:
-                logger.error("'%s' gagal: %s", q[:60], e)
-                if stats_collector:
-                    try:
-                        stats_collector.record_backend(current_backend, 500, False)
-                    except Exception:
-                        pass
-                return []
+                error = e
+                result = None
+
+        if error is not None:
+            logger.error("'%s' gagal: %s", q[:60], error)
+            _record_backend_failure()
+            if raise_on_error:
+                _notify([], False)
+                raise SearchError(f"Query '{q[:60]}' gagal: {error}") from error
+            return _notify([], False)
+
+        # Sukses → catat ke circuit breaker, adaptive delay, stats collector
+        if circuit_breaker:
+            try:
+                circuit_breaker.record_success(current_backend)
+                if current_proxy:
+                    circuit_breaker.record_success(current_proxy)
+            except Exception as e:
+                logger.debug("CircuitBreaker.record_success gagal: %s", e)
+        if adaptive_delay:
+            try:
+                adaptive_delay.report(current_backend, 200, len(result) > 0)
+            except Exception as e:
+                logger.debug("AdaptiveDelay.report gagal: %s", e)
+        if stats_collector:
+            try:
+                stats_collector.record_backend(current_backend, 200, len(result) > 0)
+                if retry_handler:
+                    stats_collector.record_retry(success=True)
+            except Exception as e:
+                logger.debug("StatsCollector.record_backend/retry gagal: %s", e)
+
+        return _notify(result or [], True)
+
+    return execute
+
+
+# --------------------------------------------------------------------------- #
+# Batch runner
+# --------------------------------------------------------------------------- #
+
+def run_batch(
+    queries: List[str],
+    case_modules: Optional[Dict] = None,
+    concurrency: int = 1,
+    *,
+    cache=None,
+    cache_params: Optional[Dict[str, Any]] = None,
+    cache_ttl: int = 24,
+    cache_only: bool = False,
+    on_query_done: Optional[Callable[[str, list, bool], None]] = None,
+    **search_kwargs,
+) -> Dict[str, list]:
+    """
+    Jalankan pencarian untuk setiap query dengan dukungan modul case & cache.
+
+    Args:
+        queries: Daftar query.
+        case_modules: Dictionary berisi instance modul case (circuit_breaker, fallback_manager,
+                     retry_handler, adaptive_delay, recovery_strategy, stats_collector).
+        concurrency: Jumlah thread paralel (1 = sekuensial).
+        cache: SearchCache opsional — hasil batch kini ikut di-cache (bug lama:
+            cache diabaikan total di mode batch).
+        cache_params: Parameter kunci cache.
+        cache_ttl: TTL cache dalam jam.
+        cache_only: Hanya layani dari cache (MISS → []).
+        on_query_done: Callback (query, results, success) per query selesai.
+        **search_kwargs: Parameter untuk search_dork (max_results, timeout, proxy_manager, dll).
+
+    Returns:
+        Dictionary {query: [list of result dicts]}. Query yang gagal bernilai list kosong.
+
+    Catatan:
+        Jika `queries` mengandung duplikat (baris yang sama persis muncul lebih
+        dari sekali), duplikat tersebut hanya akan dieksekusi SEKALI. Ini untuk
+        menghindari pemborosan request/rate-limit karena mencari dork yang identik
+        berkali-kali — hasilnya akan tetap sama untuk query yang sama persis.
+    """
+    results: Dict[str, list] = {}
+    if not queries:
+        return results
+
+    # kemunculan pertama sekaligus membuang duplikat.
+    unique_queries = list(dict.fromkeys(queries))
+    duplicate_count = len(queries) - len(unique_queries)
+    if duplicate_count > 0:
+        logger.warning(
+            "%d query duplikat terdeteksi di batch, hanya dijalankan sekali per query unik.",
+            duplicate_count,
+        )
+
+    total = len(unique_queries)
+
+    execute = build_query_executor(
+        search_kwargs,
+        case_modules,
+        cache=cache,
+        cache_params=cache_params,
+        cache_ttl=cache_ttl,
+        cache_only=cache_only,
+        on_query_done=on_query_done,
+        raise_on_error=False,
+        default_retry=True,
+    )
 
     # ── Progress bar & eksekusi ──────────────────────────────────────
     with Progress(
@@ -375,7 +537,7 @@ def run_batch(
         if concurrency > 1:
             with ThreadPoolExecutor(max_workers=concurrency) as executor:
                 future_to_query = {
-                    executor.submit(_execute_single, q): q for q in unique_queries
+                    executor.submit(execute, q): q for q in unique_queries
                 }
                 for future in as_completed(future_to_query):
                     q = future_to_query[future]
@@ -391,7 +553,7 @@ def run_batch(
                 desc = q if len(q) <= 60 else q[:57] + "..."
                 progress.update(task, description=f"[{idx}/{total}] {desc}")
                 try:
-                    res = _execute_single(q)
+                    res = execute(q)
                 except Exception as e:
                     logger.error("'%s' gagal total: %s", q[:60], e)
                     res = []
@@ -399,7 +561,8 @@ def run_batch(
                 progress.advance(task)
 
     # ── Tampilkan statistik jika stats collector tersedia ────────────
-    if stats_collector:
+    if case_modules and isinstance(case_modules, dict) and case_modules.get("stats_collector"):
+        stats_collector = case_modules["stats_collector"]
         try:
             summary = stats_collector.summary()
             # Gunakan console dari rich jika tersedia, jika tidak gunakan logger

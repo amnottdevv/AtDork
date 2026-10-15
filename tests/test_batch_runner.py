@@ -10,6 +10,17 @@ from core.case.fallback_manager import FallbackManager
 from core.case.retry_handler import RetryHandler
 from core.case.adaptive_delay import AdaptiveDelay
 
+from core.manage_cache import SearchCache
+
+
+@pytest.fixture(autouse=True)
+def fast_cooldown(monkeypatch):
+    """Jangan jeda 30 detik saat FallbackManager memutuskan action 'cooldown'.
+
+    (Suite lama butuh ~30 detik hanya gara-gara satu test yang memicu cooldown.)
+    """
+    monkeypatch.setattr("core.batch_runner.COOLDOWN_SLEEP_SECONDS", 0.0)
+
 
 # ── load_queries_from_file ──────────────────────────────────────────────
 
@@ -174,3 +185,77 @@ def test_run_batch_with_concurrency(mock_search):
     results = run_batch(queries, concurrency=2, max_results=5)
     assert len(results) == 4
     assert mock_search.call_count == 4
+
+
+# ── Dedup, cache, dan callback status (v1.3.9.6) ──────────────────────────
+
+@patch("core.batch_runner.search_dork")
+def test_run_batch_dedup_duplicate_queries(mock_search):
+    """Query yang identik hanya dieksekusi sekali (hemat request/rate-limit)."""
+    mock_search.return_value = [{"title": "x", "href": "http://a.com"}]
+    results = run_batch(["q1", "q1", "q2", "q1"], max_results=5)
+    assert mock_search.call_count == 2
+    assert results == {"q1": mock_search.return_value, "q2": mock_search.return_value}
+
+
+@patch("core.batch_runner.search_dork")
+def test_run_batch_on_query_done_success_and_failure(mock_search):
+    """on_query_done dipanggil sekali per query dengan flag success (untuk --resume)."""
+    mock_search.side_effect = [
+        [{"title": "x", "href": "http://a.com"}],
+        Exception("fatal boom"),  # classify → FATAL, tanpa retry
+    ]
+    seen = {}
+    results = run_batch(["ok", "fail"], on_query_done=lambda q, res, ok: seen.__setitem__(q, (len(res), ok)))
+    assert seen["ok"] == (1, True)
+    assert seen["fail"] == (0, False)
+    assert results["fail"] == []
+
+
+@patch("core.batch_runner.search_dork")
+def test_run_batch_cache_hit_skips_search(mock_search, tmp_path):
+    """Cache di mode batch: hasil sudah ada → search_dork tidak dipanggil."""
+    cache = SearchCache(db_path=str(tmp_path / "c.db"))
+    cache.set("cached_q", "auto", [{"title": "cached", "href": "http://c.com"}], {})
+    mock_search.return_value = [{"title": "live", "href": "http://l.com"}]
+
+    results = run_batch(["cached_q"], cache=cache, cache_params={}, max_results=5)
+    mock_search.assert_not_called()
+    assert results["cached_q"][0]["title"] == "cached"
+    cache.close()
+
+
+@patch("core.batch_runner.search_dork")
+def test_run_batch_cache_miss_stores_result(mock_search, tmp_path):
+    """Cache MISS → search dijalankan lalu hasil disimpan ke cache."""
+    cache = SearchCache(db_path=str(tmp_path / "c.db"))
+    mock_search.return_value = [{"title": "live", "href": "http://l.com"}]
+
+    results = run_batch(["new_q"], cache=cache, cache_params={}, max_results=5)
+    assert mock_search.call_count == 1
+    assert cache.get("new_q", "auto", {}) is not None
+    assert results["new_q"][0]["title"] == "live"
+    cache.close()
+
+
+@patch("core.batch_runner.search_dork")
+def test_run_batch_cache_only_miss_returns_empty(mock_search, tmp_path):
+    """--cache-only di batch: MISS → [] tanpa menyentuh jaringan."""
+    cache = SearchCache(db_path=str(tmp_path / "c.db"))
+    results = run_batch(["unknown_q"], cache=cache, cache_params={}, cache_only=True)
+    mock_search.assert_not_called()
+    assert results["unknown_q"] == []
+    cache.close()
+
+
+@patch("core.batch_runner.search_dork")
+def test_run_batch_concurrent_with_cache(mock_search, tmp_path):
+    """Cache thread-safe dipakai bersama oleh beberapa worker thread."""
+    cache = SearchCache(db_path=str(tmp_path / "c.db"))
+    mock_search.side_effect = lambda q, **kw: [{"title": q, "href": "http://a.com"}]
+
+    queries = [f"q{i}" for i in range(8)]
+    results = run_batch(queries, concurrency=4, cache=cache, cache_params={})
+    assert len(results) == 8
+    assert all(res for res in results.values())
+    cache.close()

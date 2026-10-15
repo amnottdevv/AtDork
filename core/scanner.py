@@ -65,7 +65,11 @@ def _classify_error(exception: Exception, proxy: Optional[str] = None) -> Search
     """
     error_str = str(exception).lower()
 
-    if any(keyword in error_str for keyword in ("rate", "429", "too many requests")):
+    # ddgs 9.x melempar DDGSException("No results found.") untuk query tanpa
+    # hasil — itu bukan kegagalan, tapi hasil kosong yang sah.
+    if any(keyword in error_str for keyword in ("no results", "no result found", "no valid results")):
+        return EmptyResultsError(f"Empty results: {exception}")
+    elif any(keyword in error_str for keyword in ("rate", "429", "too many requests")):
         return RateLimitError(f"Rate limit detected: {exception}")
     elif any(keyword in error_str for keyword in ("block", "forbidden", "403", "captcha", "access denied")):
         return BlockedError(f"Blocked: {exception}")
@@ -109,6 +113,7 @@ def search_dork(
     user_agent: Optional[str] = None,
     verify: bool = True,
     fallback_backends: bool = True,
+    forced_proxy: Optional[str] = None,
 ) -> List[Dict[str, Any]]:
     """
     Execute a dork search with proxy rotation, backend fallback,
@@ -128,9 +133,12 @@ def search_dork(
         user_agent: Custom User-Agent string (None = auto-rotate).
         verify: SSL certificate verification (True/False or path to CA).
         fallback_backends: If True, try alternative backends on failure.
+        forced_proxy: Paksa proxy ini untuk percobaan pertama (dipakai oleh
+            FallbackManager untuk menerapkan keputusan rotasi proxy).
 
     Returns:
         List of result dicts with keys 'title', 'href', 'body'.
+        List kosong bila semua backend tidak punya hasil (query sah tanpa hasil).
 
     Raises:
         SearchError: When all backends and retries are exhausted.
@@ -161,7 +169,10 @@ def search_dork(
 
         for attempt in range(retries + 1):
             # ── Proxy Selection ──────────────────────────────────────────
-            if proxy_manager:
+            if attempt == 0 and forced_proxy:
+                # Proxy yang dipaksakan (keputusan rotasi dari FallbackManager)
+                current_proxy = forced_proxy
+            elif proxy_manager:
                 try:
                     current_proxy = proxy_manager.get_proxy()
                     if current_proxy is None and getattr(proxy_manager, '_strict', False):
@@ -169,7 +180,9 @@ def search_dork(
                 except RuntimeError as exc:
                     raise ProxyError(str(exc)) from exc
             else:
-                current_proxy = None
+                # Tanpa proxy_manager: paksa terus proxy yang sama di retry,
+                # jangan diam-diam jatuh ke koneksi langsung.
+                current_proxy = forced_proxy
 
             # ── Exponential Backoff with Jitter ──────────────────────────
             if attempt > 0:
@@ -244,6 +257,14 @@ def search_dork(
                 if proxy_manager and current_proxy:
                     proxy_manager.report_failure(current_proxy)
 
+                # Query tanpa hasil → bukan error, langsung ke backend berikutnya
+                if isinstance(search_error, EmptyResultsError):
+                    logger.info(
+                        "Backend %s tidak punya hasil untuk query ini, coba backend berikutnya.",
+                        backend_name,
+                    )
+                    break
+
                 # Smart decision based on error type
                 if isinstance(search_error, (RateLimitError, BlockedError)):
                     logger.info(
@@ -261,6 +282,13 @@ def search_dork(
                 user_agent = get_random_user_agent()
 
     # ── All Backends Exhausted ─────────────────────────────────────────
+    # Semua backend balik tanpa hasil (bukan error jaringan) → hasil kosong
+    # yang sah. Ini penting agar query tanpa hasil tidak ditandai "failed"
+    # dan terus-menerus diulang oleh --resume.
+    if isinstance(last_error, EmptyResultsError):
+        logger.info("Tidak ada hasil untuk query '%s' di semua backend.", query[:50])
+        return []
+
     raise SearchError(
         f"Failed to fetch results for query '{query[:50]}...' "
         f"after trying {len(backends_to_try)} backend(s) "

@@ -27,7 +27,6 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "proxy_cooldown": 60,
     "max_failures": 3,
     "concurrency": 1,
-    "max_fallback_failures": 3,
     "batch_separator": ";",
     "format": "txt",
     "no_snippet": False,
@@ -98,8 +97,9 @@ def load_config(filepath: Optional[str] = None) -> Dict[str, Any]:
         3. Environment variables (ATDORK_<KEY>)
 
     Args:
-        filepath: Path to YAML config file. If None, looks for 'atdork.yaml'
-                  in the current working directory.
+        filepath: Path to YAML config file. If None, cari otomatis
+                  'atdork.yaml' / 'AtDork.yaml' / 'atdork.yml' di working
+                  directory saat ini.
 
     Returns:
         Merged configuration dictionary.
@@ -107,10 +107,18 @@ def load_config(filepath: Optional[str] = None) -> Dict[str, Any]:
     config = DEFAULT_CONFIG.copy()
 
     # Try to load from YAML
+    yaml_config = None
     if filepath is None:
-        filepath = os.path.join(os.getcwd(), "atdork.yaml")
+        # Auto-discovery: dukung kedua variasi kapitalisasi nama file.
+        for candidate in ("atdork.yaml", "AtDork.yaml", "atdork.yml"):
+            candidate_path = os.path.join(os.getcwd(), candidate)
+            yaml_config = _load_yaml(candidate_path)
+            if yaml_config:
+                filepath = candidate_path
+                break
+    else:
+        yaml_config = _load_yaml(filepath)
 
-    yaml_config = _load_yaml(filepath)
     if yaml_config:
         # Only update keys that exist in DEFAULT_CONFIG
         for k, v in yaml_config.items():

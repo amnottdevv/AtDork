@@ -12,7 +12,8 @@ Fitur:
 import sqlite3
 import json
 import logging
-from typing import Optional, Dict, Any, List
+import threading
+from typing import Optional, Dict, Any, List, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -50,26 +51,37 @@ class SearchCache:
         self.db_path = db_path
         self.default_ttl_hours = default_ttl_hours
         self._conn: Optional[sqlite3.Connection] = None
+        # RLock: dipakai juga oleh thread batch (--concurrency > 1) dan method
+        # saling memanggil (get_or_set -> get/set), jadi harus re-entrant.
+        self._lock = threading.RLock()
         self._init_db()
         if auto_cleanup:
             self.cleanup_expired()
 
     def _connect(self) -> sqlite3.Connection:
-        if self._conn is None:
-            self._conn = sqlite3.connect(self.db_path)
-            self._conn.execute("PRAGMA journal_mode=WAL")
-            self._conn.row_factory = sqlite3.Row
-        return self._conn
+        with self._lock:
+            if self._conn is None:
+                # check_same_thread=False: koneksi dipakai bersama oleh worker
+                # thread batch. Semua akses dibungkus self._lock sehingga tetap
+                # serial & aman.
+                self._conn = sqlite3.connect(
+                    self.db_path, check_same_thread=False, timeout=10.0
+                )
+                self._conn.execute("PRAGMA journal_mode=WAL")
+                self._conn.row_factory = sqlite3.Row
+            return self._conn
 
     def close(self):
-        if self._conn:
-            self._conn.close()
-            self._conn = None
+        with self._lock:
+            if self._conn:
+                self._conn.close()
+                self._conn = None
 
     def _init_db(self):
         conn = self._connect()
-        conn.executescript(SQL_CREATE_TABLE)
-        conn.commit()
+        with self._lock:
+            conn.executescript(SQL_CREATE_TABLE)
+            conn.commit()
         logger.debug("Cache database siap di %s", self.db_path)
 
     def _normalize_params(self, params: Dict[str, Any]) -> str:
@@ -90,26 +102,27 @@ class SearchCache:
 
         params_json = self._normalize_params(params or {})
         conn = self._connect()
-        cursor = conn.execute(
-            """SELECT results, created_at, hit_count FROM api_cache
-               WHERE query = ? AND engine = ? AND params = ?
-                 AND expires_at > datetime('now')
-               ORDER BY created_at DESC LIMIT 1""",
-            (query, engine, params_json),
-        )
-        row = cursor.fetchone()
-        if not row:
-            return None
-
-        try:
-            conn.execute(
-                "UPDATE api_cache SET hit_count = hit_count + 1, last_accessed = datetime('now') "
-                "WHERE query = ? AND engine = ? AND params = ?",
+        with self._lock:
+            cursor = conn.execute(
+                """SELECT results, created_at, hit_count FROM api_cache
+                   WHERE query = ? AND engine = ? AND params = ?
+                     AND expires_at > datetime('now')
+                   ORDER BY created_at DESC LIMIT 1""",
                 (query, engine, params_json),
             )
-            conn.commit()
-        except Exception as e:
-            logger.warning("Gagal update hit_count: %s", e)
+            row = cursor.fetchone()
+            if not row:
+                return None
+
+            try:
+                conn.execute(
+                    "UPDATE api_cache SET hit_count = hit_count + 1, last_accessed = datetime('now') "
+                    "WHERE query = ? AND engine = ? AND params = ?",
+                    (query, engine, params_json),
+                )
+                conn.commit()
+            except Exception as e:
+                logger.warning("Gagal update hit_count: %s", e)
 
         try:
             results = json.loads(row["results"])
@@ -131,22 +144,27 @@ class SearchCache:
             return False
 
         params_json = self._normalize_params(params or {})
-        ttl = ttl_hours or self.default_ttl_hours
+        ttl = ttl_hours if ttl_hours is not None else self.default_ttl_hours
+        # Modifikator waktu divalidasi di sini: "datetime('now', '+' || -1 || ...)"
+        # menghasilkan NULL di SQLite (entri tak pernah kadaluarsa). Dengan
+        # tanda '+' eksplisit hanya untuk nilai positif, TTL negatif valid.
+        ttl_modifier = f"{'+' if ttl >= 0 else ''}{ttl} hours"
         results_json = json.dumps(results, ensure_ascii=False)
         conn = self._connect()
-        try:
-            conn.execute(
-                """INSERT OR REPLACE INTO api_cache
-                   (query, engine, params, results, created_at, expires_at, hit_count, last_accessed)
-                   VALUES (?, ?, ?, ?, datetime('now'), datetime('now', '+' || ? || ' hours'), 1, datetime('now'))""",
-                (query, engine, params_json, results_json, ttl),
-            )
-            conn.commit()
-            logger.debug("Cache SET: %s (%s) - %d results", query[:50], engine, len(results))
-            return True
-        except Exception as e:
-            logger.error("Gagal menyimpan cache: %s", e)
-            return False
+        with self._lock:
+            try:
+                conn.execute(
+                    """INSERT OR REPLACE INTO api_cache
+                       (query, engine, params, results, created_at, expires_at, hit_count, last_accessed)
+                       VALUES (?, ?, ?, ?, datetime('now'), datetime('now', ?), 1, datetime('now'))""",
+                    (query, engine, params_json, results_json, ttl_modifier),
+                )
+                conn.commit()
+                logger.debug("Cache SET: %s (%s) - %d results", query[:50], engine, len(results))
+                return True
+            except Exception as e:
+                logger.error("Gagal menyimpan cache: %s", e)
+                return False
 
     def get_or_set(
         self,
@@ -155,55 +173,91 @@ class SearchCache:
         fetch_func,
         params: Optional[Dict[str, Any]] = None,
         ttl_hours: Optional[int] = None,
-        *args,
-        **kwargs,
+        *,
+        fetch_args: Optional[tuple] = None,
+        fetch_kwargs: Optional[Dict[str, Any]] = None,
     ) -> List[Dict[str, Any]]:
-        cached = self.get(query, engine, params, ttl_hours)
+        """
+        Ambil hasil dari cache; bila tidak ada, panggil ``fetch_func`` lalu simpan.
+
+        Perbaikan bug (v1.3.9.6): argumen untuk ``fetch_func`` sekarang diserahkan
+        lewat ``fetch_args`` / ``fetch_kwargs`` — sebelumnya diteruskan lewat
+        ``**kwargs`` bebas sehingga memanggil ``get_or_set(..., query=q)``
+        melempar ``TypeError: got multiple values for argument 'query'``.
+
+        Args:
+            query: Query pencarian (kunci cache).
+            engine: Backend mesin pencari (kunci cache).
+            fetch_func: Fungsi yang dipanggil saat cache MISS.
+            params: Parameter tambahan untuk kunci cache (region, safesearch, dll).
+            ttl_hours: TTL untuk entri baru.
+            fetch_args: Argumen posisi untuk ``fetch_func``.
+            fetch_kwargs: Argumen keyword untuk ``fetch_func``.
+
+        Returns:
+            Hasil pencarian (dari cache atau dari ``fetch_func``).
+        """
+        if not callable(fetch_func):
+            raise TypeError("fetch_func harus callable")
+
+        with self._lock:
+            cached = self.get(query, engine, params)
         if cached is not None:
             return cached
+
         logger.debug("Cache MISS: %s (%s), calling fetch_func", query[:50], engine)
-        results = fetch_func(*args, **kwargs)
+        results = fetch_func(*(fetch_args or ()), **(fetch_kwargs or {}))
         if results:
             self.set(query, engine, results, params, ttl_hours)
         return results if results else []
 
     def cleanup_expired(self) -> int:
         conn = self._connect()
-        cursor = conn.execute("DELETE FROM api_cache WHERE expires_at < datetime('now')")
-        deleted = cursor.rowcount
-        conn.commit()
+        with self._lock:
+            cursor = conn.execute("DELETE FROM api_cache WHERE expires_at < datetime('now')")
+            deleted = cursor.rowcount
+            conn.commit()
         if deleted:
             logger.info("Cache cleanup: %d expired entries removed", deleted)
         return deleted
 
     def clear_all(self) -> int:
         conn = self._connect()
-        cursor = conn.execute("DELETE FROM api_cache")
-        deleted = cursor.rowcount
-        conn.commit()
+        with self._lock:
+            cursor = conn.execute("DELETE FROM api_cache")
+            deleted = cursor.rowcount
+            conn.commit()
         logger.info("Cache cleared: %d entries removed", deleted)
         return deleted
 
     def clear_by_engine(self, engine: str) -> int:
         conn = self._connect()
-        cursor = conn.execute("DELETE FROM api_cache WHERE engine = ?", (engine,))
-        deleted = cursor.rowcount
-        conn.commit()
+        with self._lock:
+            cursor = conn.execute("DELETE FROM api_cache WHERE engine = ?", (engine,))
+            deleted = cursor.rowcount
+            conn.commit()
         logger.info("Cache cleared for engine '%s': %d entries removed", engine, deleted)
         return deleted
 
     def get_stats(self) -> Dict[str, Any]:
         conn = self._connect()
-        total = conn.execute("SELECT COUNT(*) FROM api_cache").fetchone()[0]
-        expired = conn.execute(
-            "SELECT COUNT(*) FROM api_cache WHERE expires_at < datetime('now')"
-        ).fetchone()[0]
-        total_hits = conn.execute("SELECT COALESCE(SUM(hit_count), 0) FROM api_cache").fetchone()[0]
+        with self._lock:
+            total = conn.execute("SELECT COUNT(*) FROM api_cache").fetchone()[0]
+            expired = conn.execute(
+                "SELECT COUNT(*) FROM api_cache WHERE expires_at < datetime('now')"
+            ).fetchone()[0]
+            total_hits = conn.execute(
+                "SELECT COALESCE(SUM(hit_count), 0) FROM api_cache"
+            ).fetchone()[0]
+            engines = [
+                row["engine"]
+                for row in conn.execute("SELECT DISTINCT engine FROM api_cache").fetchall()
+            ]
         return {
             "total_entries": total,
             "expired_entries": expired,
             "total_hits": total_hits,
-            "engines": [row["engine"] for row in conn.execute("SELECT DISTINCT engine FROM api_cache").fetchall()],
+            "engines": engines,
         }
 
     def __enter__(self):

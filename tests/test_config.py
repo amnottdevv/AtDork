@@ -105,3 +105,43 @@ def test_custom_config_path(tmp_path):
     with patch.dict(os.environ, {}, clear=True):
         config = load_config(filepath=str(file))
     assert config["max_results"] == 33
+
+
+# ── Auto-discovery di CWD (v1.3.9.6) ──────────────────────────────────────
+
+def test_autodiscover_atdork_yaml_in_cwd(tmp_path, monkeypatch):
+    """Tanpa --config, atdork.yaml di CWD harus dimuat otomatis."""
+    (tmp_path / "atdork.yaml").write_text("max_results: 44\nregion: 'id-id'\n")
+    monkeypatch.chdir(tmp_path)
+    with patch.dict(os.environ, {}, clear=True):
+        config = load_config(None)
+    assert config["max_results"] == 44
+    assert config["region"] == "id-id"
+
+
+def test_autodiscover_atdork_yaml_capital_variant(tmp_path, monkeypatch):
+    """Repo menyebut file-nya AtDork.yaml (huruf besar) — juga harus kebaca."""
+    (tmp_path / "AtDork.yaml").write_text("max_results: 55\n")
+    monkeypatch.chdir(tmp_path)
+    with patch.dict(os.environ, {}, clear=True):
+        config = load_config(None)
+    assert config["max_results"] == 55
+
+
+def test_no_config_file_returns_defaults(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)  # CWD bersih, tanpa yaml
+    with patch.dict(os.environ, {}, clear=True):
+        config = load_config(None)
+    assert config["max_results"] == 20
+    assert config["concurrency"] == 1
+
+
+def test_default_config_keys_all_known_to_parser():
+    """Regresi: DEFAULT_CONFIG punya key 'max_fallback_failures' yang tidak
+    dikenal parser → tiap run mencetak peringatan 'kunci tidak dikenal'."""
+    from atdork import build_parser
+
+    parser = build_parser()
+    dests = {a.dest for a in parser._actions if a.dest != "help"}
+    unknown = set(DEFAULT_CONFIG) - dests
+    assert unknown == set(), f"Key config tak dikenal parser: {unknown}"

@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Artefak runtime AtDork
+atdork.db
+atdork.db-wal
+atdork.db-shm
+atdork_cache.db
+atdork_cache.db-wal
+atdork_cache.db-shm
+atdork.log
+*.log
+
+# Hasil eksekusi
+results/

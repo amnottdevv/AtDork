@@ -25,7 +25,6 @@ max_failures: 3               # Consecutive failures before permanent proxy remo
 
 # ── Multi-threading ─────────────────────────────────────────────
 concurrency: 1                # Number of threads (1 = sequential)
-max_fallback_failures: 3      # Consecutive failures before fallback to sequential
 
 # ── Batch processing ────────────────────────────────────────────
 batch_separator: ";"          # Separator for inline multiple queries

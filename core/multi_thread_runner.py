@@ -53,6 +53,10 @@ def run_batch_multithread(
     if not queries:
         return {}
 
+    # Buang duplikat lebih dulu: results berbentuk dict {query: hasil}, sehingga
+    # query duplikat membuat len(results) < total selamanya → while-loop di
+    # bawah tidak pernah berhenti (bug loop tak berujung).
+    queries = list(dict.fromkeys(queries))
     total = len(queries)
     results: Dict[str, list] = {}
     original_concurrency = concurrency
