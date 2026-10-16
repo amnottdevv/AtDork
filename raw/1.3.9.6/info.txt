@@ -1,0 +1,2 @@
+pypi = https://pypi.org/project/atdork/1.3.9.6/
+release = https://github.com/amnottdevv/AtDork/releases/tag/1.3.9.6
