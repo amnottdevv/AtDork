@@ -8,7 +8,10 @@ available after installation from a wheel.
 import logging
 import os
 from importlib import resources
-from importlib.resources.abc import Traversable
+try:  # Python 3.11+
+    from importlib.resources.abc import Traversable
+except ImportError:  # Python 3.9/3.10
+    from importlib.abc import Traversable
 from typing import Dict, List, Optional, Union
 
 import yaml

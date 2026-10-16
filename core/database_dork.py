@@ -31,7 +31,10 @@ import os
 import random
 import shutil
 from importlib import resources
-from importlib.resources.abc import Traversable
+try:  # Python 3.11+
+    from importlib.resources.abc import Traversable
+except ImportError:  # Python 3.9/3.10
+    from importlib.abc import Traversable
 from typing import Dict, List, Optional, Union
 
 from core.package_manager import (

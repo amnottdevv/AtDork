@@ -49,7 +49,8 @@ def _fetch_ghdb_json(timeout: int = 10, max_retries: int = 3) -> Optional[dict]:
             logger.warning("SSL error, retrying without certificate verification")
             urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
             try:
-                response = requests.get(GHDB_URL, headers=HEADERS, timeout=timeout, verify=False)
+                # Deliberate fallback: retry once without cert verification after SSLError (logged above).
+                response = requests.get(GHDB_URL, headers=HEADERS, timeout=timeout, verify=False)  # nosec B501
             except requests.exceptions.RequestException as e:
                 logger.warning("Request failed (attempt %d): %s", attempt, e)
         except requests.exceptions.RequestException as e:

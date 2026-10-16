@@ -65,7 +65,7 @@ jobs:
         run: pip install bandit
 
       - name: Run Bandit
-        run: bandit -r core/ lib/ main.py -f custom -ll
+        run: bandit -r core/ lib/ atdork.py -f custom -ll
 
   # ── Dependency Vulnerability Check (Safety) ──────────────────────────
   dependency-check:
