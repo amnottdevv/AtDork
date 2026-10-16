@@ -1,6 +1,6 @@
 # GitHub Secret-Exposure Dorks (`@github/`)
 
-> **Data location:** these dorks live in the [Atdork-DB](https://github.com/amnottdevv/Atdork-DB) repository under `@folders` (e.g. `@github/github1.txt`). Browse with `atdork search <keyword>`, install with `atdork install <ref>`.
+> **Data location:** these dorks live in the [Atdork-DB](https://github.com/amnottdevv/Atdork-DB) repository under `@folders`. **[Browse `@github` in the web catalog →](https://amnottdevv.github.io/Atdork-DB/#/f/github)** — search with `atdork search github`, install with `atdork install @github/git-dorks.txt`.
 
 This category is fundamentally different from the SQLi/LFI/RFI/XSS
 categories elsewhere in this database. Those find a *potentially*
@@ -16,7 +16,11 @@ credential leaks, not searching the wider internet for other people's keys.
 
 ```
 @github/
-└── ghdorks.txt   # filename:/extension:/language: searches for common secret file patterns
+├── git-dorks.txt             # filename:/extension:/language: secret file patterns (513)
+├── githubdorks.txt           # GitHub secret-hunting dork collection               (180)
+├── github-dorks-techgaun.txt # techgaun/github-dorks collection                     (96)
+├── github.txt                # Small curated set of GitHub queries                  (19)
+└── git-files-dorks.txt       # File-path oriented GitHub searches                   (11)
 ```
 
 ## What this category looks for
@@ -49,7 +53,7 @@ HEROKU_API_KEY language:shell
 
 ```bash
 # Scope every search to your own GitHub org/account before running anything
-atdork --database-dork @github/ghdorks --backend google -r 20
+atdork --database-dork @github/git-dorks --backend google -r 20
 ```
 
 Since these are GitHub-specific search operators, run them **scoped to your
@@ -59,7 +63,7 @@ per line) rather than running them unscoped.
 
 ```bash
 # Preview what's in the file before running anything
-atdork --database-dork @github/ghdorks --database-preview
+atdork --database-dork @github/git-dorks --database-preview
 ```
 
 ## If you find a live secret

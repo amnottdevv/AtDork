@@ -1,9 +1,9 @@
 # Common Dorks (`@common/`)
 
-> **Data location:** these dorks live in the [Atdork-DB](https://github.com/amnottdevv/Atdork-DB) repository under `@folders` (e.g. `@common/common1.txt`). Browse with `atdork search <keyword>`, install with `atdork install <ref>`.
+> **Data location:** these dorks live in the [Atdork-DB](https://github.com/amnottdevv/Atdork-DB) repository under `@folders`. **[Browse `@common` in the web catalog →](https://amnottdevv.github.io/Atdork-DB/#/f/common)** — search with `atdork search common`, install with `atdork install @common`.
 
 The `@common/` folder is the core of AtDork's dork collections. It groups
-everyday web-vulnerability recon patterns into four files, split by
+everyday web-vulnerability recon patterns into five files, split by
 vulnerability class so you can load exactly the category you need for a given
 engagement.
 
@@ -12,7 +12,8 @@ engagement.
 ├── common1.txt   # SQL Injection & IDOR
 ├── common2.txt   # LFI / RFI & Path Disclosure
 ├── common3.txt   # XSS & HTML Injection
-└── common4.txt   # File Upload Bypass, RCE, Command Injection & SSRF
+├── common4.txt   # File Upload Bypass, RCE, Command Injection & SSRF
+└── common5.txt   # phpinfo/debug pages, admin API endpoints, YAML files
 ```
 
 Install this collection (optional — refs also work straight from Atdork-DB):
@@ -97,14 +98,30 @@ atdork --database-dork @common/common4 -r 25 --exec "curl -sI {}"
 
 ---
 
+## `common5.txt` – phpinfo, Debug Pages & Admin API Endpoints
+
+| Aspect | Description |
+|--------|--------------|
+| **Purpose** | Finds exposed diagnostic pages (`phpinfo.php`, `info.php`) and enterprise admin API endpoints — the leftovers of misconfigured deployments that often leak versions, paths, and internal configuration. |
+| **Common targets** | `inurl:phpinfo.php`, `inurl:info.php`, `/api/jsonws` (Liferay), `/dana-na/` & `/OA_HTML` (Oracle e-Business), `ext:yml` config files. |
+| **Size** | 708 dorks — the largest file in `@common/`. |
+
+**Usage example:**
+
+```bash
+atdork --database-dork @common/common5 -r 25
+```
+
+---
+
 ## Combining multiple categories
 
 ```bash
 # SQLi + LFI in one batch
-atdork --database-dork @common/common1,common/common2 -r 40 --format json -o recon.json
+atdork --database-dork @common/common1,@common/common2 -r 40 --format json -o recon.json
 
-# All 4 categories, random sample of 50 dorks, reproducible via seed
-atdork --database-dork @common/common1,common/common2,common/common3,common/common4 \
+# All 5 categories, random sample of 50 dorks, reproducible via seed
+atdork --database-dork @common/common1,@common/common2,@common/common3,@common/common4,@common/common5 \
   --database-r 50 --database-seed 7 --database-preview
 ```
 
@@ -140,4 +157,4 @@ The developers and this documentation are not responsible for misuse. Any legal 
 
 ---
 
-*See also: [GHDB Scraper](../ghdb-scraper.md) for dorks scraped directly from Exploit-DB, and the [Database Dorks overview](index.md) for the overall Atdork-DB folder structure.*
+*See also: [GHDB Scraper](../features/ghdb-scrapper.md) for dorks scraped directly from Exploit-DB, and the [Database Dorks overview](index.md) for the overall Atdork-DB folder structure.*

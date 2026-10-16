@@ -53,6 +53,16 @@ Complete reference for all command-line arguments available in AtDork.
 | `--validate-desc` | String | `10` | Min description length or `false` to disable |
 | `--validate-spam` | Boolean | `true` | Enable spam detection |
 | `--filter-vuln` | String | None | Vulnerability platform filter |
+| `--database-dork` | String | None | Load dorks from Atdork-DB ref(s), e.g. `@ghdb/01_footholds` |
+| `--database-preview` | Boolean | `false` | Preview loaded dorks without running them |
+| `--database-r` | Integer | None | Randomly select N dorks from the loaded set |
+| `--database-seed` | Integer | None | RNG seed for reproducible `--database-r` selection |
+| `--database-path` | Path | None | Custom database root (default: discovered Atdork-DB checkout) |
+| `--database-dork-extract` | Path | None | Extract a ref to `PATH` (shortcut for the `extract` flow, v1.3.9.5+) |
+| `--list-database-dork` | Boolean | `false` | List all available database dork files |
+| `--db-repo` | Path | None | Atdork-DB checkout path (default: auto-discover or config `db_repo`) |
+| `--db-repo-url` | String | None | Git URL of the Atdork-DB repository |
+| `--package-dir` | Path | `~/.atdork/packages` | Local package store directory |
 | `--no-fallback-backends` | Boolean | `false` | Disable backend fallback |
 | `--no-verify` | Boolean | `false` | Disable SSL certificate verification |
 | `--log-file` | Path | `atdork.log` | Log file path |
@@ -66,6 +76,40 @@ Complete reference for all command-line arguments available in AtDork.
 | `--debug` | Boolean | `false` | Enable debug logging |
 | `--version` | None | None | Show version and exit |
 | `-h`, `--help` | None | None | Show help message and exit |
+
+---
+
+## Package Subcommands
+
+The built-in package manager treats
+[Atdork-DB](https://github.com/amnottdevv/Atdork-DB) — 123 packages, 31
+`@folders`, ~994,600 dorks — like a package registry. Browse packages in the
+[web catalog](https://amnottdevv.github.io/Atdork-DB/) or with
+`atdork search` / `atdork index`.
+
+| Subcommand | Description |
+| :--- | :--- |
+| `atdork search <keyword>` | Filter the package index by keyword (ref, folder, description). |
+| `atdork index` | List every package: `ref \| dorks \| size \| description`. |
+| `atdork install <ref>` | Copy a package into the local store (`~/.atdork/packages`). |
+| `atdork uninstall <ref>` | Remove an installed package. |
+| `atdork installed` | List installed packages in the local store. |
+| `atdork update` | `git pull --ff-only` on the Atdork-DB checkout. |
+
+Package refs accept several forms — see
+[Dork Database](database/index.md#package-ref-grammar) for the full grammar:
+
+```bash
+atdork search shodan                # find packages
+atdork install @cve/cve_1.txt       # canonical: folder + file
+atdork install c@cve_1.txt          # shorthand (unique folder prefix)
+atdork install @ghdb                # whole folder
+atdork installed                    # verify the store
+atdork update                       # refresh the database checkout
+```
+
+Installed packages run as batch files (`--batch-file c@cve_1.txt`); any ref
+also loads directly from the database root via `--database-dork` (see below).
 
 ---
 
@@ -191,6 +235,34 @@ Complete reference for all command-line arguments available in AtDork.
 
 ---
 
+### Dork Database & Package Manager
+
+Load dorks straight from the [Atdork-DB](https://github.com/amnottdevv/Atdork-DB)
+checkout without installing them first. Full workflow and the package list:
+[Dork Database](database/index.md).
+
+| Flag | Description |
+| :--- | :--- |
+| `--database-dork SPEC` | Load dorks from database ref(s). Comma-separated, folder or file level. Example: `--database-dork @ghdb/01_footholds,@lfi`. |
+| `--database-preview` | Show the loaded dorks without executing them. Requires `--database-dork`. |
+| `--database-r N` | Randomly select N dorks from the loaded set before running. |
+| `--database-seed N` | Seed the RNG used by `--database-r` for reproducible selection. |
+| `--database-path PATH` | Custom database root directory (instead of the discovered checkout). |
+| `--database-dork-extract PATH` | Extract a ref to `PATH` instead of running it (v1.3.9.5+). |
+| `--list-database-dork` | List every dork file available in the database and exit. |
+| `--db-repo PATH` | Point the package manager at a specific Atdork-DB checkout. Overrides discovery. |
+| `--db-repo-url URL` | Git URL of the Atdork-DB repository (used by clone/update helpers). |
+| `--package-dir PATH` | Local package store directory. Default: `~/.atdork/packages`. |
+
+```bash
+atdork --list-database-dork                                   # what's available?
+atdork --database-dork @cve --database-preview                # show, don't run
+atdork --database-dork @ghdb/01_footholds -r 20               # run a file
+atdork --database-dork @cms --database-r 50 --database-seed 7 # random 50, reproducible
+```
+
+---
+
 ### Logging & Debugging
 
 | Flag | Description |
@@ -226,6 +298,8 @@ Complete reference for all command-line arguments available in AtDork.
 | **Proxy** | `--proxy`, `--proxy-file`, `--tor`, `--strict`, `--proxy-cooldown`, `--max-failures`, `--ip-guard` |
 | **Resilience** | `--resilient`, `--adaptive-delay`, `--concurrency`, `--max-fallback-failures`, `--no-fallback-backends` |
 | **Filter** | `--filter-vuln`, `--no-validate`, `--strict-filter`, `--validate-url`, `--validate-title`, `--validate-desc`, `--validate-spam` |
+| **Dork DB** | `--database-dork`, `--database-preview`, `--database-r`, `--database-seed`, `--database-path`, `--database-dork-extract`, `--list-database-dork` |
+| **Packages** | `--db-repo`, `--db-repo-url`, `--package-dir` + subcommands `search`, `install`, `uninstall`, `installed`, `update`, `index` |
 | **Post-Process** | `--exec`, `--exec-on-vuln`, `--exec-parallel`, `--exec-timeout` |
 | **Database** | `--db-path`, `--resume`, `--history`, `--no-dedup`, `--export-db` |
 | **Template** | `--template`, `--target`, `--select`, `--list-templates`, `--template-path`, `--preview` |

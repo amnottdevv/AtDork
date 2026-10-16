@@ -1,526 +1,220 @@
 # Basic Usage
 
+This guide covers the most common AtDork commands you'll use daily. Whether
+you're a security researcher, bug bounty hunter, or OSINT practitioner, these
+examples will help you get started quickly.
 
-
- Introduction
-
-
-
-This guide covers the most common AtDork commands you'll use daily. Whether you're a security researcher, bug bounty hunter, or OSINT practitioner, these examples will help you get started quickly.
-
-
-
-All examples assume you have AtDork installed. If not, see [Installation](installation.md).
-
-
+All examples assume you have AtDork installed. If not, see
+[Installation](installation.md).
 
 ---
-
-
 
 ## Your First Search
 
-
-
-The simplest command – search for PDF files on government websites:
-
-
+The simplest command — search for PDF files on government websites:
 
 ```bash
-
 atdork -q "site:gov filetype:pdf" -r 10
-
 ```
 
-
-
-**Explanation:**
-
-- `-q` – Your search query (dork)
-
-- `-r 10` – Return up to 10 results
-
-
+- `-q` — your search query (dork)
+- `-r 10` — return up to 10 results
 
 ---
-
-
 
 ## Common Use Cases
 
-
-
 ### 1. Find Exposed Documents
 
-
-
 ```bash
-
 # PDF files on government sites
-
 atdork -q "site:gov filetype:pdf" -r 20
 
-
-
 # Excel files on educational sites
-
 atdork -q "site:edu filetype:xls" -r 20
 
-
-
 # Config files with passwords
-
-atdork -q 'filetype:env "DB_PASSWORD"' -r 30
-
+atdork -q 'filetype:env "DB_PASSWORD"' -r 20
 ```
 
-
-
-### 2. Find Admin Panels
-
-
+### 2. Find Exposed Panels & Logins
 
 ```bash
+# Admin login pages
+atdork -q "inurl:admin login" -r 20
 
-atdork -q 'intitle:"admin panel" inurl:login' -r 30
-
+# phpMyAdmin consoles
+atdork -q "intitle:phpmyadmin inurl:index.php" -r 20
 ```
 
-
-
-### 3. Find Directory Listings
-
-
+### 3. Find Open Directories
 
 ```bash
-
+# Directory indexing
 atdork -q 'intitle:"index of" "backup"' -r 20
-
 ```
-
-
-
-### 4. Find Login Pages
-
-
-
-```bash
-
-atdork -q 'inurl:admin login' -r 30
-
-```
-
-
-
-### 5. Find WordPress Sites
-
-
-
-```bash
-
-atdork -q 'inurl:wp-content' -r 40
-
-```
-
-
 
 ---
 
+## Output Formats
 
-
-## Save Results
-
-
-
-### Save to File
-
-
+Write results to disk in the format that fits your pipeline:
 
 ```bash
+# JSON — for programmatic processing
+atdork -q "site:example.com" --format json -o results.json
 
-atdork -q "site:gov filetype:pdf" -r 20 -o results.txt
+# CSV — for spreadsheets
+atdork -q "site:example.com" --format csv -o results.csv
 
+# Plain text (default)
+atdork -q "site:example.com" -o results.txt
+
+# One file per query in a directory
+atdork --batch-file dorks.txt --output-dir ./results
 ```
-
-
-
-### Save as JSON
-
-
-
-```bash
-
-atdork -q "site:gov filetype:pdf" -r 20 --format json -o results.json
-
-```
-
-
-
-### Save as CSV
-
-
-
-```bash
-
-atdork -q "site:gov filetype:pdf" -r 20 --format csv -o results.csv
-
-```
-
-
 
 ---
-
-
 
 ## Batch Processing
 
+Feed a whole list of dorks at once — one per line:
 
-
-### Run Multiple Dorks from a File
-
-
-
-Create `dorks.txt`:
-
-
-
-```
-
+```bash
+cat > dorks.txt << 'EOF'
 site:edu filetype:xls
-
 inurl:admin login
-
 intitle:"index of" "backup"
+EOF
 
-filetype:env "DB_PASSWORD"
-
+atdork --batch-file dorks.txt -r 20 --format json --output-dir ./out
 ```
 
-
-
-Then run:
-
-
-
-```bash
-
-atdork --batch-file dorks.txt -r 30 -o all_results.json
-
-```
-
-
-
-### Run Multiple Dorks Inline
-
-
-
-Use `;` as separator:
-
-
-
-```bash
-
-atdork -q "site:gov filetype:pdf; site:edu filetype:xls" -r 20 -o results.json
-
-```
-
-
+Use `-v` to stream results to the terminal while the batch runs.
 
 ---
 
+## Dork Packages (Atdork-DB)
 
+Since v1.3.9.7 the dork data lives in the
+[Atdork-DB](https://github.com/amnottdevv/Atdork-DB) repository — **123
+packages across 31 `@folders`, ~994,600 dorks** — managed by the built-in
+package manager. **[Browse the web catalog →](https://amnottdevv.github.io/Atdork-DB/)**
 
-## Filter Vulnerabilities
-
-
-
-### WordPress Detection
-
-
-
-```bash
-
-atdork -q "inurl:wp-content" -r 40 --filter-vuln wordpress
-
-```
-
-
-
-### Show Vulnerability Counts
-
-
+### Search the index
 
 ```bash
-
-atdork -q "inurl:wp-content" -r 40 --filter-vuln wordpress -v
-
+atdork search shodan         # packages mentioning "shodan"
+atdork index                 # full package listing with descriptions
 ```
 
+### Install packages
 
+```bash
+atdork install @cve/cve_1.txt     # canonical ref: folder + file
+atdork install c@cve_1.txt        # shorthand (unique folder prefix)
+atdork install @ghdb              # entire folder
+atdork installed                  # list what's in ~/.atdork/packages
+atdork uninstall @ghdb/01_footholds
+```
+
+### Run installed packages as queries
+
+```bash
+# Installed packages work as batch files
+atdork --batch-file c@cve_1.txt -r 20
+
+# Or load any ref straight from the database root (no install step)
+atdork --database-dork @ghdb/01_footholds -r 20
+
+# Preview without running
+atdork --database-dork @cve --database-preview
+
+# Random sample from a folder (deterministic with a seed)
+atdork --database-dork @cms --database-r 50 --database-seed 7
+
+# List everything available
+atdork --list-database-dork
+```
+
+### Keep the data fresh
+
+```bash
+atdork update      # git pull --ff-only on the Atdork-DB checkout
+```
+
+Full ref grammar, folder list and category guides:
+[Dork Database](database/index.md).
 
 ---
 
+## Run with Docker
 
-
-## Use Templates (Pre-Built Dorks)
-
-
-
-### List Available Templates
-
-
+The official image bundles the CLI **and** the full database — no Python or
+clone needed:
 
 ```bash
+docker pull ghcr.io/amnottdevv/atdork:latest
 
-atdork --list-templates
+# Search
+docker run --rm -it ghcr.io/amnottdevv/atdork:latest -q "site:gov filetype:pdf" -r 10
 
+# Batch with local files mounted
+docker run --rm -it -v "$PWD:/data" -w /data ghcr.io/amnottdevv/atdork:latest \
+  --batch-file dorks.txt --format json -o out.json
+
+# Persist the package store between runs
+docker volume create atdork-store
+docker run --rm -it -v atdork-store:/home/atdork/.atdork \
+  ghcr.io/amnottdevv/atdork:latest install @cve/cve_1.txt
 ```
 
-
-
-### Use a Template
-
-
-
-```bash
-
-atdork --template sqli --target example.com -r 30
-
-```
-
-
-
-### Preview Template Dorks (Safe Check)
-
-
-
-```bash
-
-atdork --template sqli --preview
-
-```
-
-
-
-### Combine Templates
-
-
-
-```bash
-
-atdork --template sqli,wordpress,exposed_config --target example.com -r 25
-
-```
-
-
-
-### Select Specific Dorks
-
-
-
-```bash
-
-atdork --template sqli --select 1,3,5 -r 20
-
-```
-
-
+Full details in [Docker](docker.md).
 
 ---
 
-
-
-## Use Proxies (Anonymous)
-
-
-
-### Single Proxy
-
-
+## Anonymity & Proxies
 
 ```bash
+# Route through Tor (requires the tor service running)
+atdork -q "site:example.com" --tor
 
-atdork -q "target" --proxy "http:user:pass@host:8080" --strict
+# Custom proxy
+atdork -q "site:example.com" --proxy http://127.0.0.1:8080
 
+# Refuse to fall back to your real IP if the proxy dies
+atdork -q "site:example.com" --proxy http://127.0.0.1:8080 --ip-guard
 ```
 
-
-
-### Multiple Proxies from File
-
-
-
-```bash
-
-atdork -q "target" --proxy-file proxies.txt --strict
-
-```
-
-
-
-### Tor Integration
-
-
-
-```bash
-
-atdork -q "target" --tor --strict
-
-```
-
-
+See [Proxy & Anonymity](features/proxy-anonymity.md) for rotation pools and
+anonymity levels.
 
 ---
-
-
-
-## Run with Resilience (Recommended)
-
-
-
-For large or automated scans, enable resilience to handle rate limits and blocks:
-
-
-
-```bash
-
-atdork --batch-file dorks.txt --resilient --adaptive-delay --proxy-file proxies.txt --strict
-
-```
-
-
-
----
-
-
-
-## View History and Resume
-
-
-
-### View Search History
-
-
-
-```bash
-
-atdork --history
-
-```
-
-
-
-### Resume Interrupted Batch
-
-
-
-```bash
-
-atdork --resume
-
-```
-
-
-
-### Export Database
-
-
-
-```bash
-
-atdork --export-db all_results.json
-
-```
-
-
-
----
-
-
 
 ## Common Flag Reference
 
+| Flag | Purpose |
+| :--- | :--- |
+| `-q`, `--query` | Main search query |
+| `-r`, `--max-results` | Max results per engine (1–100) |
+| `--batch-file` | File with one dork per line |
+| `-o`, `--output` | Output file path |
+| `--format` | `txt`, `json`, or `csv` |
+| `--template` | Load a named dork template |
+| `--target` | Domain for `{target}` substitution |
+| `--database-dork` | Load dorks from an Atdork-DB ref |
+| `--database-preview` | Preview loaded dorks without running |
+| `--tor` / `--proxy` | Anonymize traffic |
+| `--ip-guard` | Never fall back to your real IP |
 
-
-| Flag | Description | Example |
-
-|------|-------------|---------|
-
-| `-q` | Your search query | `-q "site:gov filetype:pdf"` |
-
-| `-r` | Number of results (1-100) | `-r 20` |
-
-| `-o` | Save to file | `-o results.json` |
-
-| `--format` | Output format: `txt`, `json`, `csv` | `--format json` |
-
-| `--batch-file` | File with one query per line | `--batch-file dorks.txt` |
-
-| `--filter-vuln` | Vulnerability filter | `--filter-vuln wordpress` |
-
-| `--template` | Load dork template | `--template sqli` |
-
-| `--proxy-file` | Proxy list file | `--proxy-file proxies.txt` |
-
-| `--resilient` | Enable rate limit handling | `--resilient` |
-
-| `--verbose`, `-v` | Show results in real-time | `-v` |
-
-
+Full list in [CLI Reference](cli-reference.md).
 
 ---
-
-
-
-## Quick Reference Card
-
-
-
-| Task | Command |
-
-|------|---------|
-
-| **Basic search** | `atdork -q "dork" -r 20` |
-
-| **Save to JSON** | `atdork -q "dork" -r 20 --format json -o out.json` |
-
-| **Batch file** | `atdork --batch-file dorks.txt -r 30 -o out.json` |
-
-| **Use template** | `atdork --template sqli --target example.com -r 30` |
-
-| **Filter WordPress** | `atdork -q "inurl:wp-content" --filter-vuln wordpress` |
-
-| **With proxy** | `atdork -q "dork" --proxy-file proxies.txt --strict` |
-
-| **Resilient mode** | `atdork --batch-file dorks.txt --resilient --adaptive-delay` |
-
-| **View history** | `atdork --history` |
-
-| **Resume batch** | `atdork --resume` |
-
-
-
----
-
-
 
 ## Next Steps
 
-
-
-- [Quick Start](quickstart.md) – Get started in 5 minutes
-
-- [CLI Reference](cli-reference.md) – Complete flag reference
-
-- [Resilience System](featuresresilience-system.md) – Handle rate limits automatically
-
-- [Proxy & Anonymity](featuresproxy-anonymity.md) – Stay anonymous
-
-- [Vulnerability Filter](featuresfilter-vuln.md) – Find vulnerabilities faster
-
-- [Template System](featurestemplate-system.md) – Use pre-built dorks
-
-- [Batch Processing](featuresbatch-processing.md) – Run large scans
-
-- [Output Formats](featuresoutput-formats.md) – Export results
-
+- [CLI Reference](cli-reference.md) — every flag and subcommand
+- [Batch Processing](features/batch-processing.md) — advanced batch workflows
+- [Dork Database](database/index.md) — packages + web catalog
+- [Docker](docker.md) — containerized usage
+- [Troubleshooting](troubleshooting.md) — when something breaks

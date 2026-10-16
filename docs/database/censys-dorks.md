@@ -1,6 +1,6 @@
 # Censys Search Dorks (`@censys/censysdork.txt`)
 
-> **Data location:** these dorks live in the [Atdork-DB](https://github.com/amnottdevv/Atdork-DB) repository under `@folders` (e.g. `@censys/censys1.txt`). Browse with `atdork search <keyword>`, install with `atdork install <ref>`.
+> **Data location:** these dorks live in the [Atdork-DB](https://github.com/amnottdevv/Atdork-DB) repository under `@folders`. **[Browse `@censys` in the web catalog →](https://amnottdevv.github.io/Atdork-DB/#/f/censys)** — search with `atdork search censys`, install with `atdork install @censys/censysdork.txt`.
 
 Unlike the Google/Bing/DuckDuckGo dorks elsewhere in this database, Censys
 queries search a database of **internet-wide scan results** — banners,

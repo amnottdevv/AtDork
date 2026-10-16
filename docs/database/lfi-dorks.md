@@ -1,6 +1,6 @@
 # LFI / RFI & Path Disclosure Dorks (`@lfi/`)
 
-> **Data location:** these dorks live in the [Atdork-DB](https://github.com/amnottdevv/Atdork-DB) repository under `@folders` (e.g. `@lfi/lfi1.txt`). Browse with `atdork search <keyword>`, install with `atdork install <ref>`.
+> **Data location:** these dorks live in the [Atdork-DB](https://github.com/amnottdevv/Atdork-DB) repository under `@folders`. **[Browse `@lfi` in the web catalog →](https://amnottdevv.github.io/Atdork-DB/#/f/lfi)** — search with `atdork search lfi`, install with `atdork install @lfi/lfi.txt`.
 
 This category targets parameters that pull in a file, template, or path
 fragment on the server side. When the value isn't validated, it can be
@@ -10,7 +10,7 @@ external server).
 
 ```
 @lfi/
-└── lfi1.txt   # Path-inclusion parameters across common CMS/forum/gallery software
+└── lfi.txt   # Path-inclusion parameters across common CMS/forum/gallery software
 ```
 
 ## What this category looks for
@@ -44,13 +44,13 @@ index.php?basepath=
 
 ```bash
 # Load and run the LFI category
-atdork --database-dork @lfi/lfi1 -r 25
+atdork --database-dork @lfi/lfi -r 25
 
 # Combine with the general LFI category from the common set
-atdork --database-dork @lfi/lfi1,common/common2 --database-r 30 --filter-vuln lfi
+atdork --database-dork @lfi/lfi,@common/common2 --database-r 30 --filter-vuln lfi
 
 # Preview before running
-atdork --database-dork @lfi/lfi1 --database-preview
+atdork --database-dork @lfi/lfi --database-preview
 ```
 
 ## Confirming a real LFI, not just a matching URL
@@ -97,6 +97,6 @@ The developers and this documentation are not responsible for misuse. Any legal 
 
 ---
 
-*See also: [Common Dorks](common-dorks.md) for the general LFI/SQLi/XSS/RCE categories, [Bing & DuckDuckGo Dorks](bing-and-ddg-dorks.md), and the [Database Dorks overview](index.md) for the full Atdork-DB folder structure.*
+*See also: [Common Dorks](common-dorks.md) for the general LFI/SQLi/XSS/RCE categories, [Bing & DuckDuckGo Dorks](bing-and-ddg.md), and the [Database Dorks overview](index.md) for the full Atdork-DB folder structure.*
 
 > **Note on source material:** the raw list this category is drawn from also contained unrelated content — a set of default/unauthenticated IP-camera admin-interface dorks (Axis/Panasonic-style `ViewerFrame`, `axis-cgi`, `liveapplet` patterns) and a large batch of credential/secret-harvesting dorks (exposed `.pwd`/`.dat` files, saved FTP/VNC/chat credentials, etc.). Both were left out of this page — the camera dorks because using them typically means viewing live footage of people who never consented to being watched, and the credential dorks because they target already-exposed secrets belonging to someone else rather than a parameter/vulnerability class. If you want, I can document those as their own **separate, clearly-labeled pages** so contributors know what they're opting into, rather than folding them silently into "LFI."

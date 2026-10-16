@@ -73,25 +73,27 @@ nav:
           - Template System: features/template-system.md
           - Batch Processing: features/batch-processing.md
           - Output Formats: features/output-formats.md
-          - post processing : features/post-processing.md
-          - database and history : features/database-history.md
-          - cache system : features/cache-system.md
-          - notification : features/notification.md
-          - package manager : features/package-manager.md
-          - database dork : features/database-scrapper.md
-          - ghdb scrapper : features/ghdb-scrapper.md
+          - Post Processing: features/post-processing.md
+          - Database & History: features/database-history.md
+          - Cache System: features/cache-system.md
+          - Notification: features/notification.md
+          - Package Manager: features/package-manager.md
+          - Database Dork: features/database-scrapper.md
+          - GHDB Scraper: features/ghdb-scrapper.md
   - Reference:
       - CLI Reference: cli-reference.md
       - Configuration: configuration.md
   - Support:
       - Troubleshooting: troubleshooting.md
       - Contributing: contributing.md
-  - database :
-     - bing and ddg dorks : database/bing-and-ddg.md
-     - bug bounty dorks : database/bug-bounty-dorks.md
-     - censys dorks : database/censys-dorks.md
-     - cms dorks : database/cms-dorks.md
-     - common dorks : database/common-dorks.md
-     - github dorks : database/github-dorks.md
-     - lfi dorks : database/lfi-dorks.md
-     - rfi dorks : database/rfi-dorks.md
+  - Dork Database:
+      - Overview: database/index.md
+      - CMS Dorks: database/cms-dorks.md
+      - Common Dorks: database/common-dorks.md
+      - GitHub Dorks: database/github-dorks.md
+      - LFI Dorks: database/lfi-dorks.md
+      - RFI Dorks: database/rfi-dorks.md
+      - Bing & DuckDuckGo Dorks: database/bing-and-ddg.md
+      - Censys Dorks: database/censys-dorks.md
+      - Bug Bounty Dorks: database/bug-bounty-dorks.md
+  - Dork Catalog (web): https://amnottdevv.github.io/Atdork-DB/

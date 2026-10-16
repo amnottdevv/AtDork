@@ -1,6 +1,6 @@
 # Bing & DuckDuckGo Dorks (`@bing/`, `@duckduckgo/`)
 
-> **Data location:** these dorks live in the [Atdork-DB](https://github.com/amnottdevv/Atdork-DB) repository under `@folders` (e.g. `@bing/bing1.txt`). Browse with `atdork search <keyword>`, install with `atdork install <ref>`.
+> **Data location:** these dorks live in the [Atdork-DB](https://github.com/amnottdevv/Atdork-DB) repository under `@folders`. **[Browse `@bing` / `@duckduckgo` in the web catalog →](https://amnottdevv.github.io/Atdork-DB/#/f/bing)** — search with `atdork search bing`, install with `atdork install @bing/bing1.txt`.
 
 Bing and DuckDuckGo support several search operators that Google doesn't
 (or supports differently). This page covers what's unique about each engine
@@ -12,7 +12,8 @@ Atdork-DB/
 │   ├── bing1.txt   # OR groups & contains:
 │   └── bing2.txt   # location:, ip:, domain:, linkfromdomain:, language:, feed:, prefer:
 └── @duckduckgo/
-    └── ddg1.txt     # Verbatim error strings, !bang shortcuts, OR combos
+    ├── ddg1.txt     # Verbatim error strings, !bang shortcuts, OR combos
+    └── ddgo.txt     # Parameter-style queries (cart, id, login params)
 ```
 
 Run these with `--backend bing` or `--backend duckduckgo` so AtDork sends the

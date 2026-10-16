@@ -1,6 +1,6 @@
 # CMS-Specific Dorks (`@cms/`)
 
-> **Data location:** these dorks live in the [Atdork-DB](https://github.com/amnottdevv/Atdork-DB) repository under `@folders` (e.g. `@cms/cms1.txt`). Browse with `atdork search <keyword>`, install with `atdork install <ref>`.
+> **Data location:** these dorks live in the [Atdork-DB](https://github.com/amnottdevv/Atdork-DB) repository under `@folders`. **[Browse `@cms` in the web catalog →](https://amnottdevv.github.io/Atdork-DB/#/f/cms)** — search with `atdork search cms`, install with `atdork install @cms/joomla.txt`.
 
 Where the `common/` category targets generic parameter patterns across any
 PHP app, this category targets **fingerprints specific to a given
@@ -11,13 +11,14 @@ dorks far more precise: a hit tells you not just "a parameter exists" but
 
 ```
 @cms/
-├── joomla/joomla.txt       # Joomla components, admin paths, config exposure
-├── wordpress/wordpress.txt # WP core paths, plugins, themes, wp-config exposure
-├── magento/                # Magento admin, API, and config endpoints
-└── laravel/                # Laravel .env exposure, debug mode, artisan routes
+├── joomla.txt      # Joomla components, admin paths, config exposure      (382)
+├── wp.txt          # WP core paths, plugins, themes, wp-config exposure  (26,324)
+├── wp2.txt         # Additional WordPress dorks (plugins & params)          (474)
+├── magento.txt     # Magento admin, API, and config endpoints                (76)
+└── laravel.txt     # Laravel .env exposure, debug mode, artisan routes      (422)
 ```
 
-## 1. Joomla (`joomla/joomla.txt`)
+## 1. Joomla (`joomla.txt`)
 
 | Aspect | Description |
 |--------|--------------|
@@ -34,10 +35,10 @@ inurl:configuration.php~ site:target.com
 ```
 
 ```bash
-atdork --database-dork @cms/joomla/joomla -r 20
+atdork --database-dork @cms/joomla -r 20
 ```
 
-## 2. WordPress (`wordpress/wordpress.txt`)
+## 2. WordPress (`wp.txt`)
 
 | Aspect | Description |
 |--------|--------------|
@@ -54,10 +55,10 @@ inurl:xmlrpc.php "Invalid method"
 ```
 
 ```bash
-atdork --database-dork @cms/wordpress/wordpress -r 20 --filter-vuln wordpress
+atdork --database-dork @cms/wp -r 20 --filter-vuln wordpress
 ```
 
-## 3. Magento (`magento/`)
+## 3. Magento (`magento.txt`)
 
 | Aspect | Description |
 |--------|--------------|
@@ -77,7 +78,7 @@ inurl:var/log/system.log site:target.com
 atdork --database-dork @cms/magento -r 20
 ```
 
-## 4. Laravel (`laravel/`)
+## 4. Laravel (`laravel.txt`)
 
 | Aspect | Description |
 |--------|--------------|
@@ -102,7 +103,7 @@ atdork --database-dork @cms/laravel -r 20 --filter-vuln laravel
 
 ```bash
 # Fingerprint all four CMS types against a scoped target in one batch
-atdork --database-dork @cms/joomla/joomla,cms/wordpress/wordpress,cms/magento,cms/laravel \
+atdork --database-dork @cms/joomla,@cms/wp,@cms/magento,@cms/laravel \
   -r 40 --format json -o cms_recon.json
 ```
 

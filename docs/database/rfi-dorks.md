@@ -1,6 +1,6 @@
 # RFI Dorks — Remote File Inclusion (`@rfi/`)
 
-> **Data location:** these dorks live in the [Atdork-DB](https://github.com/amnottdevv/Atdork-DB) repository under `@folders` (e.g. `@rfi/rfi1.txt`). Browse with `atdork search <keyword>`, install with `atdork install <ref>`.
+> **Data location:** these dorks live in the [Atdork-DB](https://github.com/amnottdevv/Atdork-DB) repository under `@folders`. **[Browse `@rfi` in the web catalog →](https://amnottdevv.github.io/Atdork-DB/#/f/rfi)** — search with `atdork search rfi`, install with `atdork install @rfi/rfi.txt`.
 
 RFI is the sibling of LFI: instead of pulling in a *local* file on the
 server, the vulnerable parameter fetches and executes a file from a URL
@@ -10,7 +10,7 @@ often means immediate remote code execution.
 
 ```
 @rfi/
-└── rfi1.txt   # Path/include parameters in older PHP CMS, forum, and gallery packages
+└── rfi.txt   # Path/include parameters in older PHP CMS, forum, and gallery packages
 ```
 
 This category overlaps heavily with [LFI Dorks](lfi-dorks.md) — the same
@@ -49,13 +49,13 @@ os/pointer.php?url=
 
 ```bash
 # Load and run the RFI category
-atdork --database-dork @rfi/rfi1 -r 25
+atdork --database-dork @rfi/rfi -r 25
 
 # Combine with the LFI category since they target the same flaw class
-atdork --database-dork @rfi/rfi1,lfi/lfi1 --database-r 30 --filter-vuln lfi
+atdork --database-dork @rfi/rfi,@lfi/lfi --database-r 30 --filter-vuln lfi
 
 # Preview before running
-atdork --database-dork @rfi/rfi1 --database-preview
+atdork --database-dork @rfi/rfi --database-preview
 ```
 
 ## Confirming a real finding
@@ -104,4 +104,4 @@ The developers and this documentation are not responsible for misuse. Any legal 
 
 ---
 
-*See also: [LFI Dorks](lfi-dorks.md) for the closely-related local-inclusion category, [Common Dorks](common-dorks.md), [Bing & DuckDuckGo Dorks](bing-and-ddg-dorks.md), and the [Database Dorks overview](index.md) for the full Atdork-DB folder structure.*
+*See also: [LFI Dorks](lfi-dorks.md) for the closely-related local-inclusion category, [Common Dorks](common-dorks.md), [Bing & DuckDuckGo Dorks](bing-and-ddg.md), and the [Database Dorks overview](index.md) for the full Atdork-DB folder structure.*

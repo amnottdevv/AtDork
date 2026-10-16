@@ -1,10 +1,10 @@
 # Package Manager (`atdork install`)
 
-> **Data location:** dork data lives in the separate [Atdork-DB](https://github.com/amnottdevv/Atdork-DB) repository under `@folders` (e.g. `@ghdb/01_footholds.txt`). This page covers browsing, installing and updating those packages; see [Database Dork](database-scrapper.md) for loading them as queries.
+> **Data location:** dork data lives in the separate [Atdork-DB](https://github.com/amnottdevv/Atdork-DB) repository under `@folders` (e.g. `@ghdb/01_footholds.txt`). **Browse it in the [web catalog →](https://amnottdevv.github.io/Atdork-DB/)**. This page covers browsing, installing and updating those packages; see [Database Dork](database-scrapper.md) for loading them as queries.
 
 ## Introduction
 
-Since v1.3.9.7 AtDork ships **code only** — the 100+ dork files (roughly 978,000 dorks across 29 `@folders`) live in the Atdork-DB repository, which AtDork treats like a package registry. A generated `Index.idn` manifest describes every file (`ref | sha256 | bytes | dork-lines | description`), and the built-in package manager reads it to search, install, verify and update packages:
+Since v1.3.9.7 AtDork ships **code only** — the 123 dork files (994,603 dorks across 31 `@folders`) live in the Atdork-DB repository, which AtDork treats like a package registry. A generated `Index.idn` manifest describes every file (`ref | sha256 | bytes | dork-lines | description`), and the built-in package manager reads it to search, install, verify and update packages:
 
 ```bash
 # Browse the index
@@ -16,6 +16,8 @@ atdork install c@cve_1.txt
 # Run the installed package as a batch file
 atdork --batch-file c@cve_1.txt -r 20
 ```
+
+The easiest way to discover what's available is the **[web catalog](https://amnottdevv.github.io/Atdork-DB/)** — instant search, folder filters, per-package previews and copy-paste install commands. Docker users: the image bundles the whole database, so no clone is needed ([Docker](../docker.md)).
 
 Nothing is downloaded from the internet by AtDork itself — `install` and `update` use `git` against a local Atdork-DB checkout (cloned once, auto-discovered or pointed at with `--db-repo`).
 
@@ -126,6 +128,8 @@ Package commands exit with code `0` on success and `1` on any error.
 
 ## See Also
 
+- [Dork Database](../database/index.md) — package refs, folder list and the [web catalog](https://amnottdevv.github.io/Atdork-DB/)
 - [Database Dork](database-scrapper.md) — loading installed packages as query sets
+- [Docker](../docker.md) — the image bundles the full database at `/opt/atdork-db`
 - [GHDB Scraper](ghdb-scrapper.md) — live dork fetching from Exploit-DB
 - [Batch Processing](batch-processing.md) — running many queries with `--batch-file`

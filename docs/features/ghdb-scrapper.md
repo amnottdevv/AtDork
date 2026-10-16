@@ -11,7 +11,7 @@ Use the scraper when you need:
 - **A quick refresh** of your local database
 - **Export to JSON or TXT** for use with other tools
 
-The scraper is implemented in [`core/ghdb_scraper.py`](../../core/ghdb_scraper.py) and is invoked via the `--ghdb-scraper` family of CLI flags.
+The scraper is implemented in [`core/ghdb_scraper.py`](https://github.com/amnottdevv/atdork/blob/master/core/ghdb_scraper.py) and is invoked via the `--ghdb-scraper` family of CLI flags.
 
 ---
 

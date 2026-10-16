@@ -1,6 +1,6 @@
 # Bug Bounty Program Discovery Dorks (`@bug-bounty/`)
 
-> **Data location:** these dorks live in the [Atdork-DB](https://github.com/amnottdevv/Atdork-DB) repository under `@folders` (e.g. `@bug-bounty/bug1.txt`). Browse with `atdork search <keyword>`, install with `atdork install <ref>`.
+> **Data location:** these dorks live in the [Atdork-DB](https://github.com/amnottdevv/Atdork-DB) repository under `@folders`. **[Browse `@bug-bounty` in the web catalog →](https://amnottdevv.github.io/Atdork-DB/#/f/bug-bounty)** — search with `atdork search bug-bounty`, install with `atdork install @bug-bounty/bbdorks.txt`.
 
 This category is different from the vulnerability-class dorks elsewhere in
 the database. Instead of finding a *weak parameter*, these dorks find
@@ -10,7 +10,8 @@ rather than testing at random.
 
 ```
 @bug-bounty/
-└── bbdorks.txt   # Responsible disclosure pages, security.txt files, VDP/bounty program listings
+├── bbdorks.txt                     # Responsible disclosure pages, security.txt, VDP/bounty listings (69)
+└── bug-bounty-dorks-sushiwushi.txt # Additional program & disclosure discovery dorks                  (36)
 ```
 
 ## What this category looks for
@@ -99,4 +100,4 @@ The developers and this documentation are not responsible for testing conducted 
 
 ---
 
-*See also: [Common Dorks](common-dorks.md), [Bing & DuckDuckGo Dorks](bing-and-ddg-dorks.md), [LFI Dorks](lfi-dorks.md), and the [Database Dorks overview](index.md) for the full Atdork-DB folder structure.*
+*See also: [Common Dorks](common-dorks.md), [Bing & DuckDuckGo Dorks](bing-and-ddg.md), [LFI Dorks](lfi-dorks.md), and the [Database Dorks overview](index.md) for the full Atdork-DB folder structure.*
