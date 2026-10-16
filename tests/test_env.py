@@ -44,6 +44,8 @@ def make_args(**overrides):
         output_dir=None, output=None, log_file="atdork.log", db_path="atdork.db",
         cache_db="atdork_cache.db", package_dir=None, db_repo=None,
         database_path=None, export_db=None, ghdb_file=None,
+        database_dork_extract=None, extract_database_to=None,
+        extract_database=False,
     )
     base.update(overrides)
     return argparse.Namespace(**base)

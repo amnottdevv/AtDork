@@ -76,7 +76,7 @@ atdork --version
 **Expected output:**
 
 ```text
-atdork 1.3.9.7
+atdork 1.4.0
 ```
 
 Verify the database connection as well:

@@ -139,7 +139,12 @@ def test_run_batch_with_retry_handler(mock_search):
 
 @patch("core.batch_runner.search_dork")
 def test_run_batch_with_circuit_breaker(mock_search):
-    """Circuit breaker should record failures and block after threshold."""
+    """Circuit breaker should record failures and block after threshold.
+
+    Sejak fix maintainer v1.4.0 kegagalan dicatat TEPAT SEKALI per query
+    (setelah semua retry habis) — dulu tercatat hingga 3x per retry sehingga
+    breaker terbuka prematur. Threshold=2 karena itu butuh 2 query gagal.
+    """
     mock_search.side_effect = Exception("rate limit")
     circuit_breaker = CircuitBreaker(threshold=2, cooldown=120.0)
     fallback_manager = FallbackManager(
@@ -152,10 +157,11 @@ def test_run_batch_with_circuit_breaker(mock_search):
         "fallback_manager": fallback_manager,
         "retry_handler": retry_handler,
     }
-    results = run_batch(["q1"], case_modules=case_modules, max_results=5, backend="duckduckgo")
+    results = run_batch(["q1", "q2"], case_modules=case_modules, max_results=5, backend="duckduckgo")
     # Should return empty list (all retries exhausted)
     assert results["q1"] == []
-    # Circuit breaker should be OPEN for duckduckgo (threshold=2, retries=2 → 2 failures)
+    assert results["q2"] == []
+    # Circuit breaker should be OPEN for duckduckgo (2 failed queries, recorded once each)
     assert circuit_breaker.status("duckduckgo") == "OPEN"
 
 
