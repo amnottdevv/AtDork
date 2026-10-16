@@ -4,7 +4,7 @@
 ![Python](https://img.shields.io/badge/python-3.9%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-linux%20%7C%20macos%20%7C%20windows-lightgrey)
-![Tests](https://img.shields.io/badge/tests-114%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/tests-241%20passed-brightgreen)
 ![Lines](https://img.shields.io/badge/total%20lines-11%2C000%2B-orange)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/atdork?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=pypi+downloads)](https://pepy.tech/projects/atdork)
 [![Welcome New Contributor](https://github.com/amnottdevv/AtDork/actions/workflows/welcome_new_contributor.yml/badge.svg)](https://github.com/amnottdevv/AtDork/actions/workflows/welcome_new_contributor.yml)
