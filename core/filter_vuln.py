@@ -174,7 +174,12 @@ def filter_vulnerable(
     safe = []
 
     for res in results:
-        text = f"{res.get('title', '')} {res.get('href', '')} {res.get('body', '')}"
+        if filter_type == "link":
+            # Link mode: cocokkan hanya pada href/URL (sesuai dokumentasi).
+            text = f"{res.get('href', '')}"
+        else:
+            # Path mode: gabungkan title, href, dan body.
+            text = f"{res.get('title', '')} {res.get('href', '')} {res.get('body', '')}"
         if any(pattern.search(text) for pattern in patterns):
             vulnerable.append(res)
         else:

@@ -1215,7 +1215,15 @@ def cli_mode(args):
                         writer = csv.DictWriter(f, fieldnames=["title","href","body"])
                         writer.writeheader()
                         for row in res:
-                            writer.writerow(row)
+                            # Tulis hanya kolom yang dikenal; result dict bisa
+                            # punya key ekstra (mis. metadata provider) yang
+                            # membuat DictWriter default (extrasaction='raise')
+                            # melempar ValueError.
+                            writer.writerow({
+                                "title": row.get("title", ""),
+                                "href": row.get("href", ""),
+                                "body": row.get("body", ""),
+                            })
                 else:
                     with open(fpath, "w", encoding="utf-8") as f:
                         f.write(f"Query: {q}\n\n")
@@ -1740,6 +1748,27 @@ def apply_env_to_args(args, workspace, argv=None) -> None:
             args.ghdb_file = str(workspace.guard_write(args.ghdb_file))
         else:
             args.ghdb_file = str(workspace.results_dir / os.path.basename(args.ghdb_file))
+
+    # Extraction destinations are write targets too: without this, the strict
+    # write guard could be bypassed via '--extract-database-to /anywhere'.
+    if args.database_dork_extract:
+        if _cli_passed(argv, "--database-dork-extract"):
+            args.database_dork_extract = str(workspace.guard_write(args.database_dork_extract))
+        else:
+            args.database_dork_extract = str(
+                workspace.results_dir / os.path.basename(args.database_dork_extract)
+            )
+    if args.extract_database_to:
+        if _cli_passed(argv, "--extract-database-to"):
+            args.extract_database_to = str(workspace.guard_write(args.extract_database_to))
+        else:
+            args.extract_database_to = str(
+                workspace.results_dir / os.path.basename(args.extract_database_to)
+            )
+    elif args.extract_database:
+        # '--extract-database' with the default destination writes './database'
+        # relative to CWD; keep it inside the environment instead.
+        args.extract_database_to = str(workspace.results_dir / "database")
 
 
 def env_cli(argv: List[str]) -> int:

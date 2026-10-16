@@ -60,25 +60,24 @@ class RecoveryStrategy:
                 result["action"] = RecoveryAction.RETRY_WITH_BACKOFF
                 result["metadata"]["reason"] = "Transient error, retry after a delay."
 
+            # NOTE: get_action() hanya memutuskan tindakan, tidak mencatat
+            # kegagalan. Pencatatan dilakukan SEKALI oleh orchestrator
+            # (batch_runner._on_retry) agar satu kegagalan tidak dihitung
+            # berkali-kali (dulu: batch_runner + RecoveryStrategy +
+            # FallbackManager → circuit breaker terbuka di ambang yang salah).
             elif error_category == ErrorCategory.RATE_LIMIT:
-                self.circuit_breaker.record_failure(backend)
                 result["action"] = RecoveryAction.SWITCH_BACKEND
                 result["metadata"]["reason"] = (
                     f"Backend {backend} hit rate limit. Switching to another backend."
                 )
 
             elif error_category == ErrorCategory.BLOCKED:
-                self.circuit_breaker.record_failure(backend)
-                if proxy:
-                    self.circuit_breaker.record_failure(proxy)
                 result["action"] = RecoveryAction.SWITCH_BACKEND
                 result["metadata"]["reason"] = (
                     f"Backend {backend} is blocking requests. Switch backend and/or proxy."
                 )
 
             elif error_category == ErrorCategory.PROXY_FAIL:
-                if proxy:
-                    self.circuit_breaker.record_failure(proxy)
                 result["action"] = RecoveryAction.ROTATE_PROXY
                 result["metadata"]["reason"] = "Proxy failed. Rotating to another proxy."
 

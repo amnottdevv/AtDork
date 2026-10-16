@@ -109,9 +109,14 @@ class FallbackManager:
         }
 
         try:
+            # NOTE: decide() hanya memutuskan, tidak mencatat kegagalan ke
+            # circuit breaker. Pencatatan di-centralkan di orchestrator
+            # (batch_runner._on_retry) supaya satu kegagalan dihitung sekali.
+            # report_failure() ke proxy_manager tetap di sini karena itu
+            # melacak kesehatan proxy, bukan circuit breaker.
+
             # 1. Rate limit → cooldown backend, ganti backend
             if error_category == ErrorCategory.RATE_LIMIT:
-                self.circuit_breaker.record_failure(current_backend)
                 healthy = self._get_healthy_backend(exclude=current_backend)
                 if healthy:
                     result["action"] = FallbackAction.SWITCH_BACKEND
@@ -124,11 +129,8 @@ class FallbackManager:
 
             # 2. Blocked → ganti backend + rotasi proxy
             if error_category == ErrorCategory.BLOCKED:
-                self.circuit_breaker.record_failure(current_backend)
-                if current_proxy:
-                    self.circuit_breaker.record_failure(current_proxy)
-                    if self.proxy_manager:
-                        self.proxy_manager.report_failure(current_proxy)
+                if current_proxy and self.proxy_manager:
+                    self.proxy_manager.report_failure(current_proxy)
                 healthy_backend = self._get_healthy_backend(exclude=current_backend)
                 healthy_proxy = self._get_healthy_proxy()
                 result["action"] = FallbackAction.SWITCH_BACKEND
@@ -139,10 +141,8 @@ class FallbackManager:
 
             # 3. Proxy fail → rotasi proxy
             if error_category == ErrorCategory.PROXY_FAIL:
-                if current_proxy:
-                    self.circuit_breaker.record_failure(current_proxy)
-                    if self.proxy_manager:
-                        self.proxy_manager.report_failure(current_proxy)
+                if current_proxy and self.proxy_manager:
+                    self.proxy_manager.report_failure(current_proxy)
                 healthy_proxy = self._get_healthy_proxy()
                 if healthy_proxy:
                     result["action"] = FallbackAction.ROTATE_PROXY

@@ -16,7 +16,6 @@ import time
 from typing import Optional, List, Dict, Any, Set
 
 import requests
-import urllib3
 from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
@@ -44,15 +43,10 @@ def _fetch_ghdb_json(timeout: int = 10, max_retries: int = 3) -> Optional[dict]:
         response = None
         try:
             logger.info("Requesting GHDB (attempt %d/%d): %s", attempt, max_retries, GHDB_URL)
+            # TLS verification is always kept enabled — a certificate failure is
+            # treated as a normal request error (retried), never silently
+            # downgraded to an unverified connection (MITM risk).
             response = requests.get(GHDB_URL, headers=HEADERS, timeout=timeout)
-        except requests.exceptions.SSLError:
-            logger.warning("SSL error, retrying without certificate verification")
-            urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-            try:
-                # Deliberate fallback: retry once without cert verification after SSLError (logged above).
-                response = requests.get(GHDB_URL, headers=HEADERS, timeout=timeout, verify=False)  # nosec B501
-            except requests.exceptions.RequestException as e:
-                logger.warning("Request failed (attempt %d): %s", attempt, e)
         except requests.exceptions.RequestException as e:
             logger.warning("Request failed (attempt %d): %s", attempt, e)
 

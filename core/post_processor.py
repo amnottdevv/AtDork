@@ -22,6 +22,16 @@ logger = logging.getLogger(__name__)
 
 _WINDOWS_SHELL_RISK_CHARS = ['&', '|', '>', '<', '^', '%']
 
+# Characters that force us to go through a real shell. If the template has
+# none of these we can pass the URL as a plain argv entry (shell=False) and be
+# immune to command injection on every platform.
+_SHELL_METACHARS = set("|&;<>()$`\n\r*?[]~")
+_WINDOWS_SHELL_ONLY_METACHARS = set("%^!")
+
+# Characters that cmd.exe still interprets even inside double quotes, so a URL
+# containing them cannot be safely embedded in a shell command on Windows.
+_WINDOWS_CMD_UNSAFE_CHARS = ['"', '%', '!', '\n', '\r']
+
 
 class PostProcessor:
     """
@@ -52,20 +62,22 @@ class PostProcessor:
         self.on_success = on_success
         self.on_error = on_error
 
-        # FIX: Peringatan sekali di awal jika berjalan di Windows dan command
-        # template memakai shell metacharacter (pipe, redirect, dll). Di
-        # Windows, shlex.quote() TIDAK memberi jaminan keamanan yang sama
-        # seperti di Linux/macOS karena cmd.exe mem-parsing karakter ini
-        # sendiri sebelum program tujuan menerimanya sebagai argumen biasa.
+        # FIX HIGH: Hanya pakai shell bila template memang butuh fitur shell
+        # (pipe, redirect, glob, dsb). Template sederhana seperti "curl -I {}"
+        # dijalankan tanpa shell sehingga URL tidak pernah di-parse oleh shell.
         self._is_windows = platform.system() == "Windows"
+        metachars = set(_SHELL_METACHARS)
         if self._is_windows:
+            metachars |= _WINDOWS_SHELL_ONLY_METACHARS
+        self._needs_shell = any(ch in self.command for ch in metachars)
+
+        if self._is_windows and self._needs_shell:
             template_risk = [c for c in _WINDOWS_SHELL_RISK_CHARS if c in self.command]
             logger.warning(
-                "PostProcessor is running on Windows with shell=True. "
-                "shlex.quote() only guarantees safe escaping for POSIX shells "
-                "(bash/sh) — on Windows, characters like & | > < ^ %% in scanned "
-                "URLs can slip through and be interpreted directly by cmd.exe "
-                "even when 'quoted'. %s"
+                "PostProcessor is running on Windows with a shell template. "
+                "Command templates that use pipes/redirects must go through "
+                "cmd.exe, and URLs containing %%, !, or \" cannot be escaped "
+                "safely there — such URLs will be skipped. %s"
                 "Use a simple command template without pipe/redirect on Windows, "
                 "or run AtDork via WSL for stronger escaping guarantees.",
                 (
@@ -81,6 +93,32 @@ class PostProcessor:
             "failed": 0,
             "timeout": 0,
         }
+        # FIX: stats di-update dari banyak thread (--exec-parallel) → lindungi.
+        self._stats_lock = threading.Lock()
+
+    def _bump(self, key: str, amount: int = 1) -> None:
+        """Update statistik secara thread-safe."""
+        with self._stats_lock:
+            self.stats[key] += amount
+
+    def _quote_for_shell(self, url: str) -> str:
+        """Quote URL untuk dimasukkan ke template shell.
+
+        POSIX memakai shlex.quote (aman). Windows (cmd.exe) tidak memahami
+        single-quote POSIX; karakter yang tetap berbahaya di dalam double-quote
+        (%, !, ") membuat URL tersebut tidak bisa diamankan → ditolak.
+        """
+        if self._is_windows:
+            unsafe = [c for c in _WINDOWS_CMD_UNSAFE_CHARS if c in url]
+            if unsafe:
+                raise ValueError(
+                    "URL contains characters that cannot be safely escaped for "
+                    f"cmd.exe ({', '.join(repr(c) for c in unsafe)}); "
+                    "refusing to run the shell command. Use a template without "
+                    "pipes/redirects to run this URL safely."
+                )
+            return f'"{url}"'
+        return shlex.quote(url)
 
     def _run_single(self, url: str) -> Dict:
         """
@@ -102,7 +140,7 @@ class PostProcessor:
             # FIX HIGH: Validate URL to prevent injection
             if not isinstance(url, str) or not url.strip():
                 result["error"] = "Invalid URL (empty or not string)"
-                self.stats["failed"] += 1
+                self._bump("failed")
                 return result
             
             # FIX HIGH: Check for suspicious patterns that could bypass shlex.quote
@@ -110,38 +148,40 @@ class PostProcessor:
             if any(char in url for char in suspicious_chars):
                 logger.warning(f"URL contains suspicious characters, skipping: {url[:50]}")
                 result["error"] = "URL contains suspicious characters"
-                self.stats["failed"] += 1
+                self._bump("failed")
                 return result
 
-            # Bangun perintah dengan proper escaping
-            url_escaped = shlex.quote(url)
-            cmd = self.command.replace("{}", url_escaped)
-
-            # FIX: Peringatan per-URL di Windows — shlex.quote() tidak
-            # menjamin karakter ini aman diteruskan ke cmd.exe walau URL
-            # sudah "di-quote". Tetap dijalankan (sesuai konfigurasi), tapi
-            # operator perlu tahu ini titik rawan yang tidak sepenuhnya
-            # tertutup oleh escaping saat ini.
-            if self._is_windows:
-                risky_found = [c for c in _WINDOWS_SHELL_RISK_CHARS if c in url]
-                if risky_found:
-                    logger.warning(
-                        "URL contains Windows shell characters (%s), shlex.quote() "
-                        "escaping may not be enough protection in cmd.exe: %s",
-                        ", ".join(risky_found), url[:80],
-                    )
-
-            # FIX HIGH: Log command without exposing sensitive data
-            logger.debug(f"Executing command with URL placeholder (URL length: {len(url)} chars)")
-
-            # Jalankan dengan strict safety settings
-            process = subprocess.run(
-                cmd,
-                shell=True,  # nosec
-                capture_output=True,
-                text=True,
-                timeout=self.timeout,
-            )
+            if not self._needs_shell:
+                # FIX HIGH: Tanpa shell, URL diteruskan sebagai satu argumen
+                # (shell=False) → tidak bisa di-injeksi di platform manapun.
+                argv = [
+                    token.replace("{}", url)
+                    for token in shlex.split(self.command, posix=not self._is_windows)
+                ]
+                logger.debug(
+                    "Executing command without shell (URL length: %d chars)", len(url)
+                )
+                process = subprocess.run(
+                    argv,
+                    shell=False,
+                    capture_output=True,
+                    text=True,
+                    timeout=self.timeout,
+                )
+            else:
+                # Template butuh fitur shell → escaping yang sesuai per-OS.
+                url_escaped = self._quote_for_shell(url)
+                cmd = self.command.replace("{}", url_escaped)
+                logger.debug(
+                    "Executing command with shell (URL length: %d chars)", len(url)
+                )
+                process = subprocess.run(
+                    cmd,
+                    shell=True,  # nosec
+                    capture_output=True,
+                    text=True,
+                    timeout=self.timeout,
+                )
 
             result["returncode"] = process.returncode
             result["stdout"] = process.stdout.strip()
@@ -149,14 +189,14 @@ class PostProcessor:
 
             if process.returncode == 0:
                 result["success"] = True
-                self.stats["success"] += 1
+                self._bump("success")
                 if self.on_success:
                     try:
                         self.on_success(url, result)
                     except Exception as e:
                         logger.error("Error in on_success callback: %s", e)
             else:
-                self.stats["failed"] += 1
+                self._bump("failed")
                 result["error"] = f"Exit code: {process.returncode}"
                 if self.on_error:
                     try:
@@ -165,7 +205,7 @@ class PostProcessor:
                         logger.error("Error in on_error callback: %s", e)
 
         except subprocess.TimeoutExpired:
-            self.stats["timeout"] += 1
+            self._bump("timeout")
             result["error"] = f"Timeout after {self.timeout}s"
             if self.on_error:
                 try:
@@ -174,7 +214,7 @@ class PostProcessor:
                     logger.error("Error in on_error callback: %s", e)
 
         except Exception as e:
-            self.stats["failed"] += 1
+            self._bump("failed")
             result["error"] = str(e)
             logger.error("Error running command for %s: %s", url[:50], e)
             if self.on_error:
@@ -218,7 +258,7 @@ class PostProcessor:
                             "success": False,
                             "error": "Future timeout",
                         })
-                        self.stats["timeout"] += 1
+                        self._bump("timeout")
                     except Exception as e:
                         logger.error("Error getting results for %s: %s", url[:50], e)
                         results.append({
@@ -226,7 +266,7 @@ class PostProcessor:
                             "success": False,
                             "error": str(e),
                         })
-                        self.stats["failed"] += 1
+                        self._bump("failed")
         else:
             for url in urls:
                 result = self._run_single(url)

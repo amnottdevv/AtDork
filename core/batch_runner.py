@@ -295,10 +295,18 @@ def build_query_executor(
 
             logger.debug("Retry attempt %d after error %s: %s", attempt, category, exception)
 
-            # Selalu catat kegagalan ke circuit breaker untuk backend saat ini
+            # Catat kegagalan ke circuit breaker SEKALI di sini (satu-satunya
+            # pemilik pencatatan). Dulu RecoveryStrategy.get_action() dan
+            # FallbackManager.decide() juga mencatat kegagalan yang sama,
+            # sehingga ambang circuit breaker tercapai 3x lebih cepat.
             if circuit_breaker:
                 try:
                     circuit_breaker.record_failure(current_backend)
+                    if current_proxy and category in (
+                        ErrorCategory.BLOCKED,
+                        ErrorCategory.PROXY_FAIL,
+                    ):
+                        circuit_breaker.record_failure(current_proxy)
                     if stats_collector:
                         try:
                             stats_collector.record_circuit_breaker(

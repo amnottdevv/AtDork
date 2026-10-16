@@ -47,7 +47,15 @@ def _parse_target(target: str) -> tuple[str, str]:
         raise ValueError(
             f"Unsupported platform '{platform}'. Supported: {', '.join(PLATFORM_NAMES.keys())}"
         )
-    if not url.startswith("http"):
+    if platform == "telegram":
+        # Telegram uses 'telegram:<bot_token>/<chat_id>', not a webhook URL.
+        if "/" not in url:
+            raise ValueError(
+                f"Invalid Telegram target: {target}. "
+                "Format: telegram:<bot_token>/<chat_id> "
+                "(e.g., telegram:123456:ABC-DEF/987654321)"
+            )
+    elif not url.startswith("http"):
         raise ValueError(f"Invalid webhook URL: {url}")
     return platform, url
 
