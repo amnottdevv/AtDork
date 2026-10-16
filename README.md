@@ -666,18 +666,19 @@ If you find this tool useful, consider leaving a ⭐ on GitHub!
 
 
 
+
 ## Code Quality Metrics
 
-![Complexity](https://img.shields.io/badge/complexity-5.60-brightgreen)
+![Complexity](https://img.shields.io/badge/complexity-5.59-brightgreen)
 ![Maintainability](https://img.shields.io/badge/maintainability-60.4-brightgreen)
 ![Coverage](https://img.shields.io/badge/coverage-63.2%25-yellow)
 ![Pylint](https://img.shields.io/badge/pylint-9.01%2F100-brightgreen)
 
 | Metric | Score | Status |
 |--------|-------|--------|
-| Cyclomatic Complexity | 5.60 avg | ✅ Good |
+| Cyclomatic Complexity | 5.59 avg | ✅ Good |
 | Maintainability Index | 60.4 | ✅ Good |
 | Test Coverage | 63.2% | ⚠️ Fair |
 | Pylint Score | 9.01/100 | ✅ Good |
 
-*Analysis: atdork.py, core/, lib/ • Last updated: 2026-10-16 08:16:24 UTC*
+*Analysis: atdork.py, core/, lib/ • Last updated: 2026-10-16 10:23:40 UTC*
