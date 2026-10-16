@@ -265,8 +265,14 @@ def _deep_merge(base: Dict[str, Any], override: Dict[str, Any]) -> Dict[str, Any
     return out
 
 
-def _discover_paths(filepath: Optional[str]) -> List[str]:
-    """Layer order: global → CWD → explicit (first existing name per layer)."""
+def _discover_paths(filepath: Optional[str],
+                    env_config_path: Optional[str] = None) -> List[str]:
+    """Layer order: global → CWD → env config → explicit (first match per layer).
+
+    When `env_config_path` is set (an environment is active) the working
+    directory layer is skipped: config is deterministic and workspace-scoped,
+    no accidental atdork.yaml from whatever folder you happen to be in.
+    """
     paths: List[str] = []
 
     if filepath is None:
@@ -279,11 +285,15 @@ def _discover_paths(filepath: Optional[str]) -> List[str]:
             paths.append(candidate)
             break
 
-    for name in _CWD_CANDIDATES:
-        candidate = os.path.join(os.getcwd(), name)
-        if os.path.isfile(candidate):
-            paths.append(candidate)
-            break
+    if env_config_path is None:
+        for name in _CWD_CANDIDATES:
+            candidate = os.path.join(os.getcwd(), name)
+            if os.path.isfile(candidate):
+                paths.append(candidate)
+                break
+
+    if env_config_path:
+        paths.append(env_config_path)
 
     if filepath:
         paths.append(filepath)
@@ -336,7 +346,19 @@ def get_setting(key: str, default: Optional[Any] = None) -> Optional[Any]:
     return default
 
 
-def load_config(filepath: Optional[str] = None) -> Dict[str, Any]:
+def override_setting(key: str, value: Any) -> None:
+    """
+    Runtime override of a single setting in the loaded config.
+
+    Used by the environment (workspace) layer to redirect path-ish settings
+    (package_dir, db_repo, ...) so downstream modules reading via
+    get_setting() see the env-owned locations. Call after load_config().
+    """
+    _CURRENT[key] = value
+
+
+def load_config(filepath: Optional[str] = None,
+                env_config_path: Optional[str] = None) -> Dict[str, Any]:
     """
     Load configuration from layered YAML files, environment variables, and defaults.
 
@@ -345,6 +367,9 @@ def load_config(filepath: Optional[str] = None) -> Dict[str, Any]:
                   ATDORK_CONFIG is consulted; discovery then always layers
                   the global file, the working-directory file, and the
                   explicit path (lowest → highest precedence).
+        env_config_path: Env-local config (``<env>/.config/config.yml``)
+                  inserted above the working-directory layer. Passing it also
+                  disables working-directory discovery (workspace-scoped).
 
     Returns:
         Merged configuration: flat legacy keys (CLI-facing) plus the nested
@@ -355,7 +380,7 @@ def load_config(filepath: Optional[str] = None) -> Dict[str, Any]:
                      that references an unset environment variable.
     """
     merged: Dict[str, Any] = {}
-    for path in _discover_paths(filepath):
+    for path in _discover_paths(filepath, env_config_path):
         layer = _load_yaml(path)
         if layer is None:
             if filepath:
@@ -371,6 +396,22 @@ def load_config(filepath: Optional[str] = None) -> Dict[str, Any]:
                 "Config %s: environment '%s' is not set (used at '%s'); value left empty.",
                 path, var, path_ or "<root>",
             )
+
+        # Section values override the SAME layer's root keys; flatten them
+        # into the layer before merging so cross-layer precedence stays
+        # natural (a higher layer's root key beats a lower layer's section).
+        search_section = layer.get("search")
+        if isinstance(search_section, dict):
+            for key, value in search_section.items():
+                if key in DEFAULT_CONFIG:
+                    layer[key] = value
+        out_section = layer.get("output")
+        if isinstance(out_section, dict):
+            for key in ("format", "output_dir", "no_snippet"):
+                if key in out_section:
+                    layer[key] = out_section[key]
+            if "dir" in out_section and "output_dir" not in out_section:
+                layer["output_dir"] = out_section["dir"]
 
         merged = _deep_merge(merged, layer)
 
@@ -392,18 +433,13 @@ def load_config(filepath: Optional[str] = None) -> Dict[str, Any]:
             # Legacy v1 behaviour: silently ignore unknown keys.
             logger.debug("Ignoring unknown config key: %s", key)
 
-    # `search:` section wins over legacy root keys / defaults.
-    for key, value in sections["search"].items():
-        if key in config:
-            config[key] = value
-
-    # `output:` section flattens onto CLI-facing keys (dir → output_dir).
+    # Effective CLI-facing values already come out of the per-layer
+    # flattening above (section keys were folded into each layer's root in
+    # layer order). Sections stay stored under their names for modules
+    # reading them via get_setting() (engines, profiles, search.fallback, ...).
     output_section = sections["output"]
     if "dir" in output_section:
         output_section.setdefault("output_dir", output_section["dir"])
-    for key in ("format", "output_dir", "no_snippet"):
-        if key in output_section:
-            config[key] = output_section[key]
 
     # Environment overrides (flat, scalar keys only), then attach sections.
     config = _merge_with_env(config)

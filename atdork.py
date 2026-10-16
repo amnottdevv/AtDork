@@ -76,7 +76,8 @@ from rich.prompt import Prompt
 from rich.table import Table
 from pyfiglet import Figlet
 
-from core.config import load_config, get_setting, ConfigError
+from core.config import load_config, get_setting, override_setting, ConfigError
+from core.env import EnvError, guard_if_env, resolve_env
 from core.scanner import search_dork, SearchError
 from core.batch_runner import (
     load_queries_from_file,
@@ -185,6 +186,9 @@ def build_parser():
     )
     # Konfigurasi
     parser.add_argument("--config", type=str, help="Path to YAML config file.")
+    parser.add_argument("--env", type=str,
+                        help="AtDork environment root (all results/cache/logs/state "
+                             "stay inside it). Also: ATDORK_ENV, 'atdork env use'.")
     parser.add_argument("--interactive", action="store_true", help="Run interactive mode.")
 
     # Package manager (Atdork-DB)
@@ -1604,6 +1608,14 @@ def _pkg_index(argv: List[str]) -> int:
     parser.add_argument("--repo", type=str, help="Atdork-DB path override.")
     args_ = parser.parse_args(argv)
 
+    # Env aktif: index rebuild menulis Index.idn — repo wajib dalam root env.
+    if args_.repo:
+        try:
+            args_.repo = guard_if_env(args_.repo)
+        except EnvError as exc:
+            console.print(f"[red]Environment error: {exc}[/red]")
+            return 1
+
     if args_.build:
         try:
             stats = build_pkg_index(repo=args_.repo)
@@ -1665,11 +1677,217 @@ def package_cli(argv: List[str]) -> int:
         return 130
 
 
+# ── Environment (workspace) CLI ────────────────────────────────────────────
+
+def _fmt_bytes(n: int) -> str:
+    for unit in ("B", "KB", "MB", "GB"):
+        if n < 1024 or unit == "GB":
+            return f"{n} {unit}" if unit == "B" else f"{n:.1f} {unit}"
+        n /= 1024
+    return f"{n:.1f} GB"  # pragma: no cover
+
+
+def _cli_passed(argv, *flags) -> bool:
+    """Did the user pass one of these flags explicitly on the CLI?"""
+    for tok in argv:
+        for f in flags:
+            if tok == f:
+                return True
+            if f.startswith("--") and tok.startswith(f + "="):
+                return True
+            if f == "-o" and tok.startswith("-o") and not tok.startswith("--"):
+                return True
+    return False
+
+
+def apply_env_to_args(args, workspace, argv=None) -> None:
+    """Redirect every path-ish argument into the environment (strict guard).
+
+    Values coming from the CLI are kept but constrained to the root
+    (EnvEscapeError when they resolve outside); values from defaults/config
+    are replaced with the env-owned locations.
+    """
+    argv = list(argv if argv is not None else sys.argv[1:])
+
+    def pick(cli_flags, attr, env_path):
+        if _cli_passed(argv, *cli_flags):
+            setattr(args, attr, str(workspace.guard_write(getattr(args, attr))))
+        else:
+            setattr(args, attr, str(env_path))
+
+    pick(("--output-dir",), "output_dir", workspace.results_dir)
+    if args.output:
+        if _cli_passed(argv, "-o", "--output"):
+            args.output = str(workspace.guard_write(args.output))
+        else:
+            args.output = str(workspace.results_dir / os.path.basename(args.output))
+    pick(("--log-file",), "log_file", workspace.log_file)
+    pick(("--db-path",), "db_path", workspace.db_path)
+    pick(("--cache-db",), "cache_db", workspace.cache_db)
+    pick(("--package-dir",), "package_dir", workspace.packages_dir)
+    pick(("--db-repo",), "db_repo", workspace.db_repo)
+
+    # Explicit extra write targets — constrain when set.
+    if args.database_path:
+        args.database_path = str(workspace.guard_write(args.database_path))
+    if args.export_db:
+        if _cli_passed(argv, "--export-db"):
+            args.export_db = str(workspace.guard_write(args.export_db))
+        else:
+            args.export_db = str(workspace.state_dir / os.path.basename(args.export_db))
+    if args.ghdb_file:
+        if _cli_passed(argv, "--ghdb-file"):
+            args.ghdb_file = str(workspace.guard_write(args.ghdb_file))
+        else:
+            args.ghdb_file = str(workspace.results_dir / os.path.basename(args.ghdb_file))
+
+
+def env_cli(argv: List[str]) -> int:
+    """`atdork env create|init|list|use|which|info|destroy` → exit code."""
+    import argparse as _argparse
+    from core.env import (
+        Env, MARKER_NAME, create_env, destroy_env, list_env_roots,
+        read_registry, set_active_env,
+    )
+
+    parser = _argparse.ArgumentParser(
+        prog="atdork env",
+        description="Manage isolated AtDork environments: one root folder that "
+                    "holds results, logs, cache, state, config and the "
+                    "Atdork-DB checkout.",
+    )
+    sub = parser.add_subparsers(dest="action")
+    p_create = sub.add_parser("create", aliases=["init"],
+                              help="Create an environment at <path> (idempotent).")
+    p_create.add_argument("path")
+    p_create.add_argument("--name", type=str, default=None)
+    p_create.add_argument("--force", action="store_true",
+                          help="Rewrite the marker file (new name/timestamp).")
+    sub.add_parser("list", help="List registered environments.")
+    p_use = sub.add_parser("use", help="Set the default active environment.")
+    p_use.add_argument("path")
+    sub.add_parser("which", help="Show the resolved environment and its paths.")
+    sub.add_parser("info", help="Show environment size and status.")
+    p_destroy = sub.add_parser("destroy",
+                               help="Unregister an environment (keeps files unless --delete).")
+    p_destroy.add_argument("path")
+    p_destroy.add_argument("--delete", action="store_true",
+                           help="Also delete the environment folder (asks for confirmation).")
+    args_ = parser.parse_args(argv)
+
+    try:
+        if args_.action in ("create", "init"):
+            env = create_env(args_.path, name=args_.name, force=args_.force)
+            console.print(f"[green]✔ Environment ready:[/green] {env.root}")
+            for key, value in env.describe_paths().items():
+                console.print(f"  [dim]{key:8}[/dim] {value}")
+            console.print(
+                f"\n[dim]Use it:[/dim] atdork --env {env.root} -q \"...\"  "
+                f"[dim]or set as default:[/dim] atdork env use {env.root}"
+            )
+            return 0
+
+        if args_.action == "list":
+            reg = read_registry()
+            roots = list_env_roots()
+            if not roots:
+                console.print("[dim]No environments registered. "
+                              "Create one with: atdork env create <path>[/dim]")
+                return 0
+            for root in roots:
+                tags = ""
+                if root == reg.get("active"):
+                    tags += " [green](active)[/green]"
+                if Env.at(root) is None:
+                    tags += " [red](missing)[/red]"
+                console.print(f"  {root}{tags}")
+            return 0
+
+        if args_.action == "use":
+            env = Env.at(args_.path)
+            if env is None:
+                raise EnvError(
+                    f"'{args_.path}' is not an AtDork environment "
+                    f"(missing {MARKER_NAME}). Create it first: "
+                    f"atdork env create {args_.path}"
+                )
+            set_active_env(env.root)
+            console.print(f"[green]✔ Active environment:[/green] {env.root}")
+            return 0
+
+        if args_.action == "which":
+            env = resolve_env()
+            if env is None:
+                console.print("[yellow]No environment active.[/yellow] "
+                              "(--env, ATDORK_ENV, or 'atdork env use <path>')")
+                return 0
+            console.print(f"[green]✔ Environment:[/green] {env.root}"
+                          + (f" [dim]({env.name})[/dim]" if env.name else ""))
+            for key, value in env.describe_paths().items():
+                console.print(f"  [dim]{key:8}[/dim] {value}")
+            return 0
+
+        if args_.action == "info":
+            env = resolve_env()
+            if env is None:
+                console.print("[yellow]No environment active.[/yellow] "
+                              "(--env, ATDORK_ENV, or 'atdork env use <path>')")
+                return 1
+            created = env.meta.get("created_at", "?")
+            console.print(f"[green]✔ Environment:[/green] {env.root} "
+                          f"[dim](name: {env.name or '-'}, created: {created})[/dim]")
+            console.print("  [dim]usage by area:[/dim]")
+            for rel, total in env.usage_bytes().items():
+                console.print(f"    {rel:18} {_fmt_bytes(total)}")
+            n_results = sum(len(files) for _r, _d, files in os.walk(env.results_dir))
+            console.print(f"  [dim]results files:[/dim] {n_results}")
+            console.print(
+                f"  [dim]db repo:[/dim] "
+                + ("ready" if env.db_repo.is_dir()
+                   else "not cloned yet (run: atdork update)")
+            )
+            return 0
+
+        if args_.action == "destroy":
+            if args_.delete:
+                from rich.prompt import Confirm
+                if not Confirm.ask(
+                    f"Delete environment '{args_.path}' and ALL files inside it?"
+                ):
+                    console.print("[yellow]Cancelled.[/yellow]")
+                    return 1
+            destroy_env(args_.path, delete_files=args_.delete)
+            console.print(
+                "[green]✔ Environment removed[/green] "
+                + ("(folder deleted)" if args_.delete
+                   else "(unregistered; files kept on disk)")
+            )
+            return 0
+
+        parser.print_help()
+        return 2
+    except EnvError as exc:
+        console.print(f"[red]Environment error: {exc}[/red]")
+        return 1
+
+
 def main():
     # 1. Parser minimal khusus untuk --config
     config_parser = argparse.ArgumentParser(add_help=False)
     config_parser.add_argument("--config", type=str, default=None)
+    config_parser.add_argument("--env", type=str, default=None)
     config_args, remaining = config_parser.parse_known_args()
+
+    # 1b. Resolve AtDork environment (workspace) — before config load, so the
+    #     env layer joins config discovery and `atdork env ...` works even
+    #     with a broken config file.
+    if remaining and remaining[0] == "env":
+        sys.exit(env_cli(remaining[1:]))
+    try:
+        workspace = resolve_env(config_args.env)
+    except EnvError as e:
+        console.print(f"[red]Environment error: {e}[/red]")
+        sys.exit(1)
 
     # 2. Muat konfigurasi SELALU (auto-discover atdork.yaml/AtDork.yaml di CWD
     #    + env ATDORK_*), bukan hanya saat --config diberikan (bug lama:
@@ -1680,7 +1898,10 @@ def main():
         sys.exit(1)
 
     try:
-        loaded = load_config(config_args.config)
+        loaded = load_config(
+            config_args.config,
+            env_config_path=str(workspace.config_file) if workspace else None,
+        )
         if isinstance(loaded, dict):
             raw_config = loaded
         elif loaded is not None:
@@ -1696,6 +1917,16 @@ def main():
 
     # Normalisasi kunci: ganti tanda '-' menjadi '_' agar cocok dengan argparse dest
     config = {k.replace('-', '_'): v for k, v in raw_config.items()}
+
+    # --- Environment (workspace): lokasi store DB & package dimiliki env ---
+    # Package manager membaca kunci ini lewat config (get_setting), bukan args,
+    # jadi di-inject ke dua tempat: raw_config (→ argparse defaults) dan
+    # _CURRENT (→ get_setting).
+    if workspace:
+        for key, value in (("package_dir", str(workspace.packages_dir)),
+                           ("db_repo", str(workspace.db_repo))):
+            raw_config[key] = value
+            override_setting(key, value)
 
     # --- Package manager subcommands (atdork install / search / ...) ---
     # Dispatched before the full parser so they don't clash with search flags.
@@ -1720,6 +1951,15 @@ def main():
 
     # 5. Parse seluruh command line
     args = parser.parse_args(remaining)
+
+    # 5b. Environment aktif → semua tulisan dipaksa ke dalam root env
+    #     (strict path guard: nilai dari CLI yang keluar root = error).
+    if workspace:
+        try:
+            apply_env_to_args(args, workspace)
+        except EnvError as e:
+            console.print(f"[red]Environment error: {e}[/red]")
+            sys.exit(1)
 
     setup_logging(debug=args.debug, log_file=args.log_file)
 

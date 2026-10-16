@@ -60,3 +60,12 @@ Resolution protocols for common failure vectors encountered during large-scale n
     * Or skip the store entirely and run refs straight from the bundled database: `--database-dork @cve` (works without `install`).
 
 See [Docker](docker.md) for volumes, bind mounts, and compose examples.
+
+## 8. Environment: "… is not an AtDork environment" or "outside the environment"
+
+* **Symptom:** `--env`/`ATDORK_ENV` fails with `missing .atdork-env`, or a path is rejected with `resolves to '…' which is outside the environment`.
+* **Mitigation Actions:**
+    * Create the workspace first: `atdork env create <path>` — an environment is a plain folder with a marker, not any directory.
+    * While an environment is active all writes must stay inside its root; relative paths already resolve **against the root** (`results/x.json` → `<root>/results/x.json`), so prefer those.
+    * Output still appearing in `./results/`? No environment is actually active — verify with `atdork env which`.
+    * Full guide: [Environment](features/environment.md).

@@ -31,6 +31,7 @@ To master AtDork, explore the documentation layout based on your skill level:
 - **[Docker](docker.md)** – Containerized usage, volumes, and compose.
 - **[Dork Database](database/index.md)** – Packages, package manager, and the [web catalog](https://amnottdevv.github.io/Atdork-DB/).
 - **[Features](features/resilience-system.md)** – Deep dive into resilience, proxy, templates, and batch processing.
+- **[Environment](features/environment.md)** – Isolated workspaces: every result, log and cache file stays inside one root folder.
 - **[CLI Reference](cli-reference.md)** – The full master matrix containing all 50+ configuration flags.
 - **[Configuration](configuration.md)** – The `atdork.yml` guide: layered files, sections, `${ENV}` interpolation.
 - **[Engines & Providers](engines.md)** – Scraping engines plus Serper / SerpApi / Brave Search API providers.
@@ -62,6 +63,7 @@ To master AtDork, explore the documentation layout based on your skill level:
 | [Basic Usage](basic-usage.md) | Common commands and examples |
 | [Dork Database](database/index.md) | Package manager + [web catalog](https://amnottdevv.github.io/Atdork-DB/) |
 | [Package Manager](features/package-manager.md) | `search` / `install` / `update` deep dive |
+| [Environment](features/environment.md) | Isolated workspaces — nothing written outside the root |
 | [Configuration](configuration.md) | `atdork.yml` v2: sections, layering, `${ENV}` interpolation |
 | [Engines & Providers](engines.md) | Built-in engines + Serper / SerpApi / Brave API providers |
 | [Resilience System](features/resilience-system.md) | Circuit breakers, adaptive delays, and fallback |

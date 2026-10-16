@@ -72,6 +72,7 @@ Complete reference for all command-line arguments available in AtDork.
 | `--no-dedup` | Boolean | `false` | Disable URL deduplication |
 | `--export-db` | Path | None | Export database to file (json/csv) |
 | `--config` | Path | None | YAML config file path |
+| `--env` | Path | None | Environment root — all results/logs/cache/state stay inside it ([Environment](features/environment.md)) |
 | `--interactive` | Boolean | `false` | Run interactive mode |
 | `--debug` | Boolean | `false` | Enable debug logging |
 | `--version` | None | None | Show version and exit |
@@ -106,6 +107,29 @@ atdork install c@cve_1.txt          # shorthand (unique folder prefix)
 atdork install @ghdb                # whole folder
 atdork installed                    # verify the store
 atdork update                       # refresh the database checkout
+```
+
+---
+
+## Environment Subcommands
+
+Manage isolated workspaces — every file AtDork writes stays inside the
+environment root. Full guide: [Environment](features/environment.md).
+
+| Subcommand | Description |
+| :--- | :--- |
+| `atdork env create <path> [--name N]` | Create the workspace layout + marker (idempotent; `init` is an alias). |
+| `atdork env list` | List registered environments. |
+| `atdork env use <path>` | Set the default active environment. |
+| `atdork env which` | Show the resolved environment and its owned paths. |
+| `atdork env info` | Size per area, results count, DB clone status. |
+| `atdork env destroy <path> [--delete]` | Unregister (keep files) or delete the folder. |
+
+```bash
+atdork env create ~/osint-job        # one-time
+atdork env use ~/osint-job           # default for every command
+atdork -q "inurl:admin"              # results land in <root>/results/
+atdork --env /other/job -q "..."     # per-command override
 ```
 
 Installed packages run as batch files (`--batch-file c@cve_1.txt`); any ref
