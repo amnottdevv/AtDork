@@ -1,9 +1,27 @@
 #!/usr/bin/env python3
 """
 Atdork - Professional OSINT Tool
-Version : 1.3.9.7
+Version : 1.4.0
 Author  : alzzmarket
 GitHub  : github.com/amnottdevv/atdork
+
+Changelog (1.4.0):
+  - Professional YAML config v2: nested sections (search, engines,
+    profiles, resilience, output), layered discovery
+    (global ~/.config/atdork -> working dir -> --config), ${ENV}
+    interpolation with ${VAR:-default} defaults, strict validation
+    with clear errors. Legacy flat v1 files keep working unchanged.
+  - Third-party search API providers (core/providers/): Serper.dev,
+    SerpApi and Brave Search API, configured under `engines:` in
+    atdork.yml. Results are normalised to {title, href, body};
+    quota/rate-limit/auth errors are classified so quota and rate
+    limits skip to the next backend without wasting retries, and API
+    keys are masked everywhere via the redactor.
+  - Named backend chains: `profiles:` entries usable as
+    --backend <name>; `search.fallback` defines the explicit chain.
+  - --resilient circuit breaker is now tunable via `resilience:`.
+  - Docs: configuration.md rewritten (full .yml guide), new
+    engines.md (supported providers), examples/atdork.yml.
 
 Changelog (1.3.9.7):
   - Dork data moved out of the tool into the Atdork-DB repository
@@ -58,7 +76,7 @@ from rich.prompt import Prompt
 from rich.table import Table
 from pyfiglet import Figlet
 
-from core.config import load_config
+from core.config import load_config, get_setting, ConfigError
 from core.scanner import search_dork, SearchError
 from core.batch_runner import (
     load_queries_from_file,
@@ -120,7 +138,7 @@ from core.manage_cache import SearchCache
 # Notification
 from core.notification import send_batch_summary
 
-VERSION = "1.3.9.7"
+VERSION = "1.4.0"
 
 console = Console()
 logger = logging.getLogger("atdork")
@@ -192,7 +210,11 @@ def build_parser():
     parser.add_argument("--region", type=str, default="us-en", help="Search region.")
     parser.add_argument("--safesearch", type=str, default="moderate", choices=["on","moderate","off"])
     parser.add_argument("--timelimit", type=str, default=None, choices=["d","w","m","y"])
-    parser.add_argument("--backend", type=str, default="auto", help="Search engine backend.")
+    parser.add_argument("--backend", type=str, default="auto",
+                        help="Search engine backend: auto, google, bing, duckduckgo, brave, "
+                             "mojeek, startpage, wikipedia, ... — or an API engine configured "
+                             "under engines: in atdork.yml (serper, serpapi, brave), or a "
+                             "chain name from profiles:.")
 
     # Request tuning
     parser.add_argument("--user-agent", type=str, help="Custom User-Agent.")
@@ -423,9 +445,33 @@ def _setup_case_modules(args, proxy_manager) -> dict:
     }
 
     if args.resilient:
-        modules["circuit_breaker"] = CircuitBreaker(threshold=3, cooldown=120.0)
+        # Tunable via the `resilience:` section of atdork.yml (schema v2).
+        resilience = get_setting("resilience")
+        if not isinstance(resilience, dict):
+            resilience = {}
+        cb_cfg = resilience.get("circuit_breaker")
+        if not isinstance(cb_cfg, dict):
+            cb_cfg = {}
+        try:
+            cb_threshold = int(cb_cfg.get("failure_threshold", 3))
+            cb_cooldown = float(resilience.get("cooldown", cb_cfg.get("reset_timeout", 120.0)))
+        except (TypeError, ValueError):
+            cb_threshold, cb_cooldown = 3, 120.0
+        modules["circuit_breaker"] = CircuitBreaker(threshold=cb_threshold, cooldown=cb_cooldown)
+
+        # Backend chain: `search.fallback` from atdork.yml when set, else the
+        # legacy scraping set.
+        legacy_backends = ["duckduckgo", "startpage", "yandex", "yahoo", "wikipedia"]
+        search_cfg = get_setting("search")
+        chain: list = []
+        if isinstance(search_cfg, dict):
+            raw_chain = search_cfg.get("fallback")
+            if isinstance(raw_chain, str):
+                chain = [b.strip() for b in raw_chain.split(",") if b.strip()]
+            elif isinstance(raw_chain, list):
+                chain = [str(b).strip() for b in raw_chain if str(b).strip()]
         modules["fallback_manager"] = FallbackManager(
-            backends=["duckduckgo", "startpage", "yandex", "yahoo", "wikipedia"],
+            backends=chain or legacy_backends,
             circuit_breaker=modules["circuit_breaker"],
             proxy_manager=proxy_manager,
         )
@@ -1639,6 +1685,11 @@ def main():
             raw_config = loaded
         elif loaded is not None:
             console.print("[yellow]Warning: Config file did not yield a dictionary, using defaults.[/yellow]")
+    except ConfigError as e:
+        # Invalid schema / missing ${ENV} for a configured engine → fail fast
+        # with a clear, actionable message instead of silently misbehaving.
+        console.print(f"[red]Config error: {e}[/red]")
+        sys.exit(1)
     except Exception as e:
         console.print(f"[red]Error loading config file: {e}[/red]")
         console.print("[yellow]Continuing with default values...[/yellow]")
@@ -1654,12 +1705,16 @@ def main():
     # 3. Bangun parser penuh
     parser = build_parser()
 
-    # 4. Hanya terapkan kunci yang valid (dikenali oleh parser)
+    # 4. Hanya terapkan kunci yang valid (dikenali oleh parser).
+    #    Kunci berupa section v2 (search/engines/profiles/...) sengaja tidak
+    #    diterapkan ke parser — mereka dibaca modul via get_setting().
+    v2_section_keys = {"search", "engines", "profiles", "resilience",
+                       "output", "workflows", "version"}
     valid_dests = {action.dest for action in parser._actions if action.dest != 'help'}
     filtered_config = {k: v for k, v in config.items() if k in valid_dests}
-    if len(filtered_config) < len(config):
-        ignored = set(config.keys()) - set(filtered_config.keys())
-        console.print(f"[dim]Unknown config keys ignored: {', '.join(ignored)}[/dim]")
+    ignored = set(config.keys()) - set(filtered_config.keys()) - v2_section_keys
+    if ignored:
+        console.print(f"[dim]Unknown config keys ignored: {', '.join(sorted(ignored))}[/dim]")
 
     parser.set_defaults(**filtered_config)
 

@@ -83,6 +83,7 @@ nav:
   - Reference:
       - CLI Reference: cli-reference.md
       - Configuration: configuration.md
+      - Engines & Providers: engines.md
   - Support:
       - Troubleshooting: troubleshooting.md
       - Contributing: contributing.md

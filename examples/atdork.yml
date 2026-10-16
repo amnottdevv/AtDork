@@ -1,0 +1,76 @@
+# AtDork example configuration (schema v2)
+#
+# Copy to one of the discovery locations:
+#   ~/.config/atdork/config.yml    (global)
+#   ./atdork.yaml                  (current directory)
+#   atdork -q "..." --config ./atdork.yml
+#
+# Every value is optional. CLI flags always override this file.
+# API keys: reference the environment (export SERPER_API_KEY=...),
+# never write real keys into a committed file.
+
+version: 2
+
+# ── Search behaviour ─────────────────────────────────────────────
+search:
+  max_results: 30              # 1-100 results per query
+  region: "us-en"              # <country>-<language>
+  safesearch: "moderate"       # on | moderate | off
+  timelimit: null              # d | w | m | y | null
+  backend: "auto"              # auto | scraping backend | API engine | profile
+  fallback:                    # explicit fallback chain (optional):
+    - google                   # replaces the built-in ddgs chain
+    - serper
+    - brave
+  timeout: 10                  # seconds per attempt
+  retries: 2                   # retries per backend
+  delay: 0.0                   # seconds between requests
+  concurrency: 4               # worker threads for batch mode
+  # user_agent: "MyBot/1.0"    # null = auto-rotate
+  # proxy: socks5://127.0.0.1:9050
+  # proxy_file: ~/.atdork/proxies.txt
+  # tor: false
+  # strict: false
+  # no_fallback_backends: false
+
+# ── Third-party search APIs (docs: engines.md) ───────────────────
+# A configured name overrides a built-in backend of the same name.
+engines:
+  serper:
+    type: api
+    api_key: ${SERPER_API_KEY} # ${ENV} — load fails fast if unset
+    qps: 1                     # local rate limit (0 = unlimited)
+    timeout: 10
+  serpapi:
+    type: api
+    api_key: ${SERPAPI_KEY}
+    qps: 1
+    engine: google             # serpapi engine name
+  brave:
+    type: api
+    api_key: ${BRAVE_API_KEY}
+    qps: 1                     # free tier: 1 query/second
+
+# ── Named chains: atdork -q "..." --backend resilient ───────────
+profiles:
+  resilient: [google, serper, brave]
+  cheap: [duckduckgo, mojeek]  # scraping only — no API credits
+
+# ── Resilience tuning (active with --resilient) ─────────────────
+resilience:
+  circuit_breaker:
+    failure_threshold: 5       # failures before the breaker opens (default 3)
+    reset_timeout: 90          # seconds before the breaker half-opens
+  cooldown: 90                 # overrides reset_timeout when both are set
+
+# ── Output ───────────────────────────────────────────────────────
+output:
+  format: json                 # txt | json | csv
+  dir: ./results               # alias: output_dir
+  no_snippet: false
+
+# ── Legacy flat keys (schema v1) still work at the root ─────────
+# max_results: 50
+# backend: "google"
+# format: "csv"
+# debug: false

@@ -26,7 +26,7 @@ Complete reference for all command-line arguments available in AtDork.
 | `--region` | Choice | `us-en` | Search region |
 | `--safesearch` | Choice | `moderate` | SafeSearch level: `on`, `moderate`, `off` |
 | `--timelimit` | Choice | None | Time filter: `d`, `w`, `m`, `y` |
-| `--backend` | String | `auto` | Search engine(s), comma-separated |
+| `--backend` | String | `auto` | Search engine(s), comma-separated — scraping backends, API engines (`serper`, `serpapi`, `brave`), or a `profiles:` name. See [Engines & Providers](engines.md). |
 | `--user-agent` | String | None | Custom User-Agent (auto-rotate if None) |
 | `--timeout` | Integer | `10` | Request timeout in seconds |
 | `--retries` | Integer | `2` | Retry attempts on failure |
@@ -158,7 +158,7 @@ also loads directly from the database root via `--database-dork` (see below).
 | `--region` | Search region/language code. Examples: `us-en`, `uk-en`, `de-de`, `ru-ru`. |
 | `--safesearch` | Filter adult content: `on` (strict), `moderate` (default), `off` (none). |
 | `--timelimit` | Restrict results by time: `d` (day), `w` (week), `m` (month), `y` (year). |
-| `--backend` | Search engine(s) to use. Options: `google`, `bing`, `duckduckgo`, `startpage`, `yandex`, `auto`, or comma-separated list. |
+| `--backend` | Search engine(s) to use. Options: `google`, `bing`, `duckduckgo`, `startpage`, `yandex`, `auto`, a comma-separated list — or an API engine configured under `engines:` in `atdork.yml` (`serper`, `serpapi`, `brave`) or a `profiles:` chain name. See [Engines & Providers](engines.md). |
 
 ---
 
@@ -278,7 +278,7 @@ atdork --database-dork @cms --database-r 50 --database-seed 7 # random 50, repro
 
 | Flag | Description |
 | :--- | :--- |
-| `--config` | Path to YAML configuration file. CLI flags override YAML values. |
+| `--config` | Path to YAML configuration file (schema v2). Files are layered `global → working dir → --config` (see [Configuration](configuration.md)); CLI flags override YAML values. Env alternative: `ATDORK_CONFIG`. |
 | `--interactive` | Launch interactive mode with prompts instead of CLI flags. |
 | `--version` | Display version and exit. |
 | `-h, --help` | Display help message and exit. |

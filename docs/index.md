@@ -32,6 +32,8 @@ To master AtDork, explore the documentation layout based on your skill level:
 - **[Dork Database](database/index.md)** – Packages, package manager, and the [web catalog](https://amnottdevv.github.io/Atdork-DB/).
 - **[Features](features/resilience-system.md)** – Deep dive into resilience, proxy, templates, and batch processing.
 - **[CLI Reference](cli-reference.md)** – The full master matrix containing all 50+ configuration flags.
+- **[Configuration](configuration.md)** – The `atdork.yml` guide: layered files, sections, `${ENV}` interpolation.
+- **[Engines & Providers](engines.md)** – Scraping engines plus Serper / SerpApi / Brave Search API providers.
 - **[Troubleshooting](troubleshooting.md)** – Common issues and how to resolve them.
 
 ---
@@ -41,7 +43,8 @@ To master AtDork, explore the documentation layout based on your skill level:
 - **994,600+ Dorks** – Across 123 packages in 31 themed `@folders`, refreshed weekly ([web catalog](https://amnottdevv.github.io/Atdork-DB/)).
 - **50+ CLI Flags** – Complete control over every aspect of your search.
 - **6+ Search Engines** – DuckDuckGo, Google, Bing, Startpage, Yandex, Yahoo.
-- **114+ Unit Tests** – Production-ready stability and reliability.
+- **3 API Providers** – Serper.dev, SerpApi and Brave Search API via `engines:` in `atdork.yml`.
+- **280+ Unit Tests** – Production-ready stability and reliability.
 - **10+ Templates** – Pre-built dork collections for SQLi, XSS, WordPress, and more.
 
 !!! warning "Ethical Use"
@@ -59,6 +62,8 @@ To master AtDork, explore the documentation layout based on your skill level:
 | [Basic Usage](basic-usage.md) | Common commands and examples |
 | [Dork Database](database/index.md) | Package manager + [web catalog](https://amnottdevv.github.io/Atdork-DB/) |
 | [Package Manager](features/package-manager.md) | `search` / `install` / `update` deep dive |
+| [Configuration](configuration.md) | `atdork.yml` v2: sections, layering, `${ENV}` interpolation |
+| [Engines & Providers](engines.md) | Built-in engines + Serper / SerpApi / Brave API providers |
 | [Resilience System](features/resilience-system.md) | Circuit breakers, adaptive delays, and fallback |
 | [Proxy & Anonymity](features/proxy-anonymity.md) | Proxy pools, Tor, strict mode, IP guard |
 | [Vulnerability Filter](features/filter-vuln.md) | Platform detection with custom wordlists |
