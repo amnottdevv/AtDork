@@ -1,0 +1,72 @@
+name: Docker Build, Test & Publish
+
+on:
+  push:
+    branches: [master]
+    tags: ["v*", "[0-9]+.[0-9]+.[0-9]+*"]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/atdork
+
+jobs:
+  build-test-publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build --tag atdork:ci .
+
+      - name: Smoke tests (offline, baked database)
+        run: |
+          set -eux
+          # version & help
+          docker run --rm atdork:ci --version | grep -i atdork
+          docker run --rm atdork:ci --help > /dev/null
+          # bundled database readable by the non-root user
+          docker run --rm atdork:ci index
+          docker run --rm atdork:ci search cve --limit 3
+          # package manager roundtrip (writes into the baked database)
+          docker run --rm atdork:ci install @cve/cve_1.txt
+          docker run --rm atdork:ci installed
+
+      - name: Smoke test (fresh volume bootstrap via entrypoint)
+        run: |
+          set -eux
+          docker run --rm -v atdork-test-data:/opt/atdork-db atdork:ci search cve --limit 2
+          docker volume rm atdork-test-data
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Image metadata
+        if: github.event_name != 'pull_request'
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=semver,pattern={{version}}
+            type=sha
+
+      - name: Publish to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}

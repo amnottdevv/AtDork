@@ -64,6 +64,7 @@ nav:
       - Installation: installation.md
       - Quick Start: quickstart.md
       - Basic Usage: basic-usage.md
+      - Docker: docker.md
   - Documentation:
       - Features:
           - Resilience System: features/resilience-system.md

@@ -8,6 +8,7 @@
 ![Lines](https://img.shields.io/badge/total%20lines-11%2C000%2B-orange)
 [![PyPI Downloads](https://static.pepy.tech/personalized-badge/atdork?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=pypi+downloads)](https://pepy.tech/projects/atdork)
 [![Welcome New Contributor](https://github.com/amnottdevv/AtDork/actions/workflows/welcome_new_contributor.yml/badge.svg)](https://github.com/amnottdevv/AtDork/actions/workflows/welcome_new_contributor.yml)
+[![Docker](https://img.shields.io/badge/docker-ghcr.io%2Famnottdevv%2Fatdork-2496ED?logo=docker&logoColor=white)](https://github.com/amnottdevv/AtDork/pkgs/container/atdork)
 
 **AtDork** is a powerful, ethical OSINT tool that performs advanced search queries (Google Dorks) across multiple search engines simultaneously. Designed for security researchers, penetration testers, and bug bounty hunters.
 
@@ -44,6 +45,29 @@ pip install atdork
 git clone https://github.com/amnottdevv/atdork.git
 cd atdork
 pip install .
+```
+
+### From Docker
+```bash
+# pull the published image (or: docker build -t atdork .  — from source)
+docker pull ghcr.io/amnottdevv/atdork:latest
+
+# verify
+docker run --rm atdork --version
+```
+The image bundles the Atdork-DB dork database and runs as a non-root user.
+See [docs/docker.md](docs/docker.md) for volumes, environment variables and
+persistent data. Short version:
+
+```bash
+# search
+docker run --rm ghcr.io/amnottdevv/atdork:latest search "exposed s3" --limit 10
+
+# install a package persistently + run a batch file from your current dir
+docker run --rm -v "$PWD":/work -v atdork-data:/opt/atdork-db \
+  ghcr.io/amnottdevv/atdork:latest install @cve/cve_1.txt
+docker run --rm -v "$PWD":/work -v atdork-data:/opt/atdork-db \
+  ghcr.io/amnottdevv/atdork:latest --batch-file my-dorks.txt -r 20
 ```
 
 ### Verify Installation

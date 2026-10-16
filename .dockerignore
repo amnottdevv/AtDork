@@ -1,0 +1,27 @@
+# Keep the Docker build context small & reproducible
+.git
+.github
+.gitignore
+.pytest_cache
+.venv
+venv
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Local runtime state (never bake into the image)
+atdork.db
+atdork.log
+__pycache__/
+*.pyc
+*.pyo
+
+# Not needed inside the image
+raw/
+docs/
+tests/
+setup.sh
+setup.bat
+requirements-dev.txt
