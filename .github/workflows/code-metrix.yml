@@ -221,11 +221,20 @@ jobs:
           fi
           git add README.md
           git commit -m "docs: update code metrics"
-          for i in 1 2 3; do
+          # Both metrics jobs push to master; retry the pull+push pair until
+          # the race with the other job is won (it is a bot commit, so a
+          # rebase is always safe).
+          for i in 1 2 3 4 5; do
             echo "Push attempt $i"
-            git pull --rebase origin master && break || sleep $((RANDOM % 10 + 5))
+            git pull --rebase origin master || true
+            if git push origin master; then
+              echo "Pushed README metrics."
+              exit 0
+            fi
+            sleep $((RANDOM % 8 + 4))
           done
-          git push origin master
+          echo "::error::Could not push the README metrics after 5 attempts."
+          exit 1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -281,11 +290,18 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add .github/metrics-history/
           git commit -m "ci: record metrics for $(date -u +'%Y-%m-%d')" || echo "No changes to commit"
-          for i in 1 2 3; do
+          # See the README job above: the two metrics jobs push concurrently.
+          for i in 1 2 3 4 5; do
             echo "Push attempt $i"
-            git pull --rebase origin master && break || sleep $((RANDOM % 10 + 5))
+            git pull --rebase origin master || true
+            if git push origin master; then
+              echo "Pushed metrics history."
+              exit 0
+            fi
+            sleep $((RANDOM % 8 + 4))
           done
-          git push origin master
+          echo "::error::Could not push the metrics history after 5 attempts."
+          exit 1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
