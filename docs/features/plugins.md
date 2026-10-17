@@ -193,6 +193,52 @@ atdork install @plugins/dorkbuilder/dorkbuilder.py   # a single file
 atdork plugins list                      # verify it's ready
 ```
 
+### Installing from anywhere
+
+Plugins do not have to come from Atdork-DB — a raw module, a git repo or a
+third-party registry work the same way:
+
+```bash
+# a single module URL (must end in .py)
+atdork install https://raw.githubusercontent.com/user/repo/main/tool/tool.py
+
+# a git repository: one plugin, or pick one with '#<subpath>'
+atdork install https://github.com/user/atdork-plugins
+atdork install https://github.com/user/atdork-plugins#my-tool
+atdork install https://github.com/user/atdork-plugins#tools/my-tool
+atdork install https://github.com/user/repo --git-ref v1.2.0   # pin a tag
+
+# a third-party registry declared once in the config
+atdork plugins sources                                     # list them
+atdork install --source mine @plugins/my-tool
+```
+
+A registry is any repo that ships an `Index.idn` plus `@plugins/<tool>/…`
+folders — the same layout as Atdork-DB:
+
+```yaml
+# atdork.yaml (or <env>/.config/config.yml)
+plugins:
+  sources:
+    mine:
+      url: https://github.com/user/atdork-plugins
+      ref: main            # optional branch/tag
+      index: Index.idn     # optional custom index path
+```
+
+Generate (or refresh) its index with:
+
+```bash
+atdork plugins publish @plugins/my-tool                  # print the lines
+atdork plugins publish @plugins/my-tool --repo . --write # update Index.idn
+git push   # your registry is now installable
+```
+
+Every external install goes through the same contract gate: metadata is read
+with AST (never executed), the name must match the plugin contract, files are
+size-capped, and registry installs verify **every** file against the checksum
+in that registry's `Index.idn` — a mismatch aborts the install.
+
 ### Available plugins
 
 | Plugin | What it does |
@@ -222,6 +268,12 @@ Because a triggered plugin is real Python that runs in your interpreter, the
 trust model is the package manager: only install plugins from a repository you
 trust (`atdork install` verifies the `sha256` of every file against
 `Index.idn`). Treat installing a plugin like installing any other package.
+
+Installing from a URL, a git repo or `plugins.sources` is **TOFU trust**: the
+checksum comes from that source, so adding a source means trusting everyone
+who can push to it. Prefer tags/commit-pinned registries for shared setups, and
+review a tool's code (`atdork plugins info`, the source link in the catalog)
+before running it.
 
 Output writing goes through `ctx.guard_write()`, which enforces the active
 environment root — a plugin cannot write outside its workspace through the

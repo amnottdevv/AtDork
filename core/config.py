@@ -91,7 +91,12 @@ SEARCH_KEYS = {
 OUTPUT_KEYS = {"format", "dir", "output_dir", "no_snippet"}
 
 # Keys accepted inside the `plugins:` section.
-PLUGINS_KEYS = {"enabled", "disabled", "paths", "options"}
+PLUGINS_KEYS = {"enabled", "disabled", "paths", "options", "sources"}
+
+# Keys accepted inside one `plugins.sources.<name>` entry.
+PLUGINS_SOURCE_KEYS = {"url", "ref", "index"}
+
+_SOURCE_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 # Top-level keys allowed in a v2 file.
 KNOWN_ROOT_KEYS = set(DEFAULT_CONFIG) | set(SECTION_DEFAULTS) | {"version"}
@@ -269,6 +274,38 @@ def _validate_layer(data: Dict[str, Any], source: str) -> None:
                     f"{source}: plugins.options.{opt_name} must be a mapping "
                     f"of option defaults"
                 )
+    sources = plugins.get("sources")
+    if sources is not None:
+        if not isinstance(sources, dict):
+            raise ConfigError(
+                f"{source}: plugins.sources must be a mapping of source name "
+                "to {url, ref?, index?}"
+            )
+        for src_name, spec in sources.items():
+            where = f"plugins.sources.{src_name}"
+            if not _SOURCE_NAME_RE.fullmatch(str(src_name)):
+                raise ConfigError(
+                    f"{source}: {where}: source names must match "
+                    "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+                )
+            if not isinstance(spec, dict):
+                raise ConfigError(f"{source}: {where} must be a mapping")
+            bad_spec = [k for k in spec if k not in PLUGINS_SOURCE_KEYS]
+            if bad_spec:
+                raise ConfigError(
+                    f"{source}: {where}: unknown key(s): "
+                    f"{', '.join(sorted(bad_spec))} "
+                    f"(known: {', '.join(sorted(PLUGINS_SOURCE_KEYS))})"
+                )
+            url = spec.get("url")
+            if not isinstance(url, str) or not url.strip():
+                raise ConfigError(f"{source}: {where}.url must be a non-empty string")
+            for key in ("ref", "index"):
+                value = spec.get(key)
+                if value is not None and (not isinstance(value, str) or not value.strip()):
+                    raise ConfigError(
+                        f"{source}: {where}.{key} must be a non-empty string"
+                    )
 
 
 def _check_engine_env(layer: Dict[str, Any], source: str,

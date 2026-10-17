@@ -104,7 +104,19 @@ See [Docker](docker.md) for volumes, bind mounts, and compose examples.
     * Config defaults alone (`plugins.options`) never launch a plugin — a real `--<plugin>` or `--<plugin>-*` argument is required.
     * Full reference: [Plugins](features/plugins.md).
 
-## 12. Plugin: Execution Error or Output Rejected by Environment Guard
+## 12. Plugin: Installing From a URL, Git Repo or Custom Source Fails
+
+* **Symptom:** `git is required to install from a repository URL …`, `contains N plugins; pick one with '#<subpath>'`, `checksum mismatch … refusing to install`, or `unknown plugin source '<name>'`.
+* **Cause:** Missing git binary, an ambiguous repo layout, a registry whose files drifted from its `Index.idn`, or a source that isn't declared in the active config layer.
+* **Mitigation Actions:**
+    * Install git (`apt install git` / `brew install git`) — a single `.py` URL needs no git, repository installs do.
+    * Point at one tool inside a multi-plugin repo: `atdork install https://github.com/user/repo#my-tool`.
+    * A checksum mismatch means the registry index and its files disagree — re-run `atdork plugins publish @plugins/<tool> --repo . --write` in that registry, push it, then retry.
+    * Check what the active layer sees with `atdork plugins sources`; `--env` uses the **environment's** config (`<env>/.config/config.yml`), not the working-directory file.
+    * Share a registry safely by pinning it to a tag: `ref: v1.2.0` under `plugins.sources`, or `--git-ref v1.2.0` for a URL install.
+    * Full reference: [Plugins](features/plugins.md).
+
+## 13. Plugin: Execution Error or Output Rejected by Environment Guard
 
 * **Symptom:** `Plugin error: …`, `Plugin '<name>' crashed: …`, or `output escapes the environment root`.
 * **Cause:** The plugin raised an exception, returned a non-integer, or tried to write a path outside the active environment root.

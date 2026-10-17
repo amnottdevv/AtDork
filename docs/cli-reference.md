@@ -190,12 +190,21 @@ main command. Full guide: [Plugins](features/plugins.md).
 | `atdork plugins list` | List discovered plugins with status (`ready` / `disabled` / `invalid`). |
 | `atdork plugins info <name>` | Show a plugin's contract, flags, dests, and path. |
 | `atdork plugins run <name> [--opt KEY=VALUE]` | Run a plugin without the flag syntax. |
+| `atdork plugins publish <ref>` | Print `Index.idn` lines for a tool folder (`--write` updates the file). |
+| `atdork plugins sources` | List third-party registries configured under `plugins.sources`. |
 
 ```bash
 atdork install @plugins/dorkbuilder              # install a tool folder
+atdork install https://github.com/user/repo#tool # or from a git repo
+atdork install --source mine @plugins/tool       # or from your own registry
 atdork --dorkbuilder-text "John wick" --dorkbuilder-save dorks.txt
 atdork plugins run dorkbuilder --opt text=Acme --opt limit=3
+atdork plugins publish @plugins/dorkbuilder --write
 ```
+
+`atdork install` also accepts `--git-ref BRANCH` to pin a repository URL to a
+branch or tag, and `--source NAME` to install from a registry declared in
+`plugins.sources`.
 
 Every option is registered as `--<plugin>-<option>` (the engine prefixes short
 option names itself). A plugin runs via the bare `--<plugin>` trigger or

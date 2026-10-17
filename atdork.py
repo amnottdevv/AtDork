@@ -145,6 +145,7 @@ from core.database_dork import (
 )
 from core.package_manager import (
     DBRepoNotFound,
+    INDEX_NAME,
     IndexNotFound,
     PackageError,
     RefError,
@@ -158,6 +159,13 @@ from core.package_manager import (
     search as search_index,
     uninstall as uninstall_packages,
     update_repo,
+)
+from core.external import (
+    install_from_source,
+    install_url,
+    list_sources,
+    looks_like_url,
+    publish as publish_plugin,
 )
 from core.post_processor import PostProcessor, extract_urls, extract_vulnerable_urls
 from lib.display import show_banner, display_results
@@ -1506,18 +1514,29 @@ def _print_ref_error(exc: PackageError) -> None:
             console.print(f"  [cyan]{suggestion}[/cyan]")
 
 
-def _pkg_install(argv: List[str]) -> int:
+def _pkg_install(argv: List[str], workspace=None) -> int:
     parser = argparse.ArgumentParser(
         prog="atdork install",
-        description="Install dork packages from the Atdork-DB repository.",
+        description="Install dork packages from the Atdork-DB repository, or "
+                    "plugins from a URL / git repo / configured source.",
     )
     parser.add_argument(
         "--force", action="store_true",
         help="Re-copy even when the installed file is already identical.",
     )
     parser.add_argument(
+        "--source", metavar="NAME",
+        help="Install the refs from a third-party registry declared under "
+             "plugins.sources (e.g. --source mine @plugins/tool).",
+    )
+    parser.add_argument(
+        "--git-ref", metavar="BRANCH", dest="git_ref",
+        help="Branch or tag to use for a git repository URL.",
+    )
+    parser.add_argument(
         "refs", nargs="+", metavar="REF",
-        help="@cve/cve_1.txt, c@cve_1.txt, or a folder ref like @cve",
+        help="@cve/cve_1.txt, c@cve_1.txt, a folder ref like @cve, or a "
+             "plugin URL (https://…/tool.py, https://github.com/user/repo#tool)",
     )
     args_ = parser.parse_args(argv)
 
@@ -1525,7 +1544,15 @@ def _pkg_install(argv: List[str]) -> int:
     installed_count = existing_count = total_dorks = 0
     for ref in args_.refs:
         try:
-            outcomes = install_packages(ref, force=args_.force)
+            if looks_like_url(ref):
+                outcomes = install_url(ref, git_ref=args_.git_ref,
+                                       force=args_.force)
+            elif args_.source:
+                outcomes = install_from_source(args_.source, ref,
+                                               force=args_.force,
+                                               workspace=workspace)
+            else:
+                outcomes = install_packages(ref, force=args_.force)
         except PackageError as exc:
             _print_ref_error(exc)
             exit_code = 1
@@ -1608,6 +1635,7 @@ def _pkg_installed(argv: List[str]) -> int:
     status_label = {
         "ok": "[green]up to date[/green]",
         "modified": "[yellow]modified locally[/yellow]",
+        "external": "[cyan]external (URL/git source)[/cyan]",
         "orphan": "[dim]not in index[/dim]",
     }
     table = Table(
@@ -1746,7 +1774,7 @@ def _pkg_index(argv: List[str]) -> int:
     return 0
 
 
-def package_cli(argv: List[str]) -> int:
+def package_cli(argv: List[str], workspace=None) -> int:
     """Dispatch a package-manager subcommand; returns a process exit code."""
     if not argv or argv[0] not in PACKAGE_COMMANDS:
         console.print(
@@ -1767,6 +1795,8 @@ def package_cli(argv: List[str]) -> int:
         "index": _pkg_index,
     }
     try:
+        if argv[0] == "install":
+            return _pkg_install(argv[1:], workspace=workspace)
         return handlers[argv[0]](argv[1:])
     except PackageError as exc:
         _print_ref_error(exc)
@@ -2232,7 +2262,8 @@ def _coerce_plugin_option(definition: PluginDef, opt_name: str, raw: str) -> Any
 
 
 def plugins_cli(argv: List[str], workspace=None) -> int:
-    """`atdork plugins list|info|run` — inspect and launch installed plugins."""
+    """`atdork plugins list|info|run|publish|sources` — inspect, launch and
+    publish plugin tools."""
     parser = argparse.ArgumentParser(
         prog="atdork plugins",
         description="Plugin tools installed via the package manager. Run them "
@@ -2249,6 +2280,21 @@ def plugins_cli(argv: List[str], workspace=None) -> int:
     p_run.add_argument("--opt", action="append", default=[], metavar="KEY=VALUE",
                        help="Plugin option override (repeatable).")
 
+    p_pub = sub.add_parser(
+        "publish",
+        help="Generate Index.idn lines for a plugin tool (your own registry).",
+    )
+    p_pub.add_argument("ref", metavar="REF",
+                       help="Plugin tool folder, e.g. @plugins/mytool")
+    p_pub.add_argument("--repo", metavar="PATH",
+                       help="Repository holding the tool (default: the Atdork-DB checkout).")
+    p_pub.add_argument("--index", metavar="PATH",
+                       help="Index.idn to update with --write (default: <repo>/Index.idn).")
+    p_pub.add_argument("--write", action="store_true",
+                       help="Update the index file instead of printing the lines.")
+
+    sub.add_parser("sources", help="List third-party plugin sources (plugins.sources).")
+
     if not argv:
         parser.print_help()
         return 1
@@ -2259,8 +2305,8 @@ def plugins_cli(argv: List[str], workspace=None) -> int:
             definitions = discover_plugins()
             if not definitions:
                 console.print("[yellow]No plugins found.[/yellow] Install one: "
-                              "atdork install @plugins/<tool> — or add folders "
-                              "via plugins.paths in your config.")
+                              "atdork install @plugins/<tool> — or from anywhere: "
+                              "atdork install https://github.com/user/repo#tool")
                 return 0
             for definition in sorted(definitions, key=lambda d: d.name):
                 if definition.error:
@@ -2342,7 +2388,52 @@ def plugins_cli(argv: List[str], workspace=None) -> int:
             console.print(f"[magenta]▶ plugin[/magenta] {definition.name} "
                           f"[dim]({definition.path})[/dim]")
             return run_plugin(definition, argparse.Namespace(**namespace), ctx)
-    except PluginError as exc:
+        if args_.command == "publish":
+            lines, written = publish_plugin(
+                args_.ref, repo=args_.repo, index_path=args_.index,
+                write=args_.write)
+            if written is None:
+                console.print("[bold]Index lines for[/bold] "
+                              f"[cyan]{args_.ref}[/cyan] "
+                              "[dim](paste into your Index.idn)[/dim]")
+                for line in lines:
+                    console.print(f"  {line}")
+                console.print(
+                    "[dim]Tip: 'atdork plugins publish " + args_.ref
+                    + " --write' updates an index file in place.[/dim]")
+            else:
+                console.print(f"[green]✔[/green] wrote {len(lines)} entr"
+                              f"{'y' if len(lines) == 1 else 'ies'} → "
+                              f"{_pretty_path(written)}")
+            return 0
+
+        if args_.command == "sources":
+            sources = list_sources()
+            if not sources:
+                console.print("[yellow]No plugin sources configured.[/yellow]")
+                console.print(
+                    "[dim]Add them to your config (plugins.sources):\n"
+                    "  plugins:\n    sources:\n      mine:\n"
+                    "        url: https://github.com/user/registry[/dim]")
+                console.print(
+                    "[dim]Then: atdork install --source mine @plugins/<tool>[/dim]")
+                return 0
+            table = Table(title=f"Plugin sources ({len(sources)})",
+                          title_style="bold cyan", show_lines=False)
+            table.add_column("Name", style="cyan")
+            table.add_column("URL")
+            table.add_column("Ref")
+            table.add_column("Index")
+            for name, spec in sorted(sources.items()):
+                table.add_row(name, str(spec.get("url", "")),
+                              str(spec.get("ref", "") or "default"),
+                              str(spec.get("index", "") or INDEX_NAME))
+            console.print(table)
+            console.print("[dim]Install from a source: "
+                          "atdork install --source <name> @plugins/<tool>[/dim]")
+            return 0
+
+    except (PluginError, PackageError) as exc:
         console.print(f"[red]Plugin error:[/red] {exc}")
         return 1
 
@@ -2410,7 +2501,7 @@ def main():
     # --- Package manager subcommands (atdork install / search / ...) ---
     # Dispatched before the full parser so they don't clash with search flags.
     if remaining and remaining[0] in PACKAGE_COMMANDS:
-        sys.exit(package_cli(remaining))
+        sys.exit(package_cli(remaining, workspace=workspace))
 
     # --- Workflow engine subcommands (atdork workflow list/validate/run) ---
     # Needs the loaded config (`workflows:` layers) and the env workspace

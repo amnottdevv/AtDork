@@ -220,27 +220,8 @@ def index_file(repo: Path) -> Path:
     return repo / INDEX_NAME
 
 
-def load_index(repo: Optional[str] = None, config: Optional[Dict] = None) -> List[IndexEntry]:
-    """
-    Parse Index.idn from the Atdork-DB repository.
-
-    Args:
-        repo: Explicit repository path (overrides discovery).
-        config: Optional config dict; accepted for call-site symmetry.
-
-    Raises:
-        DBRepoNotFound: Repository not found.
-        IndexNotFound: Index.idn missing (needs 'atdork index --build').
-    """
-    root = find_db_repo(repo)
-    path = index_file(root)
-    if not path.is_file():
-        raise IndexNotFound(
-            f"{INDEX_NAME} not found in {root}. "
-            "Run 'atdork index --build' (after changing data) or "
-            f"'git -C {root} pull' to fetch it."
-        )
-
+def parse_index_file(path: Path) -> List[IndexEntry]:
+    """Parse one Index.idn-format file into entries (no repo discovery)."""
     entries: List[IndexEntry] = []
     with open(path, "r", encoding="utf-8", errors="replace") as fh:
         for lineno, raw in enumerate(fh, 1):
@@ -269,6 +250,30 @@ def load_index(repo: Optional[str] = None, config: Optional[Dict] = None) -> Lis
             except ValueError:
                 logger.warning("%s:%d: non-numeric size/lines skipped", path.name, lineno)
     return entries
+
+
+def load_index(repo: Optional[str] = None, config: Optional[Dict] = None) -> List[IndexEntry]:
+    """
+    Parse Index.idn from the Atdork-DB repository.
+
+    Args:
+        repo: Explicit repository path (overrides discovery).
+        config: Optional config dict; accepted for call-site symmetry.
+
+    Raises:
+        DBRepoNotFound: Repository not found.
+        IndexNotFound: Index.idn missing (needs 'atdork index --build').
+    """
+    root = find_db_repo(repo)
+    path = index_file(root)
+    if not path.is_file():
+        raise IndexNotFound(
+            f"{INDEX_NAME} not found in {root}. "
+            "Run 'atdork index --build' (after changing data) or "
+            f"'git -C {root} pull' to fetch it."
+        )
+
+    return parse_index_file(path)
 
 
 def index_folders(entries: Iterable[IndexEntry]) -> List[str]:
@@ -584,39 +589,75 @@ def install(raw: str, *, force: bool = False, package_dir: Optional[str] = None,
     return outcomes
 
 
+def _store_targets(ref: Ref, store: Path) -> List[IndexEntry]:
+    """Filesystem fallback for refs absent from the index (external plugins)."""
+    if not (ref.folder and ref.exact_folder):
+        return []
+    base = store / ref.folder
+    if not base.is_dir():
+        return []
+    if ref.name:
+        target = base / ref.name
+        if target.is_file():
+            return [IndexEntry(ref.folder, ref.name, "", target.stat().st_size, 0)]
+        if target.is_dir():
+            return [IndexEntry(ref.folder,
+                               f"{ref.name}/{p.relative_to(target).as_posix()}",
+                               "", p.stat().st_size, 0)
+                    for p in sorted(target.rglob("*")) if p.is_file()]
+        return []
+    return [IndexEntry(ref.folder, p.relative_to(base).as_posix(),
+                       "", p.stat().st_size, 0)
+            for p in sorted(base.rglob("*")) if p.is_file()]
+
+
 def uninstall(raw: str, *, package_dir: Optional[str] = None,
               config: Optional[Dict] = None) -> Tuple[List[IndexEntry], List[IndexEntry]]:
     """
     Remove installed copies from the local store.
 
     Returns (removed, not_installed) — folder refs remove every member.
+    Files installed from outside the index (external plugins) are removed
+    through a store scan fallback.
     """
     try:
         entries = load_index(config=config)
     except PackageError:
         entries = []
     ref = parse_ref(raw)
+    store = get_package_dir(package_dir)
 
+    targets: List[IndexEntry] = []
     if ref.name is None:
-        if not entries:
+        if entries:
+            folder = resolve_folder(raw, index=entries)
+            targets = [e for e in entries if e.folder == folder]
+        elif not _store_targets(ref, store):
             raise PackageError("Index unavailable; cannot expand folder reference.")
-        folder = resolve_folder(raw, index=entries)
-        targets = [e for e in entries if e.folder == folder]
     elif entries:
         try:
             targets = [resolve_entry(raw, index=entries)]
         except RefNotFound as exc:
             nested = _nested_folder_targets(ref, entries)
             if not nested:
-                raise exc
-            targets = nested
-    else:  # index missing — canonical @folder/file only
+                targets = _store_targets(ref, store)
+                if not targets:
+                    raise exc
+            else:
+                targets = nested
+    else:  # index missing — canonical '@folder/file' only
         if not (ref.folder and ref.exact_folder and ref.name):
             raise PackageError("Index unavailable; only canonical '@folder/file' refs work.")
-        targets = [IndexEntry(ref.folder, ref.name, "", 0, 0)]
+        targets = _store_targets(ref, store)
+        if not targets:
+            raise PackageError(f"'{raw}' is not installed in the local store.")
+
+    # Index-based targets may miss external files under the same folder.
+    seen = {(e.folder, e.name) for e in targets}
+    targets.extend(e for e in _store_targets(ref, store)
+                   if (e.folder, e.name) not in seen)
 
     removed, missing = [], []
-    store = get_package_dir(package_dir)
     for entry in targets:
         path = store / entry.folder / entry.name
         if path.is_file():
@@ -633,9 +674,26 @@ def uninstall(raw: str, *, package_dir: Optional[str] = None,
     return removed, missing
 
 
+def _is_external_plugin(path: Path) -> bool:
+    """True for a .py outside the index that still declares valid PLUGIN meta."""
+    if path.suffix.lower() != ".py":
+        return False
+    try:
+        from core.plugins import load_plugin_meta, validate_meta
+        meta = load_plugin_meta(path)
+    except Exception:
+        return False
+    return not validate_meta(meta, path.name)
+
+
 def list_installed(package_dir: Optional[str] = None,
                    config: Optional[Dict] = None) -> List[InstalledPackage]:
-    """List packages present in the local store, compared against the index."""
+    """List packages present in the local store, compared against the index.
+
+    Files under ``plugins/`` that are absent from the index but carry a valid
+    ``PLUGIN`` literal are reported as ``external`` (installed from a URL,
+    a git repo or a third-party source) instead of ``orphan``.
+    """
     store = get_package_dir(package_dir)
     if not store.is_dir():
         return []
@@ -658,7 +716,7 @@ def list_installed(package_dir: Optional[str] = None,
         lines = count_dork_lines(path)
         entry = index.get((folder, name))
         if entry is None:
-            status = "orphan"
+            status = "external" if _is_external_plugin(path) else "orphan"
         elif entry.sha256 and digest != entry.sha256:
             status = "modified"
         else:
