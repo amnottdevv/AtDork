@@ -16,7 +16,7 @@ Unlike conventional dorking scripts that easily trigger captchas and face IP ban
 - **Intelligent Resilience** – Built-in circuit breakers, adaptive jitter delays, and error classification algorithms.
 - **Seamless Pipelines** – Directly pipe discovered endpoints into vulnerability scanners like `wpscan` or `sqlmap`.
 - **Template System** – YAML-based dork collections with `{target}` substitution and selective execution.
-- **Dork Package Manager** – `atdork search` / `install` / `update` over **994,600+ dorks** in [Atdork-DB](https://github.com/amnottdevv/Atdork-DB) — 125 packages across 32 `@folders` — including installable `@plugins/` tools — browsable in the [web catalog](https://amnottdevv.github.io/Atdork-DB/).
+- **Dork Package Manager** – `atdork search` / `install` / `update` over **994,600+ dorks** in [Atdork-DB](https://github.com/amnottdevv/Atdork-DB) — 123 dork packages across 31 `@folders`, plus 7 installable `@plugins/` tools — all browsable in the [web catalog](https://amnottdevv.github.io/Atdork-DB/).
 - **Workflow Engine** – Sequential multi-step dork campaigns in YAML: threshold-triggered retries, worker pools, guarded outputs, resumable state (`atdork workflow run`, `--run-workflow`).
 - **Plugin System** – Install extra Python tools from Atdork-DB (`atdork install @plugins/<tool>`); each surfaces as `--<plugin>-<option>` flags (`--dorkbuilder-text "…"`).
 - **Docker Ready** – Official image `ghcr.io/amnottdevv/atdork` ships the CLI *and* the full database — zero setup ([Docker](docker.md)).

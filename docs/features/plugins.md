@@ -193,6 +193,22 @@ atdork install @plugins/dorkbuilder/dorkbuilder.py   # a single file
 atdork plugins list                      # verify it's ready
 ```
 
+### Available plugins
+
+| Plugin | What it does |
+|---|---|
+| `dorkbuilder` | Build ready-to-run dork lists from text + a category |
+| `reportgen` | Summarize result files into an HTML/JSON report |
+| `subdomain` | Discover indexed subdomains of a target via search dorks |
+| `emaildork` | Build (and optionally run) email-discovery dorks |
+| `vulndork` | Vulnerability-hunting dork sets by target / product / CVE |
+| `geodork` | Geographically-scoped dork builder |
+| `usernamehunt` | Find where a username/handle is used across the web |
+
+Each tool ships with its own `README.md`. Browse them — with rendered
+READMEs, options and source links — in the
+[web catalog's Plugins section](https://amnottdevv.github.io/Atdork-DB/#/plugins).
+
 ---
 
 ## Security
