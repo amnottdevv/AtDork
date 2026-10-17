@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "atdork"
-version = "1.6.0"
+version = "1.4.1"
 description = "dorking tools with ddgs metasearch OSINT tool"
 readme = "README.md"
 license = "MIT"

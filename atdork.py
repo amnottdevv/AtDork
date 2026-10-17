@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
 Atdork - Professional OSINT Tool
-Version : 1.6.0
+Version : 1.4.1
 Author  : alzzmarket
 GitHub  : github.com/amnottdevv/atdork
 
-Changelog (1.6.0):
+Changelog (1.4.1):
   - Plugin system: install extra Python tools from Atdork-DB and
     run them as `--<plugin>-<option>` flags on the main command.
       * Contract: a PLUGIN metadata literal (name/version/
@@ -29,7 +29,6 @@ Changelog (1.6.0):
   - Docs: new features/plugins.md, CLI reference section,
     troubleshooting entries #11/#12.
 
-Changelog (1.5.0):
   - Workflow engine (fase 3): sequential multi-step dork campaigns
     defined in structured YAML under `workflows:` (any config layer)
     or standalone workflow.yaml files auto-discovered in the active
@@ -212,7 +211,7 @@ from core.plugins import (
     run_plugin,
 )
 
-VERSION = "1.6.0"
+VERSION = "1.4.1"
 
 console = Console()
 logger = logging.getLogger("atdork")

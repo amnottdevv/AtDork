@@ -24,7 +24,7 @@ Resolution protocols for common failure vectors encountered during large-scale n
 
 * **Symptom:** Spreadsheet processors (Microsoft Excel, LibreOffice Calc) display warning flags regarding executable expressions or broken formatting blocks upon opening exported maps.
 * **Mitigation Actions:**
-    * Update to the latest release: `pip install --upgrade atdork` (current: `1.6.0`).
+    * Update to the latest release: `pip install --upgrade atdork` (current: `1.4.1`).
     * Distribution builds since `1.3.8` incorporate a parsing pass (`lib/storage.py`) that strips or prefixes symbols (`+`, `=`, `-`, `@`) to block Formula Injection attacks.
 
 ## 4. "Atdork-DB repository not found"
