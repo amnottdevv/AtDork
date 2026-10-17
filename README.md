@@ -30,6 +30,8 @@
 - 💾 **Caching** – Cache search results locally to avoid redundant requests and enable offline access.
 - 🔒 **Safe logging** – Proxy credentials are automatically redacted from log files to prevent accidental leaks.
 - 🔔 **Notifications** – Send batch summaries to Discord, Slack, or Telegram webhooks.
+- 🧩 **Plugin system** – Install extra Python tools from [Atdork-DB](https://github.com/amnottdevv/Atdork-DB) (`atdork install @plugins/dorkbuilder`), a git repo, a `.py` URL or your own registry; each tool surfaces as `--<plugin>-<option>` flags.
+- 👁️ **Watch mode** – Cron-friendly monitoring (`atdork watch add` + `watch run`) that re-runs your dorks and reports only the new findings, with webhook alerts.
 
 ---
 
@@ -401,6 +403,64 @@ atdork --batch-file dorks.txt --notify "discord:..." --notify-if-vuln
 2. **Slack**: Create an incoming webhook at api.slack.com/apps > Create New App > Incoming Webhooks
 3. **Telegram**: Get your bot token from @BotFather and chat ID by messaging your bot and visiting `https://api.telegram.org/bot<TOKEN>/getUpdates`
 
+### Plugins (Installable Tools)
+
+Plugins are Python tools installed through the package manager and exposed as
+`--<plugin>-<option>` flags. They ship in
+[Atdork-DB](https://github.com/amnottdevv/Atdork-DB) (`@plugins/<tool>`) and can
+also come from anywhere else:
+
+```bash
+# from Atdork-DB (curated: dorkbuilder, reportgen, subdomain, emaildork,
+# vulndork, geodork, usernamehunt)
+atdork install @plugins/dorkbuilder
+
+# from a git repository (one plugin, or pick one with '#<subpath>')
+atdork install "https://github.com/amnottdevv/Atdork-DB#@plugins/dorkbuilder"
+atdork install https://github.com/you/atdork-plugins#my-tool
+
+# from a raw module URL, or your own registry declared in the config
+atdork install https://raw.githubusercontent.com/you/repo/main/tool/tool.py
+atdork install --source mine @plugins/my-tool
+
+# inspect and run
+atdork plugins list
+atdork plugins info dorkbuilder
+atdork --dorkbuilder-text "Acme Corp" --dorkbuilder-save dorks.txt
+```
+
+Every option is registered as `--<plugin>-<option>`; a plugin runs with the bare
+`--<plugin>` flag or any `--<plugin>-…` argument. Metadata is read with AST (the
+file is never executed) and registry installs verify every file against the
+`sha256` in their `Index.idn`. Publishing your own registry is one command —
+`atdork plugins publish @plugins/<tool> --write` writes the index lines, then
+`git push`.
+
+### Watch Mode (Scheduled Monitoring)
+
+Monitor dorks without babysitting them: register a watch, then run it from cron.
+Each run re-executes the dorks, diffs the result URLs against the saved history
+and reports **only the new findings** — on the console and through `--notify`.
+
+```bash
+atdork watch add acme \
+  --dork "site:acme.com ext:env" --dork "site:acme.com intitle:index.of" \
+  --notify "discord:https://discord.com/api/webhooks/YOUR/WEBHOOK"
+
+atdork watch run acme        # first run records a baseline
+atdork watch run --all       # one cycle for every watch
+```
+
+```cron
+0 */6 * * *  cd /home/me && atdork --env ~/AtDork-workflows/atdork-env \
+             watch run acme >> ~/atdork-watch.log 2>&1
+```
+
+Sources can be literal dorks, a `--batch-file`, or a `--database-dork` package
+spec; URLs are normalized before comparison (`www.`, trailing slashes, URL
+fragments and tracking parameters are ignored), the history is bounded to 10,000
+links per watch, and a quiet cycle never sends a notification.
+
 ---
 
 ## Complete Flag Reference
@@ -524,6 +584,15 @@ atdork -q "inurl:wp-content site:example.com" -r 40 \
 0 6 * * 1 cd /path/to/atdork && atdork --batch-file weekly_dorks.txt --format csv --output-dir /reports/$(date +\%Y-\%W)/ --notify "slack:https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
 ```
 
+Prefer to hear about **new findings only**? Register a watch once and let it
+diff every cycle for you ([Watch Mode](#watch-mode-scheduled-monitoring)):
+
+```bash
+atdork watch add weekly --batch-file weekly_dorks.txt \
+  --notify "slack:https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+# crontab: 0 6 * * 1  cd /path/to/atdork && atdork watch run weekly
+```
+
 ---
 
 ## Configuration File
@@ -581,6 +650,12 @@ atdork/
 │   ├── database.py              # SQLite storage & export (history/dedup)
 │   ├── config.py                # YAML configuration loader
 │   ├── logger.py                # Rotating file logger
+│   ├── package_manager.py       # Atdork-DB index & install/uninstall
+│   ├── external.py              # Plugins from URL / git / custom registries
+│   ├── plugins.py               # Plugin contract, discovery, dispatch
+│   ├── watch.py                 # One-shot dork monitoring (cron-friendly)
+│   ├── workflow.py              # Sequential multi-step dork campaigns
+│   ├── env.py                   # Isolated environments (workspaces)
 │   └── case/
 │       ├── circuit_breaker.py   # Prevent hammering dead backends
 │       ├── ip_guard.py          # Real IP leak detection
