@@ -180,6 +180,29 @@ on name collisions.
 
 ---
 
+## Plugin Subcommands
+
+Installable Python tools that surface as `--<plugin>-<option>` flags on the
+main command. Full guide: [Plugins](features/plugins.md).
+
+| Subcommand | Description |
+| :--- | :--- |
+| `atdork plugins list` | List discovered plugins with status (`ready` / `disabled` / `invalid`). |
+| `atdork plugins info <name>` | Show a plugin's contract, flags, dests, and path. |
+| `atdork plugins run <name> [--opt KEY=VALUE]` | Run a plugin without the flag syntax. |
+
+```bash
+atdork install @plugins/dorkbuilder              # install a tool folder
+atdork --dorkbuilder-text "John wick" --dorkbuilder-save dorks.txt
+atdork plugins run dorkbuilder --opt text=Acme --opt limit=3
+```
+
+Every option is registered as `--<plugin>-<option>` (the engine prefixes short
+option names itself). A plugin runs via the bare `--<plugin>` trigger or
+implicitly when any `--<plugin>-*` argument is present.
+
+---
+
 ## Detailed Flag Descriptions
 
 ### Query & Results

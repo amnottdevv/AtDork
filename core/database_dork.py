@@ -214,6 +214,12 @@ def _resolve_dork_file(raw: str, index: List[IndexEntry]):
         entry = resolve_entry(raw, index=index)
     except RefError as exc:
         raise _ref_error(exc) from exc
+    if entry.name.lower().endswith(".py"):
+        raise FileNotFoundError(
+            f"'{raw}' is a plugin module, not a dork file — install it with "
+            f"'atdork install @plugins/{entry.name.split('/', 1)[0]}' and run "
+            f"it via its --<plugin> flags."
+        )
 
     installed = installed_path(entry)
     if installed.is_file():

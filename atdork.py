@@ -1,9 +1,33 @@
 #!/usr/bin/env python3
 """
 Atdork - Professional OSINT Tool
-Version : 1.5.0
+Version : 1.6.0
 Author  : alzzmarket
 GitHub  : github.com/amnottdevv/atdork
+
+Changelog (1.6.0):
+  - Plugin system: install extra Python tools from Atdork-DB and
+    run them as `--<plugin>-<option>` flags on the main command.
+      * Contract: a PLUGIN metadata literal (name/version/
+        description/options) + a run(args, ctx) entry point.
+      * atdork install @plugins/<tool> installs a tool folder;
+        atdork plugins list|info|run inspects and launches them.
+      * Metadata is parsed via ast.literal_eval (no code runs at
+        listing/registration time); the module is imported only
+        when one of its flags is actually triggered.
+      * Trigger: the bare --<plugin> flag OR any --<plugin>-*
+        argument; option dests are always <plugin>_<option>, so
+        plugin flags can never collide with core flags.
+      * ctx exposes console/workspace/package_dir/results_dir plus
+        get_setting(), search(), and a guarded guard_write().
+      * Package manager: VALID_EXTS += .py, nested tool folders
+        (@plugins/<tool>/*.py), tool-folder refs install/uninstall
+        every file in the folder, installed list shows plugins, and
+        .py refs are rejected as dork content with a clear hint.
+      * Config `plugins:` section (enabled/disabled/paths/options)
+        with fail-fast validation.
+  - Docs: new features/plugins.md, CLI reference section,
+    troubleshooting entries #11/#12.
 
 Changelog (1.5.0):
   - Workflow engine (fase 3): sequential multi-step dork campaigns
@@ -177,7 +201,18 @@ from core.workflow import (
     validate_workflow,
 )
 
-VERSION = "1.5.0"
+# Plugin system (core/plugins.py)
+from core.plugins import (
+    PluginDef,
+    PluginError,
+    discover_plugins,
+    dispatch_plugin,
+    make_context,
+    register_plugin_args,
+    run_plugin,
+)
+
+VERSION = "1.6.0"
 
 console = Console()
 logger = logging.getLogger("atdork")
@@ -455,6 +490,10 @@ def build_parser():
 
     parser.add_argument("--debug", action="store_true")
     parser.add_argument("--version", action="version", version=f"%(prog)s {VERSION}")
+
+    # Plugin flags (--<plugin> and the mandatory --<plugin>-<option> format)
+    # must come after every core flag so collisions can be detected.
+    register_plugin_args(parser, warn=lambda msg: logger.warning("%s", msg))
     return parser
 
 
@@ -2157,6 +2196,161 @@ def workflow_cli(argv: List[str], workspace=None) -> int:
     return 2
 
 
+# ── Plugin system ──────────────────────────────────────────────────────────
+
+def _coerce_plugin_option(definition: PluginDef, opt_name: str, raw: str) -> Any:
+    """Convert an ``--opt key=value`` string using the option's contract."""
+    match = next((o for o in definition.options
+                  if o["name"] == opt_name
+                  or o["name"].replace("-", "_") == opt_name), None)
+    if match is None:
+        raise PluginError(
+            f"plugin '{definition.name}' has no option '{opt_name}'. "
+            f"Known: {', '.join(o['name'] for o in definition.options) or '(none)'}"
+        )
+    if match.get("action") == "store_true":
+        value = raw.strip().lower()
+        if value in ("1", "true", "yes", "on"):
+            return True
+        if value in ("0", "false", "no", "off"):
+            return False
+        raise PluginError(f"'{opt_name}' is a switch — use "
+                          f"{definition.flag_for(match['name'])} or key=true/false")
+    if match.get("type") == "int":
+        try:
+            return int(raw)
+        except ValueError as e:
+            raise PluginError(f"'{opt_name}' expects an integer, got {raw!r}") from e
+    if match.get("type") == "float":
+        try:
+            return float(raw)
+        except ValueError as e:
+            raise PluginError(f"'{opt_name}' expects a number, got {raw!r}") from e
+    choices = match.get("choices")
+    if isinstance(choices, list) and raw not in choices:
+        raise PluginError(f"'{opt_name}' must be one of: {', '.join(choices)}")
+    return raw
+
+
+def plugins_cli(argv: List[str], workspace=None) -> int:
+    """`atdork plugins list|info|run` — inspect and launch installed plugins."""
+    parser = argparse.ArgumentParser(
+        prog="atdork plugins",
+        description="Plugin tools installed via the package manager. Run them "
+                    "with the flag syntax 'atdork --<plugin> "
+                    "--<plugin>-<option> ...' or via 'plugins run'.",
+    )
+    sub = parser.add_subparsers(dest="command")
+
+    sub.add_parser("list", help="List discovered plugins.")
+    p_info = sub.add_parser("info", help="Show a plugin's contract and flags.")
+    p_info.add_argument("name")
+    p_run = sub.add_parser("run", help="Run a plugin (alternative to flag syntax).")
+    p_run.add_argument("name")
+    p_run.add_argument("--opt", action="append", default=[], metavar="KEY=VALUE",
+                       help="Plugin option override (repeatable).")
+
+    if not argv:
+        parser.print_help()
+        return 1
+    args_ = parser.parse_args(argv)
+
+    try:
+        if args_.command == "list":
+            definitions = discover_plugins()
+            if not definitions:
+                console.print("[yellow]No plugins found.[/yellow] Install one: "
+                              "atdork install @plugins/<tool> — or add folders "
+                              "via plugins.paths in your config.")
+                return 0
+            for definition in sorted(definitions, key=lambda d: d.name):
+                if definition.error:
+                    status = f"[red]invalid[/red]: {definition.error}"
+                elif not definition.enabled:
+                    status = "[dim]disabled (plugins.enabled/disabled)[/dim]"
+                else:
+                    status = "[green]ready[/green]"
+                console.print(f"  [cyan]{definition.name}[/cyan] "
+                              f"v{definition.version or '?'} — "
+                              f"{definition.description or '(no description)'}")
+                console.print(
+                    f"      {status} [dim]| trigger --{definition.name} | "
+                    f"{len(definition.options)} option(s) | {definition.path}[/dim]"
+                )
+            return 0
+
+        if args_.command == "info":
+            definitions = {d.name: d for d in discover_plugins()}
+            definition = definitions.get(args_.name)
+            if definition is None:
+                raise PluginError(
+                    f"Plugin '{args_.name}' not found. Installed: "
+                    f"{', '.join(sorted(definitions)) or '(none)'}"
+                )
+            console.print(f"[bold cyan]{definition.name}[/bold cyan] "
+                          f"v{definition.version or '?'} — {definition.description}")
+            console.print(f"  [dim]source:[/dim] {definition.source}")
+            console.print(f"  [dim]path:  [/dim] {definition.path}")
+            console.print(f"  [dim]ref:   [/dim] {definition.ref}")
+            console.print(f"  [dim]status:[/dim] "
+                          + ("INVALID: " + definition.error if definition.error
+                             else ("enabled" if definition.enabled else "disabled")))
+            console.print(f"  [dim]run:   [/dim] atdork --{definition.name} "
+                          f"[--{definition.name}-<option> ...]")
+            if definition.options:
+                table = Table(show_header=True, header_style="bold")
+                table.add_column("Flag")
+                table.add_column("Dest")
+                table.add_column("Type")
+                table.add_column("Default")
+                table.add_column("Choices")
+                table.add_column("Help")
+                for opt in definition.options:
+                    flag = definition.flag_for(opt["name"])
+                    table.add_row(
+                        flag, flag[2:].replace("-", "_"),
+                        str(opt.get("type", "store_true" if opt.get("action") == "store_true" else "str")),
+                        repr(opt.get("default")),
+                        ", ".join(opt["choices"]) if isinstance(opt.get("choices"), list) else "",
+                        str(opt.get("help", "")),
+                    )
+                console.print(table)
+            return 0
+
+        if args_.command == "run":
+            definitions = {d.name: d for d in discover_plugins()}
+            definition = definitions.get(args_.name)
+            if definition is None:
+                raise PluginError(
+                    f"Plugin '{args_.name}' not found. Installed: "
+                    f"{', '.join(sorted(definitions)) or '(none)'}"
+                )
+            if definition.error:
+                raise PluginError(f"Plugin '{definition.name}' is invalid: "
+                                  f"{definition.error}")
+            namespace = vars(build_parser().parse_args([]))
+            namespace[definition.name] = True
+            for assignment in args_.opt or []:
+                key, sep, value = assignment.partition("=")
+                if not sep:
+                    raise PluginError(
+                        f"--opt expects KEY=VALUE, got {assignment!r}"
+                    )
+                key = key.strip().lstrip("-")
+                namespace[f"{definition.name}_{key}".replace("-", "_")] = \
+                    _coerce_plugin_option(definition, key, value.strip())
+            ctx = make_context(workspace=workspace, console=console)
+            console.print(f"[magenta]▶ plugin[/magenta] {definition.name} "
+                          f"[dim]({definition.path})[/dim]")
+            return run_plugin(definition, argparse.Namespace(**namespace), ctx)
+    except PluginError as exc:
+        console.print(f"[red]Plugin error:[/red] {exc}")
+        return 1
+
+    parser.print_help()
+    return 2
+
+
 def main():
     # 1. Parser minimal khusus untuk --config
     config_parser = argparse.ArgumentParser(add_help=False)
@@ -2225,6 +2419,10 @@ def main():
     if remaining and remaining[0] == "workflow":
         sys.exit(workflow_cli(remaining[1:], workspace))
 
+    # --- Plugin management (atdork plugins list|info|run) ---
+    if remaining and remaining[0] == "plugins":
+        sys.exit(plugins_cli(remaining[1:], workspace))
+
     # 3. Bangun parser penuh
     parser = build_parser()
 
@@ -2232,7 +2430,7 @@ def main():
     #    Kunci berupa section v2 (search/engines/profiles/...) sengaja tidak
     #    diterapkan ke parser — mereka dibaca modul via get_setting().
     v2_section_keys = {"search", "engines", "profiles", "resilience",
-                       "output", "workflows", "version"}
+                       "output", "workflows", "version", "plugins"}
     valid_dests = {action.dest for action in parser._actions if action.dest != 'help'}
     filtered_config = {k: v for k, v in config.items() if k in valid_dests}
     ignored = set(config.keys()) - set(filtered_config.keys()) - v2_section_keys
@@ -2266,6 +2464,14 @@ def main():
             target=args.workflow_target, workers=args.workflow_workers,
             resume=args.workflow_resume, dry_run=args.workflow_dry_run,
         ))
+
+    # --- Plugin flags (--<plugin> / --<plugin>-<option>) ---
+    # The trigger is the bare --<plugin> flag or ANY --<plugin>-* argument on
+    # the command line (config defaults alone never launch a plugin).
+    plugin_exit = dispatch_plugin(args, remaining, workspace=workspace,
+                                  console=console)
+    if plugin_exit is not None:
+        sys.exit(plugin_exit)
 
     # --- GHDB Scraper mode ---
     # Mode ini berdiri sendiri: kalau dipakai, tidak masuk ke alur pencarian/interaktif biasa.

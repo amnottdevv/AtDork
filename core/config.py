@@ -75,7 +75,8 @@ SECTION_DEFAULTS: Dict[str, Dict[str, Any]] = {
     "profiles": {},     # name -> [backend, ...] (named chains for --backend)
     "resilience": {},   # circuit_breaker / cooldown tuning for --resilient
     "output": {},       # format / dir (flattened onto the CLI-facing keys)
-    "workflows": {},    # reserved: workflow definitions (fase 3)
+    "workflows": {},    # workflow definitions (core/workflow.py)
+    "plugins": {},      # plugin system: enabled/disabled/paths/options
 }
 
 # Keys accepted inside the `search:` section (subset of search-related knobs).
@@ -88,6 +89,9 @@ SEARCH_KEYS = {
 
 # Keys accepted inside the `output:` section.
 OUTPUT_KEYS = {"format", "dir", "output_dir", "no_snippet"}
+
+# Keys accepted inside the `plugins:` section.
+PLUGINS_KEYS = {"enabled", "disabled", "paths", "options"}
 
 # Top-level keys allowed in a v2 file.
 KNOWN_ROOT_KEYS = set(DEFAULT_CONFIG) | set(SECTION_DEFAULTS) | {"version"}
@@ -229,6 +233,42 @@ def _validate_layer(data: Dict[str, Any], source: str) -> None:
             raise ConfigError(
                 f"{source}: workflows.{wf_name}.steps must be a list"
             )
+
+    # Plugin system: enabled/disabled/paths/options — structural checks only
+    # (the contract itself is validated by core/plugins.py at registration).
+    plugins = _require_dict(data, "plugins", source)
+    bad = [k for k in plugins if k not in PLUGINS_KEYS]
+    if bad:
+        raise ConfigError(
+            f"{source}: unknown plugins key(s): {', '.join(sorted(bad))} "
+            f"(known: {', '.join(sorted(PLUGINS_KEYS))})"
+        )
+    enabled = plugins.get("enabled")
+    if enabled is not None and not (
+            enabled == "auto"
+            or (isinstance(enabled, list)
+                and all(isinstance(n, str) for n in enabled))):
+        raise ConfigError(
+            f"{source}: plugins.enabled must be 'auto' or a list of plugin names"
+        )
+    for list_key in ("disabled", "paths"):
+        value = plugins.get(list_key)
+        if value is not None and not (
+                isinstance(value, list)
+                and all(isinstance(v, str) for v in value)):
+            raise ConfigError(
+                f"{source}: plugins.{list_key} must be a list of strings"
+            )
+    options = plugins.get("options")
+    if options is not None:
+        if not isinstance(options, dict):
+            raise ConfigError(f"{source}: plugins.options must be a mapping")
+        for opt_name, opt_values in options.items():
+            if not isinstance(opt_values, dict):
+                raise ConfigError(
+                    f"{source}: plugins.options.{opt_name} must be a mapping "
+                    f"of option defaults"
+                )
 
 
 def _check_engine_env(layer: Dict[str, Any], source: str,

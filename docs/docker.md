@@ -18,7 +18,7 @@ docker build -t atdork .
 ```
 
 Version-pinned images are published for every release tag
-(`ghcr.io/amnottdevv/atdork:1.5.0`), plus `latest` on every push to
+(`ghcr.io/amnottdevv/atdork:1.6.0`), plus `latest` on every push to
 `master`.
 
 ## Quick start

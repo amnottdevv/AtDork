@@ -24,7 +24,7 @@ Resolution protocols for common failure vectors encountered during large-scale n
 
 * **Symptom:** Spreadsheet processors (Microsoft Excel, LibreOffice Calc) display warning flags regarding executable expressions or broken formatting blocks upon opening exported maps.
 * **Mitigation Actions:**
-    * Update to the latest release: `pip install --upgrade atdork` (current: `1.5.0`).
+    * Update to the latest release: `pip install --upgrade atdork` (current: `1.6.0`).
     * Distribution builds since `1.3.8` incorporate a parsing pass (`lib/storage.py`) that strips or prefixes symbols (`+`, `=`, `-`, `@`) to block Formula Injection attacks.
 
 ## 4. "Atdork-DB repository not found"
@@ -91,3 +91,25 @@ See [Docker](docker.md) for volumes, bind mounts, and compose examples.
     * After fixing the definition (or after a rate-limit cooldown), continue where the run stopped: `atdork workflow run <name> --resume` — completed steps are skipped under the same `run_id`.
     * Force a single step in isolation: `--step <name>`.
     * State lives in `<env>/state/workflows/<name>.json` (or `~/.atdork/state/workflows/` without an environment) — delete it for a truly fresh start.
+
+## 11. Plugin: Flag "unrecognized arguments" or Plugin Won't Run
+
+* **Symptom:** `atdork --dorkbuilder-... ` exits with `unrecognized arguments`, or a plugin listed by `plugins list` doesn't fire.
+* **Cause:** The plugin isn't installed in the *active* package store (each environment has its own store), it's disabled in config, or its `PLUGIN` metadata is invalid.
+* **Mitigation Actions:**
+    * List what the current environment actually sees: `atdork plugins list` — `ready` means the flags are registered.
+    * Install into the active store: `atdork install @plugins/<tool>` (use `atdork env which` to confirm which store is active).
+    * Check you're using the mandatory format `--<plugin>-<option>` — a fully spelled flag with the wrong prefix is rejected at registration.
+    * An `invalid` entry prints the exact contract error (bad `name`, wrong option prefix, missing `run()`); fix the `.py` and reinstall.
+    * Config defaults alone (`plugins.options`) never launch a plugin — a real `--<plugin>` or `--<plugin>-*` argument is required.
+    * Full reference: [Plugins](features/plugins.md).
+
+## 12. Plugin: Execution Error or Output Rejected by Environment Guard
+
+* **Symptom:** `Plugin error: …`, `Plugin '<name>' crashed: …`, or `output escapes the environment root`.
+* **Cause:** The plugin raised an exception, returned a non-integer, or tried to write a path outside the active environment root.
+* **Mitigation Actions:**
+    * Run it directly for the full traceback: `atdork plugins run <name> --opt k=v`, or add `--debug`.
+    * A `run()` must return an `int` exit code (`None` counts as 0) — a string/bool return is a contract violation.
+    * The environment guard forces every write under the root — use `ctx.guard_write()` and a relative path (`results/report.html`), or run without `--env`.
+    * Silence a misbehaving plugin without uninstalling: add it to `plugins.disabled` in config.

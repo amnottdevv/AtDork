@@ -44,9 +44,14 @@ INDEX_NAME = "Index.idn"
 INDEX_HEADER = "Atdork-DB index"
 DB_REPO_NAME = "Atdork-DB"
 DB_REPO_URL = "https://github.com/amnottdevv/Atdork-DB.git"
+# Plugin tools live under this folder (optionally in tool subfolders) and
+# are Python modules, not dork content.
+PLUGIN_FOLDER = "@plugins"
 # Every data file in the repo is installable/searchable; loading files as
 # queries (.txt line-per-dork) is enforced separately by core.database_dork.
-VALID_EXTS = (".txt", ".csv", ".json")
+# .py entries are plugin modules (@plugins/<tool>/...): installable and
+# searchable, but never loaded as dork content.
+VALID_EXTS = (".txt", ".csv", ".json", ".py")
 INDEX_FIELD_SEPARATOR = "|"
 
 
@@ -333,11 +338,12 @@ def parse_ref(raw: str) -> Ref:
 
 
 def _candidate_names(name: str) -> List[str]:
-    """File names to try, preferring an auto-appended .txt (legacy style)."""
+    """File names to try, preferring an auto-appended .txt (legacy style);
+    bare names inside @plugins resolve to .py modules too."""
     _, ext = os.path.splitext(name)
     if ext:
         return [name]
-    return [name + ".txt", name]
+    return [name + ".txt", name + ".py", name]
 
 
 def _safe(name: str) -> bool:
@@ -462,6 +468,9 @@ def sha256_file(path: Path) -> str:
 
 
 def count_dork_lines(path: Path) -> int:
+    # Plugin modules (.py) are code, not dork content — never counted.
+    if path.suffix.lower() == ".py":
+        return 0
     count = 0
     with open(path, "r", encoding="utf-8", errors="replace") as fh:
         for line in fh:
@@ -491,15 +500,24 @@ def is_installed(entry: IndexEntry, package_dir: Optional[str] = None) -> bool:
 # Install / uninstall / list
 # --------------------------------------------------------------------------- #
 
-def install(raw: str, *, force: bool = False, package_dir: Optional[str] = None,
-            repo: Optional[str] = None, config: Optional[Dict] = None) -> List[InstallOutcome]:
-    """
-    Install a package reference into the local store.
+def _nested_folder_targets(ref: Ref, index: List[IndexEntry]) -> List[IndexEntry]:
+    """Entries under ``<folder>/<name>/`` — plugin tool folders like
+    ``@plugins/dorkbuilder`` resolve to every file in that subfolder."""
+    prefix = f"{ref.name}/"
+    return [e for e in index
+            if e.folder == ref.folder and e.name.startswith(prefix)]
 
-    Accepts file refs ('@cve/cve_1.txt', 'c@cve_1.txt') and folder refs
-    ('@cve', 'c@') — folder refs install every file in the folder.
+
+def resolve_targets(raw: str, index: Optional[List[IndexEntry]] = None,
+                    config: Optional[Dict] = None) -> List[IndexEntry]:
     """
-    entries = load_index(repo=repo, config=config)
+    Resolve a reference to every index entry it covers.
+
+    Handles file refs ('@cve/cve_1.txt', '@plugins/dorkbuilder/x.py'),
+    whole-folder refs ('@cve', '@plugins') and plugin tool folders
+    ('@plugins/dorkbuilder' → all files inside that subfolder).
+    """
+    entries = index if index is not None else load_index(config=config)
     ref = parse_ref(raw)
 
     if ref.name is None:
@@ -507,8 +525,28 @@ def install(raw: str, *, force: bool = False, package_dir: Optional[str] = None,
         targets = [e for e in entries if e.folder == folder]
         if not targets:
             raise RefNotFound(f"Folder '@{folder}' has no installable files.")
-    else:
-        targets = [resolve_entry(raw, index=entries)]
+        return targets
+
+    try:
+        return [resolve_entry(raw, index=entries)]
+    except RefNotFound as exc:
+        nested = _nested_folder_targets(ref, entries)
+        if nested:
+            return nested
+        raise exc
+
+
+def install(raw: str, *, force: bool = False, package_dir: Optional[str] = None,
+            repo: Optional[str] = None, config: Optional[Dict] = None) -> List[InstallOutcome]:
+    """
+    Install a package reference into the local store.
+
+    Accepts file refs ('@cve/cve_1.txt', 'c@cve_1.txt') and folder refs
+    ('@cve', '@plugins/dorkbuilder', '@plugins') — folder refs install
+    every file the reference covers.
+    """
+    entries = load_index(repo=repo, config=config)
+    targets = resolve_targets(raw, index=entries)
 
     store = get_package_dir(package_dir)
     outcomes: List[InstallOutcome] = []
@@ -565,7 +603,13 @@ def uninstall(raw: str, *, package_dir: Optional[str] = None,
         folder = resolve_folder(raw, index=entries)
         targets = [e for e in entries if e.folder == folder]
     elif entries:
-        targets = [resolve_entry(raw, index=entries)]
+        try:
+            targets = [resolve_entry(raw, index=entries)]
+        except RefNotFound as exc:
+            nested = _nested_folder_targets(ref, entries)
+            if not nested:
+                raise exc
+            targets = nested
     else:  # index missing — canonical @folder/file only
         if not (ref.folder and ref.exact_folder and ref.name):
             raise PackageError("Index unavailable; only canonical '@folder/file' refs work.")
@@ -606,9 +650,10 @@ def list_installed(package_dir: Optional[str] = None,
         if not path.is_file() or path.suffix.lower() not in VALID_EXTS:
             continue
         rel = path.relative_to(store)
-        if len(rel.parts) != 2:
+        if len(rel.parts) < 2:
             continue
-        folder, name = rel.parts
+        folder = rel.parts[0]
+        name = "/".join(rel.parts[1:])   # plugins nest: @plugins/<tool>/file.py
         digest = sha256_file(path)
         lines = count_dork_lines(path)
         entry = index.get((folder, name))
@@ -663,6 +708,12 @@ def resolve_batch_file(spec: str, config: Optional[Dict] = None) -> Path:
         ref = parse_ref(raw)
     except RefError:
         ref = None
+    if ref is not None and ref.name and ref.name.lower().endswith(".py"):
+        raise RefError(
+            f"'{raw}' is a plugin module, not a dork file. Install it with "
+            f"'atdork install @plugins/{ref.name.split('/', 1)[0]}' and run it "
+            f"via its --<plugin> flags instead of loading it as a batch."
+        )
     store = get_package_dir()
     if ref is not None and ref.exact_folder and ref.folder and ref.name:
         if not _safe(ref.name):
@@ -723,32 +774,43 @@ def humanize(stem: str) -> str:
 
 def build_index(repo: Optional[str] = None, config: Optional[Dict] = None) -> Dict[str, object]:
     """
-    Scan @folder/*.txt|csv in the Atdork-DB checkout and write Index.idn.
+    Scan @folder data files in the Atdork-DB checkout and write Index.idn.
 
-    Returns stats: {'path', 'entries', 'folders', 'total_dorks'}.
+    Layout is flat (@folder/file); @plugins additionally allows tool
+    subfolders (@plugins/<tool>/*.py) — their index name keeps the relative
+    path. Returns stats: {'path', 'entries', 'folders', 'total_dorks'}.
     """
     root = find_db_repo(repo)
     entries: List[IndexEntry] = []
     skipped_nested = 0
     for folder in sorted(p for p in root.iterdir() if p.is_dir() and p.name.startswith("@")):
-        for path in sorted(folder.iterdir()):
-            if not path.is_file() or path.name.startswith("."):
-                continue
+        if folder.name == PLUGIN_FOLDER:
+            # Plugin tools may nest: @plugins/<tool>/file.py
+            candidates = sorted(
+                p for p in folder.rglob("*")
+                if p.is_file() and not p.name.startswith(".")
+                and not any(part.startswith(".") or part == "__pycache__"
+                            for part in p.relative_to(folder).parts[:-1])
+            )
+        else:
+            candidates = [p for p in sorted(folder.iterdir())
+                          if p.is_file() and not p.name.startswith(".")]
+        for path in candidates:
             if path.suffix.lower() not in VALID_EXTS:
                 continue
-            if path.parent != folder:  # pragma: no cover - iterdir is already flat
+            if path.parent != folder and folder.name != PLUGIN_FOLDER:  # pragma: no cover - flat folders
                 skipped_nested += 1
                 continue
             entries.append(IndexEntry(
                 folder=folder.name[1:],
-                name=path.name,
+                name=path.relative_to(folder).as_posix(),
                 sha256=sha256_file(path),
                 size_bytes=path.stat().st_size,
                 dork_lines=count_dork_lines(path),
                 description=humanize(os.path.splitext(path.name)[0]),
             ))
     if not entries:
-        raise PackageError(f"No dork files found under @folders in {root}.")
+        raise PackageError(f"No package files found under @folders in {root}.")
 
     entries.sort(key=lambda e: e.ref)
     total_dorks = sum(e.dork_lines for e in entries)
