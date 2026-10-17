@@ -79,6 +79,7 @@ nav:
           - Notification: features/notification.md
           - Package Manager: features/package-manager.md
           - Environment: features/environment.md
+          - Workflows: features/workflows.md
           - Database Dork: features/database-scrapper.md
           - GHDB Scraper: features/ghdb-scrapper.md
   - Reference:

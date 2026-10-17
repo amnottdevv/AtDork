@@ -214,7 +214,21 @@ def _validate_layer(data: Dict[str, Any], source: str) -> None:
             f"(known: {', '.join(sorted(OUTPUT_KEYS))})"
         )
 
-    _require_dict(data, "workflows", source)  # reserved (fase 3), opaque for now
+    # Workflows: structural check only (deep step-by-step validation lives in
+    # core/workflow.py, invoked by `atdork workflow validate|run` — importing
+    # it here would create a config↔workflow import cycle).
+    workflows = _require_dict(data, "workflows", source)
+    for wf_name, wf_def in workflows.items():
+        if not isinstance(wf_def, dict):
+            raise ConfigError(
+                f"{source}: workflows.{wf_name} must be a mapping "
+                f"with a 'steps:' list"
+            )
+        steps = wf_def.get("steps")
+        if steps is not None and not isinstance(steps, list):
+            raise ConfigError(
+                f"{source}: workflows.{wf_name}.steps must be a list"
+            )
 
 
 def _check_engine_env(layer: Dict[str, Any], source: str,

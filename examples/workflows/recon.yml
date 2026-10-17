@@ -1,0 +1,73 @@
+# AtDork workflow examples — sequential multi-step dork campaigns.
+#
+# Copy one into your project root as `workflow.yaml` (auto-discovered), keep
+# them in your config `workflows:` section, or point at them explicitly:
+#
+#   atdork workflow validate --file examples/workflows/recon.yml
+#   atdork workflow run exposed-files --file examples/workflows/recon.yml \
+#       --target example.com --dry-run
+#   atdork --run-workflow exposed-files --workflow-file examples/workflows/recon.yml
+#
+# Reference: docs/features/workflows.md
+version: 2
+workflows:
+  # ── Minimal: one step, threshold retry ──────────────────────────────
+  exposed-files:
+    description: "Hunt exposed documents for one target"
+    target: "example.com"          # default target; override with --target
+    max_results: 50
+    steps:
+      - name: documents
+        query: 'site:{target} ext:(pdf|docx|xls|csv) (intitle:index OR intitle:download)'
+        # Fewer than 5 unique results → the alternate queries below run
+        # automatically and their results are merged + deduplicated.
+        when_results_below: 5
+        retry_with:
+          - 'site:{target} ext:pdf'
+          - 'site:{target} (filetype:doc OR filetype:xls)'
+        outputs:
+          # Relative paths resolve inside the active environment root.
+          - file: exposed-files.json
+            format: json
+
+  # ── Full: multiple queries per step, workers, API backend overlay ───
+  recon-acme:
+    description: "Full recon sweep: files → portals → version fingerprints"
+    target: "example.com"
+    workers: 2                    # threads inside each step (steps stay serial)
+    backend: auto                 # default chain: scraping backends + API fallback
+    region: "us-en"
+    steps:
+      - name: exposed-files
+        query: 'site:{target} ext:(pdf|docx) (intitle:index OR intitle:download)'
+        when_results_below: 10
+        retry_with:
+          - 'site:{target} ext:pdf'
+          - 'site:{target} ext:docx OR ext:xls'
+        outputs:
+          - file: recon/files.json
+            format: json
+
+      - name: login-portals
+        # `queries:` runs several dorks in one step (parallel via workers).
+        queries:
+          - 'site:{target} inurl:(login OR signin OR admin)'
+          - 'site:{target} intitle:"index of" (config OR .env OR .git)'
+        worker_overrides:
+          # Force the Serper API backend for this step's worker pool
+          # (requires engines.serper.api_key — see docs/engines.md).
+          backend: serper
+        on_error: continue        # a failed step doesn't abort the run
+
+      - name: fingerprints
+        query: 'site:{target} ("wordpress" OR "drupal" OR "joomla") (inurl:wp-admin OR inurl:change-log)'
+        outputs:
+          - file: recon/fingerprints.csv
+            format: csv
+
+# ── Root discovery ────────────────────────────────────────────────────
+# `workflow.yaml` / `workflows.yaml` in the active environment root or the
+# current directory are read automatically; the environment root wins on
+# name collisions. Run the single workflow found in the root with:
+#
+#   atdork --run-workflow .

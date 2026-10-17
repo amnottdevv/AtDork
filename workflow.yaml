@@ -1,0 +1,29 @@
+# AtDork workflow — auto-discovered from the project root.
+#
+#   atdork workflow list          # show this workflow
+#   atdork workflow validate      # schema check, no search
+#   atdork --run-workflow .       # run the single workflow found in the root
+#   atdork --run-workflow demo --workflow-dry-run
+#   atdork workflow run demo --resume
+#
+# Full reference: docs/features/workflows.md
+version: 2
+workflows:
+  demo:
+    description: "Smoke-test sweep against the documentation domain (example.com)"
+    target: "example.com"
+    workers: 2
+    max_results: 10
+    steps:
+      - name: exposed-files
+        query: 'site:{target} (ext:pdf OR ext:txt)'
+        when_results_below: 3
+        retry_with:
+          - 'site:{target} ext:pdf'
+          - 'site:{target} ext:txt'
+        outputs:
+          - file: demo-exposed-files.json
+            format: json
+      - name: login-portals
+        query: 'site:{target} inurl:(login OR signin)'
+        on_error: continue

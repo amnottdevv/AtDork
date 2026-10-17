@@ -1,9 +1,34 @@
 #!/usr/bin/env python3
 """
 Atdork - Professional OSINT Tool
-Version : 1.4.0
+Version : 1.5.0
 Author  : alzzmarket
 GitHub  : github.com/amnottdevv/atdork
+
+Changelog (1.5.0):
+  - Workflow engine (fase 3): sequential multi-step dork campaigns
+    defined in structured YAML under `workflows:` (any config layer)
+    or standalone workflow.yaml files auto-discovered in the active
+    environment root and the working directory.
+      * atdork workflow list|validate|run, plus the one-shot flag
+        atdork --run-workflow NAME ('.' = the single workflow found
+        in the root) with --workflow-file/--workflow-target/
+        --workflow-workers/--workflow-resume/--workflow-dry-run.
+      * Steps run strictly in order; `when_results_below` triggers
+        `retry_with` queries whose results merge + dedupe.
+      * `workers: N` thread concurrency inside a step;
+        `worker_overrides` overlays search kwargs per step (e.g.
+        force the Serper API backend for one pool).
+      * Resumable state per workflow
+        (<env>/state/workflows/<name>.json): --resume skips steps
+        already completed.
+      * Step outputs (txt/json/csv) are written through the
+        environment write guard; {target}/{step}/{date}/{run_id}
+        substitution in queries and output paths.
+  - Config loader: `workflows:` entries get a fail-fast structural
+    check (mapping with a steps list) at load time.
+  - Docs: new features/workflows.md, CLI reference section,
+    examples/workflows/recon.yml + root workflow.yaml demo.
 
 Changelog (1.4.0):
   - Professional YAML config v2: nested sections (search, engines,
@@ -69,9 +94,11 @@ import logging
 import random
 import threading
 from datetime import datetime
+from pathlib import Path
 from typing import Optional, Dict, Any, List, Tuple
 
 from rich.console import Console
+from rich.markup import escape
 from rich.prompt import Prompt
 from rich.table import Table
 from pyfiglet import Figlet
@@ -139,7 +166,18 @@ from core.manage_cache import SearchCache
 # Notification
 from core.notification import send_batch_summary
 
-VERSION = "1.4.0"
+# Workflow engine (fase 3)
+from core.workflow import (
+    WORKFLOW_FILENAMES,
+    WorkflowEngine,
+    WorkflowError,
+    collect_workflows,
+    discover_workflow_files,
+    load_workflow_file,
+    validate_workflow,
+)
+
+VERSION = "1.5.0"
 
 console = Console()
 logger = logging.getLogger("atdork")
@@ -189,6 +227,21 @@ def build_parser():
     parser.add_argument("--env", type=str,
                         help="AtDork environment root (all results/cache/logs/state "
                              "stay inside it). Also: ATDORK_ENV, 'atdork env use'.")
+    wf_group = parser.add_argument_group("workflow engine")
+    wf_group.add_argument("--run-workflow", metavar="NAME", default=None,
+                          help="Run a named workflow (config 'workflows:', a "
+                               "workflow.yaml in the root, or --workflow-file). "
+                               "'.' runs the single workflow discovered in the root.")
+    wf_group.add_argument("--workflow-file", metavar="FILE", default=None,
+                          help="Read workflow definitions from this YAML file.")
+    wf_group.add_argument("--workflow-target", metavar="TARGET", default=None,
+                          help="Override the workflow target ({target} substitution).")
+    wf_group.add_argument("--workflow-workers", metavar="N", type=int, default=None,
+                          help="Override the worker (thread) count for every step.")
+    wf_group.add_argument("--workflow-resume", action="store_true",
+                          help="Resume: skip steps already completed in the saved state.")
+    wf_group.add_argument("--workflow-dry-run", action="store_true",
+                          help="Print the resolved queries without searching.")
     parser.add_argument("--interactive", action="store_true", help="Run interactive mode.")
 
     # Package manager (Atdork-DB)
@@ -1900,6 +1953,210 @@ def env_cli(argv: List[str]) -> int:
         return 1
 
 
+# ── Workflow engine (fase 3) ───────────────────────────────────────────────
+
+def _collect_workflow_definitions(workspace, files=None):
+    """Merge workflow definitions from config `workflows:` + files.
+
+    Without explicit files, the root is scanned for workflow.yaml (env root
+    first, then the CWD). Returns ({name: (definition, source)}, paths).
+    """
+    config_workflows = get_setting("workflows")
+    paths = list(files) if files else discover_workflow_files(workspace)
+    return collect_workflows(
+        paths, config_workflows if isinstance(config_workflows, dict) else {}
+    ), paths
+
+
+def _resolve_workflow(name: str, workspace, files=None):
+    """Resolve *name* to ``(workflow_name, definition, source)``.
+
+    Accepts a workflow name (config or discovered files), an explicit file
+    path (runnable when it holds exactly one workflow), or a directory marker
+    such as ``.`` (the single workflow discovered in that root is used).
+    """
+    if name and os.path.isfile(name):
+        workflows = load_workflow_file(name)
+        if len(workflows) == 1:
+            wname, definition = next(iter(workflows.items()))
+            return wname, definition, name
+        raise WorkflowError(
+            f"{name} contains {len(workflows)} workflows "
+            f"({', '.join(sorted(workflows))}); pass the name explicitly"
+        )
+
+    if name == "." or (name and os.path.isdir(name)):
+        base = Path(name) if name != "." else Path.cwd()
+        found = discover_workflow_files(workspace, cwd=base)
+        collected = collect_workflows(found)
+        if not collected:
+            raise WorkflowError(
+                f"No workflow file found in '{base}' "
+                f"(expected one of: {', '.join(WORKFLOW_FILENAMES)})"
+            )
+        if len(collected) > 1:
+            raise WorkflowError(
+                f"'{base}' holds {len(collected)} workflows "
+                f"({', '.join(sorted(collected))}); pick one by name"
+            )
+        wname, (definition, source) = next(iter(collected.items()))
+        return wname, definition, source
+
+    collected, paths = _collect_workflow_definitions(workspace, files)
+    if name in collected:
+        definition, source = collected[name]
+        return name, definition, source
+    available = ", ".join(sorted(collected)) or "(none)"
+    sources = ", ".join(str(p) for p in paths) or "no files"
+    raise WorkflowError(
+        f"Workflow '{name}' not found. Available: {available} "
+        f"[dim](sources: config workflows:, {sources})[/dim]"
+    )
+
+
+def _print_workflow_summary(summary: Dict[str, Any], source: str) -> None:
+    """Compact per-step result table after a run."""
+    marks = {
+        "done": ("✓", "green"), "below_threshold": ("△", "yellow"),
+        "failed": ("✗", "red"), "planned": ("•", "cyan"),
+    }
+    for step in summary.get("steps", []):
+        mark, color = marks.get(step.get("status", ""), ("•", "dim"))
+        status_text = str(step.get("status", ""))
+        if "results" in step:
+            status_text += f", {step.get('results', 0)} results"
+        if step.get("skipped"):
+            status_text += ", skipped"
+        line = f"  [{color}]{mark}[/{color}] {escape(str(step.get('name')))} [dim]({status_text})[/dim]"
+        if step.get("error"):
+            line += f" [red]{escape(str(step['error']))}[/red]"
+        console.print(line)
+    status = summary.get("status", "completed")
+    color = "green" if status == "completed" else "red"
+    console.print(
+        f"[{color}]Workflow {status}[/{color}] — "
+        f"{summary.get('total_results', 0)} total unique results "
+        f"[dim](source: {escape(str(source))}, run {summary.get('run_id')}, "
+        f"state: {escape(str(summary.get('state_file')))})[/dim]"
+    )
+
+
+def _run_workflow_by_name(name: str, workspace, *, files=None, target=None,
+                          workers=None, step=None, resume=False,
+                          dry_run=False) -> int:
+    """Shared execution path for `atdork workflow run` and --run-workflow."""
+    wname, definition, source = _resolve_workflow(name, workspace, files)
+    engine = WorkflowEngine(
+        wname, definition, target=target, workers=workers,
+        workspace=workspace, console=console,
+    )
+    try:
+        summary = engine.run(resume=resume, only_step=step, dry_run=dry_run)
+    except WorkflowError as exc:
+        console.print(f"[red]Workflow error: {exc}[/red]")
+        return 1
+    _print_workflow_summary(summary, source)
+    return 0 if summary.get("status") == "completed" else 1
+
+
+def workflow_cli(argv: List[str], workspace=None) -> int:
+    """`atdork workflow list|validate|run` — sequential dork campaigns."""
+    parser = argparse.ArgumentParser(
+        prog="atdork workflow",
+        description="Run sequential multi-step dork campaigns from YAML "
+                    "definitions (config 'workflows:' section or workflow.yaml "
+                    "in the root).",
+    )
+    sub = parser.add_subparsers(dest="command")
+
+    p_list = sub.add_parser("list", help="List available workflows.")
+    p_list.add_argument("--file", action="append", dest="files", metavar="FILE",
+                        help="Workflow YAML file (repeatable).")
+
+    p_validate = sub.add_parser("validate", help="Validate workflow definitions.")
+    p_validate.add_argument("name", nargs="?", default=None,
+                            help="Workflow name (default: all).")
+    p_validate.add_argument("--file", action="append", dest="files", metavar="FILE",
+                            help="Workflow YAML file (repeatable).")
+
+    p_run = sub.add_parser("run", help="Run a workflow.")
+    p_run.add_argument("name",
+                       help="Workflow name, a file path, or '.' for the single "
+                            "workflow discovered in the current root.")
+    p_run.add_argument("--file", action="append", dest="files", metavar="FILE",
+                       help="Workflow YAML file (repeatable).")
+    p_run.add_argument("--target", help="Override the workflow target ({target}).")
+    p_run.add_argument("--workers", type=int, help="Override worker (thread) count.")
+    p_run.add_argument("--step", help="Run only this step (by name).")
+    p_run.add_argument("--resume", action="store_true",
+                       help="Skip steps already completed in the saved state.")
+    p_run.add_argument("--dry-run", action="store_true",
+                       help="Print resolved queries without searching.")
+
+    if not argv:
+        parser.print_help()
+        return 1
+    args = parser.parse_args(argv)
+
+    try:
+        if args.command == "list":
+            collected, paths = _collect_workflow_definitions(workspace, args.files)
+            if not collected:
+                console.print("[yellow]No workflows found.[/yellow] "
+                              "Add a 'workflows:' section to your config or a "
+                              "workflow.yaml file in the root.")
+                return 0
+            for wname in sorted(collected):
+                definition, source = collected[wname]
+                steps = len(definition.get("steps") or []) \
+                    if isinstance(definition, dict) else 0
+                desc = definition.get("description", "") \
+                    if isinstance(definition, dict) else ""
+                console.print(f"  [cyan]{wname}[/cyan] — {steps} step(s) "
+                              f"[dim]({escape(str(source))})[/dim]"
+                              + (f" {desc}" if desc else ""))
+            return 0
+
+        if args.command == "validate":
+            collected, _ = _collect_workflow_definitions(workspace, args.files)
+            if args.name:
+                if args.name not in collected:
+                    raise WorkflowError(
+                        f"Workflow '{args.name}' not found. Available: "
+                        f"{', '.join(sorted(collected)) or '(none)'}"
+                    )
+                collected = {args.name: collected[args.name]}
+            if not collected:
+                raise WorkflowError("No workflows to validate (none configured "
+                                    "and none discovered).")
+            invalid = False
+            for wname, (definition, _source) in sorted(collected.items()):
+                errors = validate_workflow(wname, definition)
+                if errors:
+                    invalid = True
+                    console.print(f"[red]✗ {wname}[/red]:")
+                    for error in errors:
+                        console.print(f"    [red]- {error}[/red]")
+                else:
+                    steps = len((definition or {}).get("steps") or [])
+                    console.print(f"[green]✓ {wname}[/green] — valid "
+                                  f"({steps} steps)")
+            return 1 if invalid else 0
+
+        if args.command == "run":
+            return _run_workflow_by_name(
+                args.name, workspace, files=args.files, target=args.target,
+                workers=args.workers, step=args.step, resume=args.resume,
+                dry_run=args.dry_run,
+            )
+    except WorkflowError as exc:
+        console.print(f"[red]Workflow error: {exc}[/red]")
+        return 1
+
+    parser.print_help()
+    return 2
+
+
 def main():
     # 1. Parser minimal khusus untuk --config
     config_parser = argparse.ArgumentParser(add_help=False)
@@ -1962,6 +2219,12 @@ def main():
     if remaining and remaining[0] in PACKAGE_COMMANDS:
         sys.exit(package_cli(remaining))
 
+    # --- Workflow engine subcommands (atdork workflow list/validate/run) ---
+    # Needs the loaded config (`workflows:` layers) and the env workspace
+    # (state + guarded outputs), so it dispatches after both are resolved.
+    if remaining and remaining[0] == "workflow":
+        sys.exit(workflow_cli(remaining[1:], workspace))
+
     # 3. Bangun parser penuh
     parser = build_parser()
 
@@ -1991,6 +2254,18 @@ def main():
             sys.exit(1)
 
     setup_logging(debug=args.debug, log_file=args.log_file)
+
+    # --- Workflow engine (--run-workflow NAME) ---
+    # Runs a sequential multi-step campaign; definitions come from the config
+    # `workflows:` section, a workflow.yaml auto-discovered in the root, or
+    # an explicit --workflow-file. Dispatched before the interactive check.
+    if args.run_workflow:
+        sys.exit(_run_workflow_by_name(
+            args.run_workflow, workspace,
+            files=[args.workflow_file] if args.workflow_file else None,
+            target=args.workflow_target, workers=args.workflow_workers,
+            resume=args.workflow_resume, dry_run=args.workflow_dry_run,
+        ))
 
     # --- GHDB Scraper mode ---
     # Mode ini berdiri sendiri: kalau dipakai, tidak masuk ke alur pencarian/interaktif biasa.

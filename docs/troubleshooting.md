@@ -24,7 +24,7 @@ Resolution protocols for common failure vectors encountered during large-scale n
 
 * **Symptom:** Spreadsheet processors (Microsoft Excel, LibreOffice Calc) display warning flags regarding executable expressions or broken formatting blocks upon opening exported maps.
 * **Mitigation Actions:**
-    * Update to the latest release: `pip install --upgrade atdork` (current: `1.4.0`).
+    * Update to the latest release: `pip install --upgrade atdork` (current: `1.5.0`).
     * Distribution builds since `1.3.8` incorporate a parsing pass (`lib/storage.py`) that strips or prefixes symbols (`+`, `=`, `-`, `@`) to block Formula Injection attacks.
 
 ## 4. "Atdork-DB repository not found"
@@ -69,3 +69,25 @@ See [Docker](docker.md) for volumes, bind mounts, and compose examples.
     * While an environment is active all writes must stay inside its root; relative paths already resolve **against the root** (`results/x.json` → `<root>/results/x.json`), so prefer those.
     * Output still appearing in `./results/`? No environment is actually active — verify with `atdork env which`.
     * Full guide: [Environment](features/environment.md).
+
+## 9. Workflow: "'<name>' not found" or Validation Errors
+
+* **Symptom:** `atdork workflow run <name>` / `--run-workflow` exits with `Workflow '…' not found`, or `workflow validate` prints schema errors.
+* **Cause:** The definition isn't in the merged sources (config `workflows:` + discovered files), or it violates the schema.
+* **Mitigation Actions:**
+    * List what AtDork actually sees: `atdork workflow list` (each entry shows its source — config or file path).
+    * Discovery looks for `workflow.yaml` / `workflows.yaml` (etc.) in the **active environment root** and the **current directory** only — not in parent folders. `atdork env which` tells you which root is active.
+    * Fix schema errors with `atdork workflow validate` — errors are prefixed with the exact path (`workflows.<name>.steps[2]: …`) and exit non-zero (CI-friendly).
+    * `{target}` errors mean a query uses the token but neither the workflow nor `--target` provides one.
+    * Full reference: [Workflows](features/workflows.md).
+
+## 10. Workflow: Step "below_threshold" / "failed" / Resuming
+
+* **Symptom:** A step reports `below_threshold`, or the run stops with `failed … (on_error: stop)` and remaining steps never ran.
+* **Cause:** `below_threshold` simply means fewer **unique** results than `when_results_below` after the `retry_with` queries merged (often normal for small targets). `failed` means every query of that step errored out (backends exhausted).
+* **Mitigation Actions:**
+    * Preview the exact queries first: `--dry-run` (or `--workflow-dry-run`) — no searches, no credits.
+    * Inspect the step's `retry_with` list — alternate, broader dorks are the intended fix for thin results.
+    * After fixing the definition (or after a rate-limit cooldown), continue where the run stopped: `atdork workflow run <name> --resume` — completed steps are skipped under the same `run_id`.
+    * Force a single step in isolation: `--step <name>`.
+    * State lives in `<env>/state/workflows/<name>.json` (or `~/.atdork/state/workflows/` without an environment) — delete it for a truly fresh start.

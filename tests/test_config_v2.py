@@ -109,6 +109,38 @@ def test_v2_bad_section_type_raises(tmp_path):
             load_config(filepath=str(file))
 
 
+def test_v2_valid_workflows_pass(tmp_path):
+    file = tmp_path / "atdork.yml"
+    file.write_text("""
+version: 2
+workflows:
+  recon:
+    target: example.com
+    steps:
+      - name: s1
+        query: 'site:{target} inurl:login'
+""")
+    with patch.dict(os.environ, ENV_CLEAN, clear=True):
+        config = load_config(filepath=str(file))
+    assert config["workflows"]["recon"]["steps"][0]["name"] == "s1"
+
+
+def test_v2_workflow_not_a_mapping_raises(tmp_path):
+    file = tmp_path / "atdork.yml"
+    file.write_text('version: 2\nworkflows:\n  wf: "just-a-string"\n')
+    with patch.dict(os.environ, ENV_CLEAN, clear=True):
+        with pytest.raises(ConfigError, match=r"workflows\.wf must be a mapping"):
+            load_config(filepath=str(file))
+
+
+def test_v2_workflow_steps_not_a_list_raises(tmp_path):
+    file = tmp_path / "atdork.yml"
+    file.write_text('version: 2\nworkflows:\n  wf:\n    steps: "oops"\n')
+    with patch.dict(os.environ, ENV_CLEAN, clear=True):
+        with pytest.raises(ConfigError, match=r"workflows\.wf\.steps must be a list"):
+            load_config(filepath=str(file))
+
+
 def test_v2_unsupported_version_raises(tmp_path):
     file = tmp_path / "atdork.yml"
     file.write_text("version: 99\n")

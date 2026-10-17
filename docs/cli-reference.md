@@ -135,6 +135,49 @@ atdork --env /other/job -q "..."     # per-command override
 Installed packages run as batch files (`--batch-file c@cve_1.txt`); any ref
 also loads directly from the database root via `--database-dork` (see below).
 
+## Workflow Subcommands
+
+Run sequential multi-step dork campaigns defined in YAML. Full guide:
+[Workflows](features/workflows.md).
+
+| Subcommand | Description |
+| :--- | :--- |
+| `atdork workflow list` | List available workflows (config `workflows:` + discovered files). |
+| `atdork workflow validate [name]` | Validate definitions (schema, substitutions, targets). Exit 1 on errors. |
+| `atdork workflow run <name>` | Run a workflow. `<name>` may also be a file path or `.` (the single workflow found in the root). |
+
+| Flag (on `run`) | Description |
+| :--- | :--- |
+| `--file FILE` | Workflow YAML file(s), repeatable (also on `list`/`validate`). |
+| `--target TARGET` | Override the workflow target (`{target}` substitution). |
+| `--workers N` | Override the worker (thread) count for every step. |
+| `--step NAME` | Run only this step. |
+| `--resume` | Skip steps already completed in the saved state. |
+| `--dry-run` | Print resolved queries without searching. |
+
+One-shot flags on the main command (same engine, no subcommand):
+
+| Flag | Description |
+| :--- | :--- |
+| `--run-workflow NAME` | Run a workflow by name, file path, or `.` for the single workflow discovered in the root. |
+| `--workflow-file FILE` | Read workflow definitions from this file. |
+| `--workflow-target TARGET` | Override the workflow target. |
+| `--workflow-workers N` | Override the worker (thread) count. |
+| `--workflow-resume` | Resume: skip completed steps. |
+| `--workflow-dry-run` | Print resolved queries without searching. |
+
+```bash
+atdork workflow list                     # what's defined?
+atdork workflow validate                 # schema check, no credits spent
+atdork --run-workflow .                  # run the single workflow in ./workflow.yaml
+atdork workflow run recon-acme --target example.com --workers 2
+atdork workflow run recon-acme --resume   # continue after a failed/stopped run
+```
+
+Workflow files named `workflow.yaml` (etc.) in the active environment root or
+the working directory are discovered automatically; the environment root wins
+on name collisions.
+
 ---
 
 ## Detailed Flag Descriptions
@@ -324,6 +367,7 @@ atdork --database-dork @cms --database-r 50 --database-seed 7 # random 50, repro
 | **Filter** | `--filter-vuln`, `--no-validate`, `--strict-filter`, `--validate-url`, `--validate-title`, `--validate-desc`, `--validate-spam` |
 | **Dork DB** | `--database-dork`, `--database-preview`, `--database-r`, `--database-seed`, `--database-path`, `--database-dork-extract`, `--list-database-dork` |
 | **Packages** | `--db-repo`, `--db-repo-url`, `--package-dir` + subcommands `search`, `install`, `uninstall`, `installed`, `update`, `index` |
+| **Workflow** | `--run-workflow`, `--workflow-file`, `--workflow-target`, `--workflow-workers`, `--workflow-resume`, `--workflow-dry-run` + subcommands `list`, `validate`, `run` |
 | **Post-Process** | `--exec`, `--exec-on-vuln`, `--exec-parallel`, `--exec-timeout` |
 | **Database** | `--db-path`, `--resume`, `--history`, `--no-dedup`, `--export-db` |
 | **Template** | `--template`, `--target`, `--select`, `--list-templates`, `--template-path`, `--preview` |
