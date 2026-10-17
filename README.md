@@ -12,7 +12,7 @@
 
 **AtDork** is a powerful, ethical OSINT tool that performs advanced search queries (Google Dorks) across multiple search engines simultaneously. Designed for security researchers, penetration testers, and bug bounty hunters.
 
----
+--- 
 
 ## Why AtDork?
 
