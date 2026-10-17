@@ -207,6 +207,7 @@ atdork install https://github.com/user/atdork-plugins
 atdork install https://github.com/user/atdork-plugins#my-tool
 atdork install https://github.com/user/atdork-plugins#tools/my-tool
 atdork install https://github.com/user/repo --git-ref v1.2.0   # pin a tag
+atdork install "https://github.com/amnottdevv/Atdork-DB#@plugins/dorkbuilder"
 
 # a third-party registry declared once in the config
 atdork plugins sources                                     # list them
