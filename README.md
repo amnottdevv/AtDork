@@ -672,6 +672,7 @@ If you find this tool useful, consider leaving a ⭐ on GitHub!
 
 
 
+
 ## Code Quality Metrics
 
 ![Complexity](https://img.shields.io/badge/complexity-6.13-brightgreen)
@@ -686,4 +687,4 @@ If you find this tool useful, consider leaving a ⭐ on GitHub!
 | Test Coverage | 67.5% | ⚠️ Fair |
 | Pylint Score | 9.08/100 | ✅ Good |
 
-*Analysis: atdork.py, core/, lib/ • Last updated: 2026-10-17 11:41:50 UTC*
+*Analysis: atdork.py, core/, lib/ • Last updated: 2026-10-17 13:06:05 UTC*
