@@ -18,7 +18,8 @@ Unlike conventional dorking scripts that easily trigger captchas and face IP ban
 - **Template System** – YAML-based dork collections with `{target}` substitution and selective execution.
 - **Dork Package Manager** – `atdork search` / `install` / `update` over **994,600+ dorks** in [Atdork-DB](https://github.com/amnottdevv/Atdork-DB) — 123 dork packages across 31 `@folders`, plus 7 installable `@plugins/` tools — all browsable in the [web catalog](https://amnottdevv.github.io/Atdork-DB/).
 - **Workflow Engine** – Sequential multi-step dork campaigns in YAML: threshold-triggered retries, worker pools, guarded outputs, resumable state (`atdork workflow run`, `--run-workflow`).
-- **Plugin System** – Install extra Python tools from Atdork-DB (`atdork install @plugins/<tool>`); each surfaces as `--<plugin>-<option>` flags (`--dorkbuilder-text "…"`).
+- **Plugin System** – Install extra Python tools from Atdork-DB (`atdork install @plugins/<tool>`), a git repo, a `.py` URL or your own registry (`--source`); each surfaces as `--<plugin>-<option>` flags (`--dorkbuilder-text "…"`).
+- **Watch Mode** – Cron-friendly monitoring: `atdork watch add` + `watch run` re-runs dorks and reports only new findings (webhook alerts via `--notify`).
 - **Docker Ready** – Official image `ghcr.io/amnottdevv/atdork` ships the CLI *and* the full database — zero setup ([Docker](docker.md)).
 
 ---
@@ -36,6 +37,7 @@ To master AtDork, explore the documentation layout based on your skill level:
 - **[Environment](features/environment.md)** – Isolated workspaces: every result, log and cache file stays inside one root folder.
 - **[Workflows](features/workflows.md)** – Sequential multi-step campaigns: thresholds, retries, workers, resume.
 - **[Plugins](features/plugins.md)** – Installable tools exposed as `--<plugin>-<option>` flags.
+- **[Watch Mode](features/watch.md)** – Cron-friendly monitoring: report only new findings, with webhook alerts.
 - **[CLI Reference](cli-reference.md)** – The full master matrix containing all 50+ configuration flags.
 - **[Configuration](configuration.md)** – The `atdork.yml` guide: layered files, sections, `${ENV}` interpolation.
 - **[Engines & Providers](engines.md)** – Scraping engines plus Serper / SerpApi / Brave Search API providers.
@@ -49,7 +51,7 @@ To master AtDork, explore the documentation layout based on your skill level:
 - **50+ CLI Flags** – Complete control over every aspect of your search.
 - **6+ Search Engines** – DuckDuckGo, Google, Bing, Startpage, Yandex, Yahoo.
 - **3 API Providers** – Serper.dev, SerpApi and Brave Search API via `engines:` in `atdork.yml`.
-- **280+ Unit Tests** – Production-ready stability and reliability.
+- **565 Unit Tests** – Production-ready stability and reliability, run on Python 3.10 / 3.12 / 3.14.
 - **10+ Templates** – Pre-built dork collections for SQLi, XSS, WordPress, and more.
 
 !!! warning "Ethical Use"
@@ -70,6 +72,7 @@ To master AtDork, explore the documentation layout based on your skill level:
 | [Environment](features/environment.md) | Isolated workspaces — nothing written outside the root |
 | [Workflows](features/workflows.md) | Multi-step campaigns — `workflow run` / `--run-workflow` |
 | [Plugins](features/plugins.md) | Installable tools — `--<plugin>-<option>` flag system |
+| [Watch Mode](features/watch.md) | One-shot dork monitoring — `watch run`, new-findings-only alerts |
 | [Configuration](configuration.md) | `atdork.yml` v2: sections, layering, `${ENV}` interpolation |
 | [Engines & Providers](engines.md) | Built-in engines + Serper / SerpApi / Brave API providers |
 | [Resilience System](features/resilience-system.md) | Circuit breakers, adaptive delays, and fallback |

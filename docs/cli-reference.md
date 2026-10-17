@@ -180,6 +180,42 @@ on name collisions.
 
 ---
 
+## Watch Subcommands
+
+One-shot monitoring: register dorks, then report only the new findings each
+cycle. Full guide: [Watch Mode](features/watch.md).
+
+| Subcommand | Description |
+| :--- | :--- |
+| `atdork watch add <name>` | Create (or extend) a watch: `--dork`, `--batch-file`, `--database-dork`, `--notify`. |
+| `atdork watch list` | List watches with their source summary and last run. |
+| `atdork watch show <name>` | Show the definition, options, history counters and last new URLs. |
+| `atdork watch run <name>` | Run one cycle (cron-friendly). `--all` runs every watch. |
+| `atdork watch remove <name>` | Delete the watch and its history. |
+
+| Flag (on `add` / `run`) | Description |
+| :--- | :--- |
+| `--dork DORK` | Dork to run (repeatable on `add`). |
+| `--batch-file FILE` | File of dorks, one per line (repeatable on `add`). |
+| `--database-dork SPEC` | Database dork spec, e.g. `@ghdb/01_footholds`. |
+| `--notify TARGET` | Webhook target (`discord:` / `slack:` / `telegram:`). Stored on `add`, overridable on `run`. |
+| `--backend`, `--max-results`, `--timeout`, `--retries`, `--delay`, `--region`, `--safesearch`, `--timelimit` | Search options (stored on `add`, overridable on `run`). |
+| `--dry-run` (run) | Resolve the dorks and exit — nothing searched. |
+| `--concurrency N` (run) | Parallel dork workers (default 1). |
+| `--all` (run) | Run every saved watch. |
+
+```bash
+atdork watch add acme --dork "site:acme.com ext:env" --notify discord:https://…
+atdork watch run acme              # first run = baseline, later runs report the delta
+atdork watch run acme --dry-run    # sanity-check the dorks, no credits spent
+atdork watch run --all             # one cycle for every watch
+```
+
+State lives in `<env>/state/watch/<name>.json`; runs never use the search
+cache, and a quiet cycle (no new findings) sends no notification.
+
+---
+
 ## Plugin Subcommands
 
 Installable Python tools that surface as `--<plugin>-<option>` flags on the

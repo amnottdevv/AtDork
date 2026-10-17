@@ -99,6 +99,25 @@ def test_run_batch_success(mock_search):
 
 
 @patch("core.batch_runner.search_dork")
+def test_run_batch_silent_mode(mock_search):
+    """show_progress=False runs without a rich bar (watch / cron mode)."""
+    mock_search.return_value = [{"title": "R", "href": "http://a.com"}]
+    results = run_batch(["q1"], show_progress=False)
+    assert results == {"q1": [{"title": "R", "href": "http://a.com"}]}
+
+
+def test_null_progress_shim_api():
+    """The silent shim mirrors the bits of the rich Progress API we use."""
+    from core.batch_runner import _NullProgress
+
+    with _NullProgress() as progress:
+        task = progress.add_task("x", total=2)
+        progress.update(task, advance=1)
+        progress.advance(task)
+    assert task == 0
+
+
+@patch("core.batch_runner.search_dork")
 def test_run_batch_with_failures(mock_search):
     """Queries that raise exceptions should be recorded as empty lists."""
     mock_search.side_effect = [

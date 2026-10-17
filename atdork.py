@@ -167,6 +167,18 @@ from core.external import (
     looks_like_url,
     publish as publish_plugin,
 )
+from core.watch import (
+    WatchError,
+    add_watch,
+    list_watches,
+    load_watch,
+    remove_watch,
+    run_all as run_all_watches,
+    run_watch,
+    state_dir as watch_state_dir,
+    state_path as watch_state_path,
+    summarize as summarize_watch,
+)
 from core.post_processor import PostProcessor, extract_urls, extract_vulnerable_urls
 from lib.display import show_banner, display_results
 from lib.storage import save_results
@@ -260,6 +272,15 @@ def build_parser():
             "\n"
             "Package refs: @cve/cve_1.txt (canonical), c@cve_1.txt (shorthand),\n"
             "              @cve (whole folder)\n"
+            "\n"
+            "Plugins (installable tools, --<plugin>-<option> flags):\n"
+            "  atdork install @plugins/dorkbuilder        From Atdork-DB\n"
+            "  atdork install https://github.com/u/r#tool From a git repo\n"
+            "  atdork plugins list|info|run|publish|sources\n"
+            "\n"
+            "Watch mode (one-shot monitoring, cron-friendly):\n"
+            "  atdork watch add acme --dork \"site:acme.com ext:env\" --notify discord:https://…\n"
+            "  atdork watch run acme\n"
             "\n"
             'Example: atdork -q "site:gov filetype:pdf" -r 10 -o results.json'
         ),
@@ -2225,6 +2246,226 @@ def workflow_cli(argv: List[str], workspace=None) -> int:
     return 2
 
 
+# ── Watch mode (core/watch.py) ─────────────────────────────────────────────
+
+WATCH_OPTION_KEYS = ("backend", "max_results", "timeout", "retries", "delay",
+                     "region", "safesearch", "timelimit")
+
+
+def _watch_add_search_flags(parser) -> None:
+    """Search flags shared by `watch add` and `watch run`."""
+    parser.add_argument("--backend", help="Search backend for this watch.")
+    parser.add_argument("--max-results", type=int, dest="max_results",
+                        help="Results per dork.")
+    parser.add_argument("--timeout", type=int, help="Request timeout (seconds).")
+    parser.add_argument("--retries", type=int, help="Retries per dork.")
+    parser.add_argument("--delay", type=float, help="Delay between requests.")
+    parser.add_argument("--region", help="Search region (e.g. us-en).")
+    parser.add_argument("--safesearch", help="Safesearch level.")
+    parser.add_argument("--timelimit", help="Time limit filter (d/w/m/y).")
+
+
+def _watch_options(args, *, fill_defaults: bool = False) -> dict:
+    """Collect the stored search options of a watch (CLI over config)."""
+    options = {}
+    for key in WATCH_OPTION_KEYS:
+        value = getattr(args, key, None)
+        if value is None and fill_defaults:
+            value = get_setting(key)
+        if value is not None:
+            options[key] = value
+    return options
+
+
+def _watch_proxy_manager():
+    """Proxy manager for watch runs (config-driven; None when unused)."""
+    if not (get_setting("proxy") or get_setting("proxy_file")
+            or get_setting("tor")):
+        return None
+    try:
+        return create_proxy_manager(
+            proxy_arg=get_setting("proxy"),
+            proxy_file=get_setting("proxy_file"),
+            enable_tor=bool(get_setting("tor")),
+            cooldown=int(get_setting("proxy_cooldown") or 60),
+            strict=bool(get_setting("strict")),
+            max_failures=int(get_setting("max_failures") or 3),
+        )
+    except ValueError as exc:
+        raise WatchError(f"proxy manager error: {exc}") from exc
+
+
+def watch_cli(argv: List[str], workspace=None) -> int:
+    """`atdork watch add|list|show|remove|run` — one-shot dork monitoring."""
+    parser = argparse.ArgumentParser(
+        prog="atdork watch",
+        description="Monitor dorks and report only new findings. Each "
+                    "'watch run' is one cycle (cron-friendly): re-run the "
+                    "dorks, diff the result URLs against the saved history, "
+                    "notify through --notify, then exit.",
+    )
+    sub = parser.add_subparsers(dest="command")
+
+    p_add = sub.add_parser("add", help="Register a watch (merges into an "
+                                       "existing one).")
+    p_add.add_argument("name", help="Watch name (letters, digits, . _ -).")
+    p_add.add_argument("--dork", action="append", default=[], dest="dorks",
+                       metavar="DORK", help="Dork to run (repeatable).")
+    p_add.add_argument("--batch-file", action="append", default=[],
+                       dest="batch_files", metavar="FILE",
+                       help="File of dorks, one per line (repeatable).")
+    p_add.add_argument("--database-dork", dest="database", metavar="SPEC",
+                       help="Database dork spec, e.g. '@ghdb/01_footholds'.")
+    p_add.add_argument("--notify", metavar="TARGET",
+                       help="Webhook target stored with the watch "
+                            "(discord:|slack:|telegram:).")
+    _watch_add_search_flags(p_add)
+
+    sub.add_parser("list", help="List watches with their state.")
+
+    p_show = sub.add_parser("show", help="Show one watch (sources + history).")
+    p_show.add_argument("name")
+
+    p_remove = sub.add_parser("remove", help="Delete a watch and its history.")
+    p_remove.add_argument("name")
+
+    p_run = sub.add_parser("run", help="Run one cycle (cron-friendly).")
+    p_run.add_argument("name", nargs="?", default=None,
+                       help="Watch name (omit with --all).")
+    p_run.add_argument("--all", action="store_true", dest="all_watches",
+                       help="Run every saved watch.")
+    p_run.add_argument("--dry-run", action="store_true",
+                       help="Resolve the dorks and exit — nothing searched.")
+    p_run.add_argument("--notify", metavar="TARGET",
+                       help="Override the stored webhook target for this run.")
+    p_run.add_argument("--concurrency", type=int, default=1,
+                       help="Parallel dork workers (default: 1).")
+    _watch_add_search_flags(p_run)
+
+    if not argv:
+        parser.print_help()
+        return 1
+    args = parser.parse_args(argv)
+
+    try:
+        if args.command == "add":
+            record = add_watch(
+                args.name,
+                dorks=args.dorks,
+                batch_files=args.batch_files,
+                database=args.database,
+                notify=args.notify,
+                options=_watch_options(args, fill_defaults=True),
+                workspace=workspace,
+            )
+            console.print(f"[green]✔[/green] watch [cyan]{record['name']}[/cyan] "
+                          f"saved — {summarize_watch(record)}")
+            console.print(f"[dim]Run it: atdork watch run {record['name']} "
+                          "(add it to cron for real monitoring)[/dim]")
+            return 0
+
+        if args.command == "list":
+            records = list_watches(workspace)
+            if not records:
+                console.print("[yellow]No watches yet.[/yellow] Create one: "
+                              "atdork watch add <name> --dork \"site:x ext:env\"")
+                return 0
+            table = Table(title=f"Watches ({len(records)})",
+                          title_style="bold cyan", show_lines=False)
+            table.add_column("Name", style="cyan", no_wrap=True)
+            table.add_column("Sources")
+            table.add_column("Notify")
+            table.add_column("Last run")
+            for record in records:
+                table.add_row(str(record.get("name", "?")), summarize_watch(record),
+                              str(record.get("notify", "") or "—"),
+                              str(record.get("last_run", "") or "never"))
+            console.print(table)
+            console.print("[dim]State: " + _pretty_path(watch_state_dir(workspace))
+                          + "[/dim]")
+            return 0
+
+        if args.command == "show":
+            record = load_watch(args.name, workspace)
+            console.print(f"[bold cyan]watch {record['name']}[/bold cyan] "
+                          f"— {summarize_watch(record)}")
+            for label, key in (("Dorks", "dorks"),
+                               ("Batch files", "batch_files")):
+                for item in record.get(key) or []:
+                    console.print(f"  [dim]{label}:[/dim] {item}")
+            if record.get("database"):
+                console.print(f"  [dim]Database dork:[/dim] "
+                              f"{record['database']}")
+            if record.get("notify"):
+                console.print(f"  [dim]Notify:[/dim] {record['notify']}")
+            options = record.get("options") or {}
+            if options:
+                console.print("  [dim]Options:[/dim] " + ", ".join(
+                    f"{k}={v}" for k, v in sorted(options.items())))
+            console.print(f"  [dim]Runs:[/dim] {int(record.get('runs') or 0)}"
+                          f"  [dim]Last run:[/dim] "
+                          f"{record.get('last_run') or 'never'}"
+                          f"  [dim]Last new:[/dim] "
+                          f"{int(record.get('last_new') or 0)}"
+                          f"  [dim]Seen URLs:[/dim] "
+                          f"{len(record.get('seen') or [])}")
+            for url in (record.get("last_new_urls") or [])[:10]:
+                console.print(f"  [green]•[/green] {url}")
+            console.print(f"  [dim]State:[/dim] "
+                          f"{_pretty_path(watch_state_path(record['name'], workspace))}")
+            return 0
+
+        if args.command == "remove":
+            path = remove_watch(args.name, workspace)
+            console.print(f"[green]✔[/green] removed watch {args.name} "
+                          f"([dim]{_pretty_path(path)}[/dim])")
+            return 0
+
+        if args.command == "run":
+            search_kwargs = _watch_options(args)
+            try:
+                proxy_manager = _watch_proxy_manager()
+            except WatchError as exc:
+                console.print(f"[red]watch: {exc}[/red]")
+                return 1
+            if proxy_manager is not None:
+                search_kwargs["proxy_manager"] = proxy_manager
+                console.print("[dim]Proxy manager initialized.[/dim]")
+
+            common = dict(workspace=workspace, console=console,
+                          concurrency=max(1, int(args.concurrency or 1)),
+                          search_kwargs=search_kwargs,
+                          notify_target=args.notify, dry_run=args.dry_run)
+
+            if args.all_watches:
+                reports, errors = run_all_watches(**common)
+                if not reports and not errors:
+                    console.print("[yellow]No watches to run.[/yellow]")
+                    return 0
+                total_new = sum(len(r.get("new") or []) for r in reports)
+                console.print(f"\n[bold]{len(reports)} watch(es) run — "
+                              f"{total_new} new finding(s)[/bold]")
+                return 1 if errors and not reports else 0
+
+            if not args.name:
+                console.print("[red]watch run needs a name (or --all).[/red]")
+                return 2
+            report = run_watch(args.name, **common)
+            if report["failed"] and report["failed"] == report["queries"]:
+                console.print("[red]All dorks failed — nothing was checked.[/red]")
+                return 1
+            return 0
+    except WatchError as exc:
+        console.print(f"[red]Watch error: {exc}[/red]")
+        return 1
+    except PackageError as exc:
+        _print_ref_error(exc)
+        return 1
+
+    parser.print_help()
+    return 2
+
+
 # ── Plugin system ──────────────────────────────────────────────────────────
 
 def _coerce_plugin_option(definition: PluginDef, opt_name: str, raw: str) -> Any:
@@ -2508,6 +2749,10 @@ def main():
     # (state + guarded outputs), so it dispatches after both are resolved.
     if remaining and remaining[0] == "workflow":
         sys.exit(workflow_cli(remaining[1:], workspace))
+
+    # --- Watch mode (atdork watch add/list/show/remove/run) ---
+    if remaining and remaining[0] == "watch":
+        sys.exit(watch_cli(remaining[1:], workspace))
 
     # --- Plugin management (atdork plugins list|info|run) ---
     if remaining and remaining[0] == "plugins":

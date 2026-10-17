@@ -80,6 +80,7 @@ nav:
           - Package Manager: features/package-manager.md
           - Environment: features/environment.md
           - Workflows: features/workflows.md
+          - Watch Mode: features/watch.md
           - Plugins: features/plugins.md
           - Database Dork: features/database-scrapper.md
           - GHDB Scraper: features/ghdb-scrapper.md

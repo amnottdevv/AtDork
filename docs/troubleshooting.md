@@ -125,3 +125,17 @@ See [Docker](docker.md) for volumes, bind mounts, and compose examples.
     * A `run()` must return an `int` exit code (`None` counts as 0) — a string/bool return is a contract violation.
     * The environment guard forces every write under the root — use `ctx.guard_write()` and a relative path (`results/report.html`), or run without `--env`.
     * Silence a misbehaving plugin without uninstalling: add it to `plugins.disabled` in config.
+
+## 14. Watch: Nothing New, Wrong Findings, or No Notification
+
+* **Symptom:** `watch run` always reports `0 new`, every result is reported as new on every run, or the webhook never fires.
+* **Cause:** The first run is a baseline by design; a changed dork target re-keys results; and quiet cycles (nothing new) never notify.
+* **Mitigation Actions:**
+    * The very first `watch run <name>` records a **baseline** and reports nothing as new — that is expected. Run it twice to see the delta.
+    * Every run without new findings stays quiet (no notification). Only the baseline and real findings notify.
+    * Check what the watch holds: `atdork watch show <name>` lists the dorks, stored options, run counter and the last new URLs.
+    * Verify the dorks resolve before spending time/credits: `atdork watch run <name> --dry-run`.
+    * A different backend can return a different result set (so URLs may look "new"); pin the search options on `add` (`--max-results`, `--region`, `--backend`) so cycles are comparable.
+    * Reset the history by deleting `<env>/state/watch/<name>.json` (or `watch remove` + `watch add`) — the next run becomes a fresh baseline.
+    * Confirm the watch state file is the one you think it is: environments keep their own (`atdork --env <path> watch list`).
+    * Full guide: [Watch Mode](features/watch.md).

@@ -468,6 +468,25 @@ def build_query_executor(
 # Batch runner
 # --------------------------------------------------------------------------- #
 
+class _NullProgress:
+    """Progress shim: same API as rich Progress, draws nothing (cron mode)."""
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc_info):
+        return False
+
+    def add_task(self, *args, **kwargs) -> int:
+        return 0
+
+    def update(self, *args, **kwargs) -> None:
+        return None
+
+    def advance(self, *args, **kwargs) -> None:
+        return None
+
+
 def run_batch(
     queries: List[str],
     case_modules: Optional[Dict] = None,
@@ -478,6 +497,7 @@ def run_batch(
     cache_ttl: int = 24,
     cache_only: bool = False,
     on_query_done: Optional[Callable[[str, list, bool], None]] = None,
+    show_progress: bool = True,
     **search_kwargs,
 ) -> Dict[str, list]:
     """
@@ -494,6 +514,8 @@ def run_batch(
         cache_ttl: TTL cache dalam jam.
         cache_only: Hanya layani dari cache (MISS → []).
         on_query_done: Callback (query, results, success) per query selesai.
+        show_progress: Tampilkan progress bar rich (False untuk mode senyap,
+            mis. `atdork watch run` dari cron).
         **search_kwargs: Parameter untuk search_dork (max_results, timeout, proxy_manager, dll).
 
     Returns:
@@ -533,13 +555,15 @@ def run_batch(
     )
 
     # ── Progress bar & eksekusi ──────────────────────────────────────
-    with Progress(
+    progress_cm = Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
         BarColumn(),
         TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
         TimeElapsedColumn(),
-    ) as progress:
+    ) if show_progress else _NullProgress()
+
+    with progress_cm as progress:
         task = progress.add_task("[cyan]Running batch queries...", total=total)
 
         if concurrency > 1:
