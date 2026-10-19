@@ -1,0 +1,3577 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+        <link rel="canonical" href="https://amnottdevv.github.io/AtDork/features/database-scrapper/">
+      
+      
+        <link rel="prev" href="../plugins/">
+      
+      
+        <link rel="next" href="../ghdb-scrapper/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Database Dork - AtDork Documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="light-blue">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#database-dork" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="AtDork Documentation" class="md-header__button md-logo" aria-label="AtDork Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            AtDork Documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Database Dork
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="light-blue"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="light-blue"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/amnottdevv/atdork" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    amnottdevv/atdork
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../installation/" class="md-tabs__link">
+          
+  
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../resilience-system/" class="md-tabs__link">
+          
+  
+  
+  Documentation
+
+        </a>
+      </li>
+    
+  
+
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../cli-reference/" class="md-tabs__link">
+          
+  
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../troubleshooting/" class="md-tabs__link">
+          
+  
+  
+  Support
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../database/" class="md-tabs__link">
+          
+  
+  
+  Dork Database
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="https://amnottdevv.github.io/Atdork-DB/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Dork Catalog (web)
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="AtDork Documentation" class="md-nav__button md-logo" aria-label="AtDork Documentation" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    AtDork Documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/amnottdevv/atdork" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    amnottdevv/atdork
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../basic-usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Basic Usage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../docker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Documentation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Documentation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_1" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3_1" id="__nav_3_1_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Features
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_1_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3_1">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Features
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../resilience-system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Resilience System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../proxy-anonymity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Proxy & Anonymity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../filter-vuln/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vulnerability Filter
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../template-system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Template System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../batch-processing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Batch Processing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../output-formats/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Output Formats
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../post-processing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Post Processing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../database-history/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Database & History
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cache-system/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cache System
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../notification/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Notification
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../package-manager/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Package Manager
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../environment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Environment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../workflows/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Workflows
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../watch/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Watch Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../plugins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Database Dork
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Database Dork
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Introduction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-it-does" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#categories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Categories
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Categories">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ghdb-ghdb-14-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GHDB (@ghdb/ — 14 Files)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#folders-28-total" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Folders (28 Total)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cli-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI Flags
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-use" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to Use
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How to Use">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-browse-and-list-available-packages" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Browse and List Available Packages
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-install-packages-locally" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Install Packages Locally
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-update-the-atdork-db-checkout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Update the Atdork-DB Checkout
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-load-dorks-from-a-single-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Load Dorks from a Single File
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-load-dorks-from-multiple-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Load Dorks from Multiple Files
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-load-whole-folders" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Load Whole Folders
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-random-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Random Selection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-reproducible-random-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Reproducible Random Selection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-preview-without-executing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Preview Without Executing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#10-custom-local-copy-legacy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Custom Local Copy (Legacy)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#directory-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Directory Structure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Works
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How It Works">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#package-reference-grammar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Package Reference Grammar
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#resolution-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resolution Order
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#path-safety" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Path Safety
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#random-selection-algorithm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Random Selection Algorithm
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#integration-with-other-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integration with Other Features
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-workflows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Workflows
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Common Workflows">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#quick-recon" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Recon
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#password-and-token-audit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Password and Token Audit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cms-vulnerability-scan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CMS Vulnerability Scan
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#search-engine-specific" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Search Engine Specific
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reproducible-daily-scan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reproducible Daily Scan
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bug-bounty-focus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bug Bounty Focus
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#custom-local-dork-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom Local Dork File
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#database-directory-not-found" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Database directory not found
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#database-dork-file-not-found" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Database dork file not found
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#parent-directory-traversal-not-allowed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parent directory traversal not allowed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#destination-already-exists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Destination already exists
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#legacy-subdirectory-path-resolves-to-nothing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Legacy subdirectory path resolves to nothing
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exit-codes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exit Codes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See Also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ghdb-scrapper/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GHDB Scraper
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../engines/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Engines & Providers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Support
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Support
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dork Database
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Dork Database
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../database/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../database/cms-dorks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CMS Dorks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../database/common-dorks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Common Dorks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../database/github-dorks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GitHub Dorks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../database/lfi-dorks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LFI Dorks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../database/rfi-dorks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RFI Dorks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../database/bing-and-ddg/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bing & DuckDuckGo Dorks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../database/censys-dorks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Censys Dorks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../database/bug-bounty-dorks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bug Bounty Dorks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="https://amnottdevv.github.io/Atdork-DB/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dork Catalog (web)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Introduction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-it-does" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What It Does
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#categories" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Categories
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Categories">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ghdb-ghdb-14-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GHDB (@ghdb/ — 14 Files)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#folders-28-total" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Folders (28 Total)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#cli-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CLI Flags
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-use" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to Use
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How to Use">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-browse-and-list-available-packages" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Browse and List Available Packages
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-install-packages-locally" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Install Packages Locally
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-update-the-atdork-db-checkout" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Update the Atdork-DB Checkout
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-load-dorks-from-a-single-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Load Dorks from a Single File
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-load-dorks-from-multiple-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Load Dorks from Multiple Files
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-load-whole-folders" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Load Whole Folders
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-random-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Random Selection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-reproducible-random-selection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Reproducible Random Selection
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-preview-without-executing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Preview Without Executing
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#10-custom-local-copy-legacy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Custom Local Copy (Legacy)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#directory-structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Directory Structure
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#how-it-works" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How It Works
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="How It Works">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#package-reference-grammar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Package Reference Grammar
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#resolution-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Resolution Order
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#path-safety" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Path Safety
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#random-selection-algorithm" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Random Selection Algorithm
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#integration-with-other-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integration with Other Features
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-workflows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Workflows
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Common Workflows">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#quick-recon" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Quick Recon
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#password-and-token-audit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Password and Token Audit
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cms-vulnerability-scan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CMS Vulnerability Scan
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#search-engine-specific" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Search Engine Specific
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reproducible-daily-scan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reproducible Daily Scan
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bug-bounty-focus" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bug Bounty Focus
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#custom-local-dork-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom Local Dork File
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#troubleshooting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Troubleshooting
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Troubleshooting">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#database-directory-not-found" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Database directory not found
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#database-dork-file-not-found" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Database dork file not found
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#parent-directory-traversal-not-allowed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parent directory traversal not allowed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#destination-already-exists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Destination already exists
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#legacy-subdirectory-path-resolves-to-nothing" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Legacy subdirectory path resolves to nothing
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#exit-codes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exit Codes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#see-also" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        See Also
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="database-dork">Database Dork<a class="headerlink" href="#database-dork" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>Data location:</strong> these dorks live in the <a href="https://github.com/amnottdevv/Atdork-DB">Atdork-DB</a> repository under <code>@folders</code> (e.g. <code>@ghdb/01_footholds.txt</code>). Browse with <code>atdork search &lt;keyword&gt;</code>, install with <code>atdork install &lt;ref&gt;</code>.</p>
+</blockquote>
+<h2 id="introduction">Introduction<a class="headerlink" href="#introduction" title="Permanent link">&para;</a></h2>
+<p>AtDork ships <strong>code only</strong> — the dork data lives in the separate
+<a href="https://github.com/amnottdevv/Atdork-DB">Atdork-DB</a> repository, checked out
+locally (by default <code>~/Atdork-DB</code>) and indexed by <code>Index.idn</code>. The current
+index contains <strong>~978,000 dorks across 100+ files in 29 <code>@folders</code></strong>, including:</p>
+<ul>
+<li>GHDB (Google Hacking Database) from Exploit-DB (<code>@ghdb/</code>, refreshed weekly)</li>
+<li>Search engine specific dorks (Bing, DuckDuckGo, Google, Yandex, Shodan, Censys)</li>
+<li>Platform and CMS specific dorks (<code>@cms/</code>, <code>@github/</code>, <code>@cloud/</code>)</li>
+<li>Vulnerability focused dorks (<code>@lfi/</code>, <code>@rfi/</code>, <code>@cve/</code>, <code>@vuln/</code>)</li>
+<li>Industry and niche specific dorks (<code>@crypto/</code>, <code>@gaming/</code>, <code>@iot/</code>, <code>@bug-bounty/</code>)</li>
+</ul>
+<p>The Database Dork feature lets you load, filter, and execute these dorks without
+manual copy-pasting. Dorks are addressed with <strong>package refs</strong> such as
+<code>@cve/cve_1.txt</code>, whole folders such as <code>@ghdb</code>, and comma-separated
+combinations — plus random selection and reproducible runs via RNG seeds. A
+built-in package manager (<code>atdork search</code> / <code>install</code> / <code>uninstall</code> /
+<code>installed</code>) lets you cache packages locally in <code>~/.atdork/packages/</code>.</p>
+<p>This is distinct from the <strong>GHDB Scraper</strong> (<code>--ghdb-scraper</code>), which performs
+live HTTP fetching from Exploit-DB. The Database Dork feature reads from local
+files — no network required.</p>
+<hr />
+<h2 id="what-it-does">What It Does<a class="headerlink" href="#what-it-does" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Feature</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Atdork-DB Packages</td>
+<td>~978,000 dorks across 29 <code>@folders</code>, resolved from the Atdork-DB checkout</td>
+</tr>
+<tr>
+<td>Package Manager</td>
+<td><code>atdork search</code> / <code>install</code> / <code>uninstall</code> / <code>installed</code> — cache packages in <code>~/.atdork/packages/</code></td>
+</tr>
+<tr>
+<td>Manifest Index</td>
+<td><code>Index.idn</code> maps every <code>@folder/file.txt</code> to checksum, size, dork count, and description</td>
+</tr>
+<tr>
+<td>List Available Files</td>
+<td><code>--list-database-dork</code> shows all index entries as <code>@folder/file.txt</code> with dork counts and sizes</td>
+</tr>
+<tr>
+<td>Flexible Naming</td>
+<td>Accepts canonical refs, shorthand (<code>c@cve_1.txt</code>), bare file names, and whole folders</td>
+</tr>
+<tr>
+<td>Multi-file Combos</td>
+<td>Load dorks from multiple files or folders in one command via comma</td>
+</tr>
+<tr>
+<td>Whole-folder Loading</td>
+<td><code>--database-dork @ghdb</code> loads every <code>.txt</code> member of the folder</td>
+</tr>
+<tr>
+<td>Random Selection</td>
+<td>Pick N random dorks from the combined set without replacement</td>
+</tr>
+<tr>
+<td>Reproducible Runs</td>
+<td>Use <code>--database-seed</code> for deterministic random selection</td>
+</tr>
+<tr>
+<td>Preview Mode</td>
+<td>Inspect loaded dorks without executing them as searches</td>
+</tr>
+<tr>
+<td>Path Safety</td>
+<td>Parent traversal (<code>..</code>) and absolute paths are rejected</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="categories">Categories<a class="headerlink" href="#categories" title="Permanent link">&para;</a></h2>
+<p>All dorks live in the Atdork-DB checkout under <code>@folders</code>. The <code>@ghdb/</code> folder
+holds the numbered GHDB categories:</p>
+<h3 id="ghdb-ghdb-14-files">GHDB (<code>@ghdb/</code> — 14 Files)<a class="headerlink" href="#ghdb-ghdb-14-files" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Ref</th>
+<th>Category</th>
+<th>Dorks</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>@ghdb/01_footholds.txt</code></td>
+<td>Footholds</td>
+<td>121</td>
+</tr>
+<tr>
+<td><code>@ghdb/02_files_containing_usernames.txt</code></td>
+<td>Files Containing Usernames</td>
+<td>47</td>
+</tr>
+<tr>
+<td><code>@ghdb/03_sensitive_directories.txt</code></td>
+<td>Sensitive Directories</td>
+<td>450</td>
+</tr>
+<tr>
+<td><code>@ghdb/04_web_server_detection.txt</code></td>
+<td>Web Server Detection</td>
+<td>205</td>
+</tr>
+<tr>
+<td><code>@ghdb/05_vulnerable_files.txt</code></td>
+<td>Vulnerable Files</td>
+<td>86</td>
+</tr>
+<tr>
+<td><code>@ghdb/06_vulnerable_servers.txt</code></td>
+<td>Vulnerable Servers</td>
+<td>129</td>
+</tr>
+<tr>
+<td><code>@ghdb/07_error_messages.txt</code></td>
+<td>Error Messages</td>
+<td>124</td>
+</tr>
+<tr>
+<td><code>@ghdb/08_files_containing_juicy_info.txt</code></td>
+<td>Files Containing Juicy Info</td>
+<td>1,743</td>
+</tr>
+<tr>
+<td><code>@ghdb/09_files_containing_passwords.txt</code></td>
+<td>Files Containing Passwords</td>
+<td>401</td>
+</tr>
+<tr>
+<td><code>@ghdb/10_sensitive_online_shopping_info.txt</code></td>
+<td>Sensitive Online Shopping Info</td>
+<td>15</td>
+</tr>
+<tr>
+<td><code>@ghdb/11_network_or_vulnerability_data.txt</code></td>
+<td>Network or Vulnerability Data</td>
+<td>108</td>
+</tr>
+<tr>
+<td><code>@ghdb/12_pages_containing_login_portals.txt</code></td>
+<td>Pages Containing Login Portals</td>
+<td>1,549</td>
+</tr>
+<tr>
+<td><code>@ghdb/13_various_online_devices.txt</code></td>
+<td>Various Online Devices</td>
+<td>743</td>
+</tr>
+<tr>
+<td><code>@ghdb/14_advisories_and_vulnerabilities.txt</code></td>
+<td>Advisories and Vulnerabilities</td>
+<td>2,219</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>@ghdb/</code> files are refreshed weekly by an automated workflow in the
+Atdork-DB repository; run <code>atdork update</code> to pull the latest data and rebuild
+the index.</p>
+<h3 id="folders-28-total">Folders (28 Total)<a class="headerlink" href="#folders-28-total" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Folder</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>@admin/</code></td>
+<td>Admin panel and stats-page dorks (<code>adminpanel-dorks</code>, <code>awstats</code>)</td>
+</tr>
+<tr>
+<td><code>@bing/</code></td>
+<td>Bing-specific dorks (<code>bing1</code>, <code>bing2</code>)</td>
+</tr>
+<tr>
+<td><code>@bug-bounty/</code></td>
+<td>Bug bounty and responsible disclosure dorks (<code>bbdorks</code>)</td>
+</tr>
+<tr>
+<td><code>@carding/</code></td>
+<td>Carding and fraud-related dorks (security research only)</td>
+</tr>
+<tr>
+<td><code>@censys/</code></td>
+<td>Censys search queries (<code>censysdork</code>)</td>
+</tr>
+<tr>
+<td><code>@cloud/</code></td>
+<td>Cloud instance dorks — AWS, Azure, GCP, IBM (<code>amazondorks</code>, <code>aws</code>, <code>azure</code>, <code>googlecloud</code>, <code>ibmcloud</code>)</td>
+</tr>
+<tr>
+<td><code>@cms/</code></td>
+<td>CMS-specific dorks — WordPress, Joomla, Laravel, Magento (<code>wp</code>, <code>wp2</code>, <code>joomla</code>, <code>laravel</code>, <code>magento</code>)</td>
+</tr>
+<tr>
+<td><code>@common/</code></td>
+<td>Common dorks — SQLi, XSS, IDOR, etc. (<code>common1</code>–<code>common5</code>)</td>
+</tr>
+<tr>
+<td><code>@crypto/</code></td>
+<td>Crypto wallet and exchange dorks (incl. 600k-scale sets)</td>
+</tr>
+<tr>
+<td><code>@cve/</code></td>
+<td>CVE-focused dorks (<code>cve_1</code>)</td>
+</tr>
+<tr>
+<td><code>@duckduckgo/</code></td>
+<td>DuckDuckGo dorks with <code>!bang</code> shortcuts (<code>ddg1</code>, <code>ddgo</code>)</td>
+</tr>
+<tr>
+<td><code>@exploit-db/</code></td>
+<td>Additional Exploit-DB category files (<code>Footholds</code>, <code>Sensitive-Directories</code>, …)</td>
+</tr>
+<tr>
+<td><code>@gaming/</code></td>
+<td>Gaming-related dorks (<code>fortnite</code>, <code>minecraft</code>, …)</td>
+</tr>
+<tr>
+<td><code>@ghdb/</code></td>
+<td>Google Hacking Database, numbered categories (see above)</td>
+</tr>
+<tr>
+<td><code>@github/</code></td>
+<td>GitHub search for secrets — tokens, keys, passwords (<code>git-dorks</code>, <code>githubdorks</code>, …)</td>
+</tr>
+<tr>
+<td><code>@google/</code></td>
+<td>Google dorks (<code>googledorks1</code>, <code>googledorks2</code>)</td>
+</tr>
+<tr>
+<td><code>@iot/</code></td>
+<td>CCTV, IP camera, and IoT device dorks (<code>cctv</code>, <code>cctv3</code>, <code>various-iot-devices-dorks</code>)</td>
+</tr>
+<tr>
+<td><code>@lfi/</code></td>
+<td>Local File Inclusion dorks (<code>lfi</code>)</td>
+</tr>
+<tr>
+<td><code>@movie/</code></td>
+<td>Movie streaming dorks (<code>netflix-dorks</code>, <code>movie</code>)</td>
+</tr>
+<tr>
+<td><code>@network/</code></td>
+<td>IP range and web server detection dorks (<code>ipdorks</code>, <code>webserver-detection-dorks</code>)</td>
+</tr>
+<tr>
+<td><code>@onion/</code></td>
+<td>Tor and onion service dorks (<code>onion</code>)</td>
+</tr>
+<tr>
+<td><code>@rfi/</code></td>
+<td>Remote File Inclusion dorks (<code>rfi</code>)</td>
+</tr>
+<tr>
+<td><code>@sensitive/</code></td>
+<td>Sensitive files, dirs, logs, and hidden files dorks</td>
+</tr>
+<tr>
+<td><code>@shodan/</code></td>
+<td>Shodan queries (<code>shodan1</code>, <code>shodan2</code>, <code>shodanqueries</code>, ICS/IoT CSV)</td>
+</tr>
+<tr>
+<td><code>@shopping/</code></td>
+<td>E-commerce and shopping dorks (<code>10kshopping-dorks</code>, <code>webstore-dorks</code>)</td>
+</tr>
+<tr>
+<td><code>@social/</code></td>
+<td>Discord and LinkedIn dorks (<code>discord-tokens-dorks</code>, <code>linkedindorks</code>)</td>
+</tr>
+<tr>
+<td><code>@vuln/</code></td>
+<td>Vulnerable server dorks (<code>vuln-server-dorks</code>)</td>
+</tr>
+<tr>
+<td><code>@yandex/</code></td>
+<td>Yandex dorks (<code>yandex</code>)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="cli-flags">CLI Flags<a class="headerlink" href="#cli-flags" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>--db-repo PATH</code></td>
+<td>string</td>
+<td>Path to the Atdork-DB checkout (default: auto-discover, or config key <code>db_repo</code>; env <code>ATDORK_DB_REPO</code>)</td>
+</tr>
+<tr>
+<td><code>--db-repo-url URL</code></td>
+<td>string</td>
+<td>Git URL of the Atdork-DB repository (used by <code>atdork update</code>)</td>
+</tr>
+<tr>
+<td><code>--package-dir PATH</code></td>
+<td>string</td>
+<td>Override the package store (default: <code>~/.atdork/packages</code>)</td>
+</tr>
+<tr>
+<td><code>--list-database-dork</code></td>
+<td>flag</td>
+<td>List all index entries as <code>@folder/file.txt</code> with dork counts and sizes</td>
+</tr>
+<tr>
+<td><code>--database-dork SPEC</code></td>
+<td>string</td>
+<td>Load dorks from package refs. Comma-separated. Accepts <code>@folder/file.txt</code>, <code>x/file.txt</code> shorthand, bare file names, and whole folders</td>
+</tr>
+<tr>
+<td><code>--database-r N</code></td>
+<td>int</td>
+<td>Randomly select N dorks from the combined set</td>
+</tr>
+<tr>
+<td><code>--database-path PATH</code></td>
+<td>string</td>
+<td>Root of a legacy local database copy</td>
+</tr>
+<tr>
+<td><code>--database-preview</code></td>
+<td>flag</td>
+<td>Preview loaded dorks without running a search</td>
+</tr>
+<tr>
+<td><code>--database-seed N</code></td>
+<td>int</td>
+<td>Optional RNG seed for reproducible <code>--database-r</code></td>
+</tr>
+<tr>
+<td><code>--extract-database</code></td>
+<td>flag</td>
+<td>Legacy: copy a local <code>./database</code> directory to a destination</td>
+</tr>
+<tr>
+<td><code>--extract-database-to PATH</code></td>
+<td>string</td>
+<td>Custom destination for <code>--extract-database</code></td>
+</tr>
+<tr>
+<td><code>--database-dork-extract PATH</code></td>
+<td>string</td>
+<td>Legacy shortcut: copy a local database to <code>PATH</code></td>
+</tr>
+<tr>
+<td><code>--force</code></td>
+<td>flag</td>
+<td>Overwrite existing destination when extracting</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p><strong>Note:</strong> AtDork no longer bundles a dork database — it ships code only. The
+<code>--extract-database</code>, <code>--extract-database-to</code>, <code>--database-dork-extract</code>, and
+<code>--force</code> flags operate on a <strong>legacy local <code>./database</code> directory</strong> you
+provide (e.g. an old extraction kept for offline editing). New setups should
+use the Atdork-DB checkout and package refs instead.</p>
+</blockquote>
+<hr />
+<h2 id="how-to-use">How to Use<a class="headerlink" href="#how-to-use" title="Permanent link">&para;</a></h2>
+<h3 id="1-browse-and-list-available-packages">1. Browse and List Available Packages<a class="headerlink" href="#1-browse-and-list-available-packages" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Search the index by keyword (returns @folder/file.txt refs)</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>atdork<span class="w"> </span>search<span class="w"> </span>wp
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># List every index entry with dork counts and sizes</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>atdork<span class="w"> </span>--list-database-dork
+</code></pre></div>
+<p><code>atdork search wp</code> prints matching refs such as <code>@cms/wp.txt</code> (26,324 dorks)
+and <code>@cms/wp2.txt</code> (474 dorks), ready to pass to <code>--database-dork</code> or
+<code>atdork install</code>.</p>
+<h3 id="2-install-packages-locally">2. Install Packages Locally<a class="headerlink" href="#2-install-packages-locally" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Install a whole folder into the package store</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>atdork<span class="w"> </span>install<span class="w"> </span>@cms
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># Install a single file</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>atdork<span class="w"> </span>install<span class="w"> </span>@cve/cve_1.txt
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1"># Show what is installed</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>atdork<span class="w"> </span>installed
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="c1"># Remove an installed package</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>atdork<span class="w"> </span>uninstall<span class="w"> </span>@cve/cve_1.txt
+</code></pre></div>
+<p>Installed copies land in <code>~/.atdork/packages/</code> and take priority when
+resolving <code>--database-dork</code> refs.</p>
+<h3 id="3-update-the-atdork-db-checkout">3. Update the Atdork-DB Checkout<a class="headerlink" href="#3-update-the-atdork-db-checkout" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># git pull the Atdork-DB checkout and rebuild the index</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>atdork<span class="w"> </span>update
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Show or manually rebuild the manifest</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>atdork<span class="w"> </span>index
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>atdork<span class="w"> </span>index<span class="w"> </span>--build
+</code></pre></div>
+<h3 id="4-load-dorks-from-a-single-file">4. Load Dorks from a Single File<a class="headerlink" href="#4-load-dorks-from-a-single-file" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Canonical ref: folder + file</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>atdork<span class="w"> </span>--database-dork<span class="w"> </span>@ghdb/01_footholds.txt<span class="w"> </span>-r<span class="w"> </span><span class="m">10</span><span class="w"> </span>-v
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># The .txt extension is optional</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>atdork<span class="w"> </span>--database-dork<span class="w"> </span>@ghdb/01_footholds
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="c1"># Bare file name, matched against the index (.txt auto-appended)</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>atdork<span class="w"> </span>--database-dork<span class="w"> </span>01_footholds
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="c1"># Shorthand: unique single-letter folder prefix</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>atdork<span class="w"> </span>--database-dork<span class="w"> </span>c@cve_1.txt
+</code></pre></div>
+<h3 id="5-load-dorks-from-multiple-files">5. Load Dorks from Multiple Files<a class="headerlink" href="#5-load-dorks-from-multiple-files" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Combine refs, bare names, and shorthand in one command</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>atdork<span class="w"> </span>--database-dork<span class="w"> </span>@ghdb/01_footholds.txt,@cms/wp.txt<span class="w"> </span>-r<span class="w"> </span><span class="m">50</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>atdork<span class="w"> </span>--database-dork<span class="w"> </span>@cve/cve_1.txt,c@cve_1.txt,01_footholds<span class="w"> </span>--database-preview
+</code></pre></div>
+<p>All dorks are merged into a single list, deduplicated while preserving order.</p>
+<h3 id="6-load-whole-folders">6. Load Whole Folders<a class="headerlink" href="#6-load-whole-folders" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1"># Load EVERY .txt member of a folder</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>atdork<span class="w"> </span>--database-dork<span class="w"> </span>@ghdb<span class="w"> </span>--database-r<span class="w"> </span><span class="m">100</span><span class="w"> </span>-r<span class="w"> </span><span class="m">10</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="c1"># Combine multiple folders</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>atdork<span class="w"> </span>--database-dork<span class="w"> </span>@ghdb,@lfi<span class="w"> </span>--database-r<span class="w"> </span><span class="m">50</span><span class="w"> </span>--database-preview
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1"># A folder plus a specific file</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>atdork<span class="w"> </span>--database-dork<span class="w"> </span>@bug-bounty,@cve/cve_1.txt<span class="w"> </span>--database-preview
+</code></pre></div>
+<h3 id="7-random-selection">7. Random Selection<a class="headerlink" href="#7-random-selection" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Pick 10 random dorks from one file</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>atdork<span class="w"> </span>--database-dork<span class="w"> </span>@ghdb/01_footholds<span class="w"> </span>--database-r<span class="w"> </span><span class="m">10</span><span class="w"> </span>-r<span class="w"> </span><span class="m">5</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Pick 100 random dorks from an entire folder</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>atdork<span class="w"> </span>--database-dork<span class="w"> </span>@github<span class="w"> </span>--database-r<span class="w"> </span><span class="m">100</span><span class="w"> </span>-r<span class="w"> </span><span class="m">10</span>
+</code></pre></div>
+<p>If <code>--database-r</code> exceeds the total dork count, all dorks are used and a warning is logged.</p>
+<h3 id="8-reproducible-random-selection">8. Reproducible Random Selection<a class="headerlink" href="#8-reproducible-random-selection" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Same seed = same selection every time</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>atdork<span class="w"> </span>--database-dork<span class="w"> </span>@ghdb/01_footholds<span class="w"> </span>--database-r<span class="w"> </span><span class="m">10</span><span class="w"> </span>--database-seed<span class="w"> </span><span class="m">42</span><span class="w"> </span>-r<span class="w"> </span><span class="m">5</span>
+</code></pre></div>
+<p>Useful for benchmarking, sharing configurations, or replaying specific dork sets.</p>
+<h3 id="9-preview-without-executing">9. Preview Without Executing<a class="headerlink" href="#9-preview-without-executing" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>atdork<span class="w"> </span>--database-dork<span class="w"> </span>01_footholds,@bing/bing1,@cms/wp<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">  </span>--database-r<span class="w"> </span><span class="m">5</span><span class="w"> </span>--database-preview<span class="w"> </span>--database-seed<span class="w"> </span><span class="m">7</span>
+</code></pre></div>
+<p>Preview shows the loaded dorks without executing them as search queries.</p>
+<h3 id="10-custom-local-copy-legacy">10. Custom Local Copy (Legacy)<a class="headerlink" href="#10-custom-local-copy-legacy" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="c1"># Point at a local database root (e.g. a hand-edited copy)</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>atdork<span class="w"> </span>--database-path<span class="w"> </span>/opt/my-dorks<span class="w"> </span>--database-dork<span class="w"> </span>custom_file<span class="w"> </span>--database-r<span class="w"> </span><span class="m">50</span>
+</code></pre></div>
+<p>Legacy subdirectory paths such as <code>/bing/bing1</code> only resolve against a local
+<code>./database</code> directory or a <code>--database-path</code> root. In index mode, use
+<code>@</code>-refs instead (e.g. <code>@bing/bing1</code>).</p>
+<hr />
+<h2 id="directory-structure">Directory Structure<a class="headerlink" href="#directory-structure" title="Permanent link">&para;</a></h2>
+<p>Dork data lives in the Atdork-DB checkout (default <code>~/Atdork-DB</code>; override with
+<code>--db-repo</code> or <code>ATDORK_DB_REPO</code>):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>Atdork-DB/
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>├── Index.idn               # generated manifest: @folder/file.txt|sha256|bytes|dork-lines|description
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>├── @exploit-db/  @ghdb/  @shodan/  @censys/  @cloud/  @cms/  @common/  @crypto/
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>├── @cve/  @duckduckgo/  @bing/  @google/  @yandex/  @gaming/  @github/  @lfi/  @rfi/
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a>├── @admin/  @sensitive/  @social/  @network/  @vuln/  @shopping/  @movie/  @onion/
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a>├── @bug-bounty/  @carding/  @iot/
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a>└── scripts/ + .github/workflows/   # weekly GHDB auto-refresh into @ghdb/
+</code></pre></div>
+<p>Installed packages are cached separately:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>~/.atdork/packages/
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>└── @cms/wp.txt   # one copy per installed package ref
+</code></pre></div>
+<hr />
+<h2 id="how-it-works">How It Works<a class="headerlink" href="#how-it-works" title="Permanent link">&para;</a></h2>
+<h3 id="package-reference-grammar">Package Reference Grammar<a class="headerlink" href="#package-reference-grammar" title="Permanent link">&para;</a></h3>
+<p><code>--database-dork</code> (and <code>--batch-file</code>) accept these ref forms:</p>
+<table>
+<thead>
+<tr>
+<th>Ref</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>@cve/cve_1.txt</code></td>
+<td>Canonical: folder + file</td>
+</tr>
+<tr>
+<td><code>c@cve_1.txt</code></td>
+<td>Shorthand: unique folder prefix — <code>c</code> resolves to the folder starting with <code>c</code> that contains <code>cve_1.txt</code></td>
+</tr>
+<tr>
+<td><code>cve_1.txt</code> / <code>01_footholds</code></td>
+<td>Bare file name, matched against the index (<code>.txt</code> auto-appended)</td>
+</tr>
+<tr>
+<td><code>@cve</code></td>
+<td>Whole folder — loads every <code>.txt</code> member</td>
+</tr>
+</tbody>
+</table>
+<h3 id="resolution-order">Resolution Order<a class="headerlink" href="#resolution-order" title="Permanent link">&para;</a></h3>
+<p>When you run <code>--database-dork</code>, AtDork resolves each ref in this order:</p>
+<ol>
+<li>Installed copy in the package store (<code>~/.atdork/packages/</code>)</li>
+<li>The Atdork-DB checkout (<code>~/Atdork-DB</code>, or <code>--db-repo</code> / <code>ATDORK_DB_REPO</code>)</li>
+<li>A legacy local <code>./database</code> directory, or the root given by <code>--database-path PATH</code></li>
+</ol>
+<p>Unknown refs print a <code>Did you mean:</code> suggestion with close matches from the
+index, and <code>atdork search &lt;keyword&gt;</code> finds the right package by name.</p>
+<h3 id="path-safety">Path Safety<a class="headerlink" href="#path-safety" title="Permanent link">&para;</a></h3>
+<p>All file specs are sanitized to prevent directory traversal attacks:</p>
+<ul>
+<li>Parent traversal (<code>..</code>) is rejected with <code>ValueError</code></li>
+<li>Absolute paths (<code>C:\...</code>, <code>/etc/passwd</code>) are rejected</li>
+<li>Legacy subdirectory paths (<code>/bing/bing1</code>) are only accepted against a local
+  database root; index mode uses <code>@</code>-refs</li>
+</ul>
+<h3 id="random-selection-algorithm">Random Selection Algorithm<a class="headerlink" href="#random-selection-algorithm" title="Permanent link">&para;</a></h3>
+<p><code>--database-r N</code> uses <code>random.sample()</code> without replacement from the deduplicated dork list. With <code>--database-seed S</code>, a <code>random.Random(S)</code> instance is created, guaranteeing identical output across runs and Python versions.</p>
+<h3 id="integration-with-other-features">Integration with Other Features<a class="headerlink" href="#integration-with-other-features" title="Permanent link">&para;</a></h3>
+<p>Database dorks merge with queries from <code>--template</code>, <code>-q</code>, and <code>--batch-file</code>
+(the same package refs work there too):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Combine database dorks + template + custom query</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>atdork<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span>--database-dork<span class="w"> </span>@ghdb/01_footholds,@bing/bing1<span class="w"> </span>--database-r<span class="w"> </span><span class="m">20</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">  </span>--template<span class="w"> </span>sqli<span class="w"> </span>--target<span class="w"> </span>example.com<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">  </span>-q<span class="w"> </span><span class="s2">"site:example.com filetype:pdf"</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">  </span>-r<span class="w"> </span><span class="m">10</span><span class="w"> </span>--concurrency<span class="w"> </span><span class="m">3</span><span class="w"> </span>--verbose
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="c1"># Batch-file accepts package refs directly</span>
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>atdork<span class="w"> </span>--batch-file<span class="w"> </span>@cve/cve_1.txt<span class="w"> </span>-r<span class="w"> </span><span class="m">10</span>
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="c1"># Filter results for WordPress vulnerabilities</span>
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>atdork<span class="w"> </span>--database-dork<span class="w"> </span>@ghdb/09_files_containing_passwords,@cms/wp<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="w">  </span>--filter-vuln<span class="w"> </span>wordpress<span class="w"> </span>-r<span class="w"> </span><span class="m">10</span>
+<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>
+<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a><span class="c1"># Execute command on discovered URLs</span>
+<a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a>atdork<span class="w"> </span>--database-dork<span class="w"> </span>@ghdb/12_pages_containing_login_portals,@common/common1<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a><span class="w">  </span>--database-r<span class="w"> </span><span class="m">50</span><span class="w"> </span>--exec<span class="w"> </span><span class="s2">"curl -s -I {} | head -1"</span><span class="w"> </span>--exec-parallel<span class="w"> </span><span class="m">5</span>
+<a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a>
+<a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a><span class="c1"># Send results to Discord</span>
+<a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a>atdork<span class="w"> </span>--database-dork<span class="w"> </span>@ghdb/08_files_containing_juicy_info,@github/git-dorks<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a><span class="w">  </span>--database-r<span class="w"> </span><span class="m">100</span><span class="w"> </span>--notify<span class="w"> </span>discord:https://discord.com/api/webhooks/...
+</code></pre></div>
+<hr />
+<h2 id="common-workflows">Common Workflows<a class="headerlink" href="#common-workflows" title="Permanent link">&para;</a></h2>
+<h3 id="quick-recon">Quick Recon<a class="headerlink" href="#quick-recon" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Run a randomized sample across multiple categories</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>atdork<span class="w"> </span>--database-dork<span class="w"> </span>@ghdb/01_footholds.txt,@ghdb/03_sensitive_directories.txt,@ghdb/12_pages_containing_login_portals.txt,@common/common1<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">  </span>--database-r<span class="w"> </span><span class="m">30</span><span class="w"> </span>--database-seed<span class="w"> </span><span class="m">42</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="w">  </span>-r<span class="w"> </span><span class="m">10</span><span class="w"> </span>--concurrency<span class="w"> </span><span class="m">3</span><span class="w"> </span>--verbose<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="w">  </span>--output-dir<span class="w"> </span>recon_results/
+</code></pre></div>
+<h3 id="password-and-token-audit">Password and Token Audit<a class="headerlink" href="#password-and-token-audit" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>atdork<span class="w"> </span>--database-dork<span class="w"> </span>@ghdb/09_files_containing_passwords.txt,@github/git-dorks,@github/githubdorks<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">  </span>--database-r<span class="w"> </span><span class="m">50</span><span class="w"> </span>-r<span class="w"> </span><span class="m">15</span><span class="w"> </span>--output<span class="w"> </span>passwords.json<span class="w"> </span>--format<span class="w"> </span>json
+</code></pre></div>
+<h3 id="cms-vulnerability-scan">CMS Vulnerability Scan<a class="headerlink" href="#cms-vulnerability-scan" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># Install once, then scan</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>atdork<span class="w"> </span>install<span class="w"> </span>@cms
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a>atdork<span class="w"> </span>--database-dork<span class="w"> </span>@cms/wp,@cms/joomla,@cms/laravel<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">  </span>--database-r<span class="w"> </span><span class="m">200</span><span class="w"> </span>--target<span class="w"> </span>example.com<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">  </span>-r<span class="w"> </span><span class="m">20</span><span class="w"> </span>--concurrency<span class="w"> </span><span class="m">5</span><span class="w"> </span>--cache<span class="w"> </span>--cache-ttl<span class="w"> </span><span class="m">24</span>
+</code></pre></div>
+<h3 id="search-engine-specific">Search Engine Specific<a class="headerlink" href="#search-engine-specific" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># Bing-specific dorks</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>atdork<span class="w"> </span>--database-dork<span class="w"> </span>@bing/bing1,@bing/bing2<span class="w"> </span>--database-r<span class="w"> </span><span class="m">50</span>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="c1"># DuckDuckGo-specific dorks</span>
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>atdork<span class="w"> </span>--database-dork<span class="w"> </span>@duckduckgo/ddg1<span class="w"> </span>--database-r<span class="w"> </span><span class="m">30</span>
+</code></pre></div>
+<h3 id="reproducible-daily-scan">Reproducible Daily Scan<a class="headerlink" href="#reproducible-daily-scan" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>atdork<span class="w"> </span>--database-dork<span class="w"> </span>@ghdb/08_files_containing_juicy_info.txt,@common/common2,@common/common3<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a><span class="w">  </span>--database-r<span class="w"> </span><span class="m">100</span><span class="w"> </span>--database-seed<span class="w"> </span><span class="m">1337</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a><span class="w">  </span>-r<span class="w"> </span><span class="m">10</span><span class="w"> </span>--cache<span class="w"> </span>--cache-ttl<span class="w"> </span><span class="m">24</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="w">  </span>--notify<span class="w"> </span>slack:https://hooks.slack.com/services/...
+</code></pre></div>
+<h3 id="bug-bounty-focus">Bug Bounty Focus<a class="headerlink" href="#bug-bounty-focus" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>atdork<span class="w"> </span>--database-dork<span class="w"> </span>@bug-bounty<span class="w"> </span>--database-r<span class="w"> </span><span class="m">50</span><span class="w"> </span>--target<span class="w"> </span>target.com<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a><span class="w">  </span>-r<span class="w"> </span><span class="m">10</span><span class="w"> </span>--concurrency<span class="w"> </span><span class="m">5</span><span class="w"> </span>--output<span class="w"> </span>bug-bounty-results.json
+</code></pre></div>
+<h3 id="custom-local-dork-file">Custom Local Dork File<a class="headerlink" href="#custom-local-dork-file" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># 1. Create a local copy root</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>mkdir<span class="w"> </span>-p<span class="w"> </span>mydorks/internal
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a><span class="nb">echo</span><span class="w"> </span><span class="s1">'site:mycompany.com intitle:"confidential"'</span><span class="w"> </span>&gt;<span class="w"> </span>mydorks/internal/company_secrets.txt
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>
+<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a><span class="c1"># 2. Use your file alongside indexed packages</span>
+<a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a>atdork<span class="w"> </span>--database-path<span class="w"> </span>mydorks/<span class="w"> </span>--database-dork<span class="w"> </span>/internal/company_secrets,@common/common1<span class="w"> </span>-r<span class="w"> </span><span class="m">20</span>
+</code></pre></div>
+<hr />
+<h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
+<h3 id="database-directory-not-found">Database directory not found<a class="headerlink" href="#database-directory-not-found" title="Permanent link">&para;</a></h3>
+<p><strong>Fix:</strong> AtDork expects the Atdork-DB checkout. Either clone it and point
+AtDork at it, or use a local copy:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1"># Clone the data repo once</span>
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/amnottdevv/Atdork-DB<span class="w"> </span>~/Atdork-DB
+<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>
+<a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="c1"># Or point AtDork at an existing checkout</span>
+<a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>atdork<span class="w"> </span>--db-repo<span class="w"> </span>/path/to/Atdork-DB<span class="w"> </span>...
+<a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a><span class="nb">export</span><span class="w"> </span><span class="nv">ATDORK_DB_REPO</span><span class="o">=</span>/path/to/Atdork-DB
+<a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a>
+<a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a><span class="c1"># Or use a local database copy</span>
+<a id="__codelineno-20-9" name="__codelineno-20-9" href="#__codelineno-20-9"></a>atdork<span class="w"> </span>--database-path<span class="w"> </span>/path/to/local/db<span class="w"> </span>--database-dork<span class="w"> </span>&lt;ref&gt;
+</code></pre></div>
+<h3 id="database-dork-file-not-found">Database dork file not found<a class="headerlink" href="#database-dork-file-not-found" title="Permanent link">&para;</a></h3>
+<p>Unknown refs now print a <code>Did you mean:</code> line with close matches from the
+index. <strong>Fix:</strong> Run <code>atdork search &lt;keyword&gt;</code> to find the package, or
+<code>atdork --list-database-dork</code> to see every <code>@folder/file.txt</code> entry.</p>
+<h3 id="parent-directory-traversal-not-allowed">Parent directory traversal not allowed<a class="headerlink" href="#parent-directory-traversal-not-allowed" title="Permanent link">&para;</a></h3>
+<p><strong>Cause:</strong> You used <code>..</code> in the spec, which is blocked for security.</p>
+<p><strong>Fix:</strong> Use refs within the index or database root only. For external files, use <code>--database-path</code>.</p>
+<h3 id="destination-already-exists">Destination already exists<a class="headerlink" href="#destination-already-exists" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>Error: Destination already exists: '/path/to/mydork'.
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>Hint: pass --force to overwrite.
+</code></pre></div>
+<p><strong>Fix:</strong> Add <code>--force</code> to overwrite or delete the folder manually. (Legacy extraction only.)</p>
+<h3 id="legacy-subdirectory-path-resolves-to-nothing">Legacy subdirectory path resolves to nothing<a class="headerlink" href="#legacy-subdirectory-path-resolves-to-nothing" title="Permanent link">&para;</a></h3>
+<p><strong>Cause:</strong> Paths like <code>/bing/bing1</code> only work against a local <code>./database</code>
+directory or a <code>--database-path</code> root — not in index mode.</p>
+<p><strong>Fix:</strong> Use <code>@</code>-refs instead: <code>@bing/bing1</code>.</p>
+<hr />
+<h2 id="exit-codes">Exit Codes<a class="headerlink" href="#exit-codes" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>0</code></td>
+<td>Success</td>
+</tr>
+<tr>
+<td><code>1</code></td>
+<td>Error (file not found, invalid ref, extraction failure, etc.)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="see-also">See Also<a class="headerlink" href="#see-also" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../ghdb-scrapper/">GHDB Scraper</a> — Live-fetch dorks from Exploit-DB</li>
+<li><a href="../template-system/">Template System</a> — YAML-based dork collections</li>
+<li><a href="../batch-processing/">Batch Processing</a> — Running many queries efficiently</li>
+<li><a href="../filter-vuln/">Filter Vulnerability</a> — Filtering results by platform</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.top", "search.suggest", "search.highlight", "code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
