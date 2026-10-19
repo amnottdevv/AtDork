@@ -25,8 +25,10 @@ from core.package_manager import (
     index_folders,
     install,
     is_installed,
+    is_within,
     list_installed,
     load_index,
+    parse_index_file,
     parse_ref,
     read_index_header,
     resolve_batch_file,
@@ -196,6 +198,64 @@ def test_uninstall_removes_and_reports_missing(repo, tmp_path, monkeypatch):
 
     removed, missing = uninstall("@cve/cve_1.txt")
     assert not removed and [e.ref for e in missing] == ["@cve/cve_1.txt"]
+
+
+# ── path-traversal hardening ──────────────────────────────────────────────
+
+def test_uninstall_rejects_traversal_ref(repo, tmp_path, monkeypatch):
+    """A ref that climbs out of the store must never delete a file."""
+    _store(monkeypatch, tmp_path)
+    victim = tmp_path / "VICTIM.txt"
+    victim.write_text("keep me\n", encoding="utf-8")
+
+    with pytest.raises(PackageError):
+        uninstall("@cve/../../VICTIM.txt")          # relative traversal
+    with pytest.raises(PackageError):
+        uninstall("@cve/" + str(victim))            # absolute name
+    assert victim.read_text(encoding="utf-8") == "keep me\n"
+
+
+def test_uninstall_without_index_cannot_escape_store(tmp_path, monkeypatch):
+    """The filesystem fallback (no Atdork-DB) is the risky path: it must skip
+    the index but still refuse '..' and absolute names."""
+    store = _store(monkeypatch, tmp_path)
+    (store / "plugins" / "tool").mkdir(parents=True)
+    (store / "plugins" / "tool" / "tool.py").write_text("x\n", encoding="utf-8")
+    victim = tmp_path / "VICTIM.txt"
+    victim.write_text("keep me\n", encoding="utf-8")
+    # Point discovery at a nonexistent checkout: the index is unavailable and
+    # entries == [] → the store-scan fallback runs.
+    monkeypatch.setenv("ATDORK_DB_REPO", str(tmp_path / "missing-db"))
+
+    with pytest.raises(PackageError):
+        uninstall("@plugins/../../VICTIM.txt")
+    with pytest.raises(PackageError):
+        uninstall("@plugins/" + str(victim))
+    assert victim.read_text(encoding="utf-8") == "keep me\n"
+
+
+def test_parse_index_file_skips_unsafe_entries(tmp_path):
+    """Index lines with '..' or absolute names are dropped at parse time."""
+    index = tmp_path / "Index.idn"
+    index.write_text(
+        "# Atdork Index v1\n"
+        "@cve/good.txt|deadbeef|3|1|fine\n"
+        "@cve/../../../etc/passwd|deadbeef|3|1|evil\n"
+        "@cve//etc/passwd|deadbeef|3|1|evil\n",
+        encoding="utf-8",
+    )
+    assert [e.ref for e in parse_index_file(index)] == ["@cve/good.txt"]
+
+
+def test_is_within_blocks_escapes(tmp_path):
+    root = tmp_path / "store"
+    (root / "plugins").mkdir(parents=True)
+    assert is_within(root, root / "plugins" / "tool.py")
+    assert not is_within(root, root / ".." / "outside.txt")
+    assert not is_within(root, Path("/etc/passwd"))
+    link = root / "link"
+    link.symlink_to(tmp_path / "outside")
+    assert not is_within(root, link / "x.txt")      # symlink is resolved first
 
 
 def test_list_installed_statuses(repo, tmp_path, monkeypatch):

@@ -238,7 +238,9 @@ git push   # your registry is now installable
 Every external install goes through the same contract gate: metadata is read
 with AST (never executed), the name must match the plugin contract, files are
 size-capped, and registry installs verify **every** file against the checksum
-in that registry's `Index.idn` — a mismatch aborts the install.
+in that registry's `Index.idn` — a mismatch (or a missing `sha256`) aborts the
+install. Index entries are validated too: a ref that contains `..` or an
+absolute path is rejected, and no install can write outside the local store.
 
 ### Available plugins
 

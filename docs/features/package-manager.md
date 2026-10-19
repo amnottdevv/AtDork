@@ -73,6 +73,10 @@ Installing an already-installed, unmodified package is idempotent (`already inst
 
 Remove an installed package (or folder) from the store. The Atdork-DB checkout is never touched.
 
+Refs are validated before anything is removed: a reference containing `..`,
+an absolute path, or a folder that escapes the store is rejected — `uninstall`
+can only ever delete files inside the store.
+
 ### `atdork installed`
 
 List what is in the store with integrity status:

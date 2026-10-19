@@ -25,7 +25,7 @@ from core.external import (
     looks_like_url,
     publish,
 )
-from core.package_manager import list_installed, uninstall
+from core.package_manager import PackageError, list_installed, uninstall
 
 pytestmark = pytest.mark.skipif(shutil.which("git") is None,
                                 reason="git executable not installed")
@@ -343,6 +343,43 @@ def test_install_from_source_missing_file(tmp_path):
     (repo / "@plugins" / "tool" / "tool.py").unlink()
     commit_all(repo, "drop file")
     with pytest.raises(ExternalError, match="missing from the checkout"):
+        install_from_source("demo", "@plugins/tool",
+                            config=source_config(f"file://{repo}"),
+                            workspace=SimpleNamespace(root=str(tmp_path / "env")),
+                            package_dir=str(tmp_path / "store"))
+
+
+def test_install_from_source_rejects_path_traversal(tmp_path):
+    """A registry index must not be able to write outside the local store."""
+    repo = init_repo(tmp_path / "registry")
+    write_plugin(repo / "@plugins" / "tool", name="tool")
+    outside = tmp_path / "OUTSIDE.txt"
+    outside.write_text("do not touch\n", encoding="utf-8")
+    (repo / "Index.idn").write_text(
+        "@plugins/tool/../../../OUTSIDE.txt||0|0|poison\n", encoding="utf-8")
+    commit_all(repo, "poisoned index")
+
+    store = tmp_path / "store"
+    with pytest.raises(PackageError):
+        install_from_source("demo", "@plugins/tool",
+                            config=source_config(f"file://{repo}"),
+                            workspace=SimpleNamespace(root=str(tmp_path / "env")),
+                            package_dir=str(store))
+
+    assert outside.read_text(encoding="utf-8") == "do not touch\n"
+    assert not (tmp_path / "store").exists() or not any(
+        (tmp_path / "store").rglob("*.txt"))
+
+
+def test_install_from_source_requires_a_checksum(tmp_path):
+    """An empty sha256 in the index is not a licence to skip verification."""
+    repo = init_repo(tmp_path / "registry")
+    write_plugin(repo / "@plugins" / "tool", name="tool")
+    (repo / "Index.idn").write_text(
+        "@plugins/tool/tool.py||0|0|no checksum\n", encoding="utf-8")
+    commit_all(repo, "index without hashes")
+
+    with pytest.raises(ExternalError, match="no checksum"):
         install_from_source("demo", "@plugins/tool",
                             config=source_config(f"file://{repo}"),
                             workspace=SimpleNamespace(root=str(tmp_path / "env")),

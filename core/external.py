@@ -42,7 +42,9 @@ from core.package_manager import (
     IndexEntry,
     InstallOutcome,
     PackageError,
+    _safe,
     get_package_dir,
+    is_within,
     parse_index_file,
     parse_ref,
     resolve_targets,
@@ -420,20 +422,38 @@ def install_from_source(source: str, raw_ref: str, *, force: bool = False,
     store = get_package_dir(package_dir)
     outcomes: List[InstallOutcome] = []
     for entry in targets:
+        if not (_safe(entry.folder) and _safe(entry.name)):
+            raise ExternalError(
+                f"source '{source}': unsafe entry '{entry.ref}' in {index_name} "
+                "— refusing to install."
+            )
+        if not str(entry.sha256 or "").strip():
+            raise ExternalError(
+                f"source '{source}': {entry.ref} has no checksum in {index_name} "
+                "— refusing to install (every file must record a sha256)."
+            )
         src = repo / f"@{entry.folder}" / entry.name
+        if not is_within(repo, src):
+            raise ExternalError(
+                f"source '{source}': unsafe source path for {entry.ref} — refusing."
+            )
         if not src.is_file():
             raise ExternalError(
                 f"source '{source}': {entry.ref} is listed in {index_name} but "
                 "missing from the checkout."
             )
         digest = sha256_file(src)
-        if entry.sha256 and digest != entry.sha256:
+        if digest != entry.sha256:
             raise ExternalError(
                 f"source '{source}': checksum mismatch for {entry.ref} "
                 f"(index {entry.sha256[:12]}…, file {digest[:12]}…) — refusing "
                 "to install."
             )
         dest = store / entry.folder / entry.name
+        if not is_within(store, dest):
+            raise ExternalError(
+                f"source '{source}': unsafe destination for {entry.ref} — refusing."
+            )
         if dest.is_file() and not force and sha256_file(dest) == digest:
             outcomes.append(InstallOutcome(entry, dest, "exists"))
             continue

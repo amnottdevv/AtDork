@@ -238,6 +238,10 @@ def parse_index_file(path: Path) -> List[IndexEntry]:
             if not folder or not name:
                 logger.warning("%s:%d: malformed index line skipped", path.name, lineno)
                 continue
+            if not (_safe(folder) and _safe(name)):
+                logger.warning("%s:%d: unsafe index entry skipped: %s",
+                               path.name, lineno, ref)
+                continue
             try:
                 entries.append(IndexEntry(
                     folder=folder,
@@ -354,6 +358,22 @@ def _candidate_names(name: str) -> List[str]:
 def _safe(name: str) -> bool:
     parts = name.replace("\\", "/").split("/")
     return ".." not in parts and not name.startswith("/") and "://" not in name
+
+
+def is_within(base: Path, target: Path) -> bool:
+    """True when *target* resolves inside (or equals) *base*.
+
+    Symlinks and ``..`` are resolved first, so a reference that climbs out of
+    the store or the repository is always rejected. Nonexistent paths still
+    resolve lexically (``Path.resolve`` is non-strict), which is what we want:
+    a destination that does not exist yet must still pass the check.
+    """
+    try:
+        root = Path(base).resolve()
+        resolved = Path(target).resolve()
+    except OSError:  # pragma: no cover - unreadable path component
+        return False
+    return resolved == root or root in resolved.parents
 
 
 def resolve_entry(raw: str, index: Optional[List[IndexEntry]] = None,
@@ -556,13 +576,22 @@ def install(raw: str, *, force: bool = False, package_dir: Optional[str] = None,
     store = get_package_dir(package_dir)
     outcomes: List[InstallOutcome] = []
     for entry in targets:
+        if not (_safe(entry.folder) and _safe(entry.name)):
+            raise PackageError(
+                f"Unsafe index entry '{entry.ref}': the index must not contain "
+                "'..' or absolute paths. Refusing to install it."
+            )
         src = source_path(entry, repo=repo, config=config)
+        if not is_within(find_db_repo(repo), src):
+            raise PackageError(f"Unsafe source path for '{entry.ref}' — refusing.")
         if not src.is_file():
             raise PackageError(
                 f"Source file missing in Atdork-DB: {entry.ref} "
                 "(index out of date? run 'atdork index --build')"
             )
         dest = store / entry.folder / entry.name
+        if not is_within(store, dest):
+            raise PackageError(f"Unsafe destination for '{entry.ref}' — refusing.")
 
         if dest.is_file() and not force:
             try:
@@ -590,14 +619,27 @@ def install(raw: str, *, force: bool = False, package_dir: Optional[str] = None,
 
 
 def _store_targets(ref: Ref, store: Path) -> List[IndexEntry]:
-    """Filesystem fallback for refs absent from the index (external plugins)."""
+    """Filesystem fallback for refs absent from the index (external plugins).
+
+    References are validated before any path is built: a name with ``..``,
+    an absolute name or a folder that escapes the store raises
+    :class:`RefError` instead of reaching the filesystem.
+    """
     if not (ref.folder and ref.exact_folder):
         return []
+    if not _safe(ref.folder):
+        raise RefError(f"Unsafe package folder: '@{ref.folder}'")
+    if ref.name is not None and not _safe(ref.name):
+        raise RefError(f"Unsafe package reference: '@{ref.folder}/{ref.name}'")
     base = store / ref.folder
+    if not is_within(store, base):
+        raise RefError(f"Unsafe package folder: '@{ref.folder}'")
     if not base.is_dir():
         return []
     if ref.name:
         target = base / ref.name
+        if not is_within(store, target):
+            raise RefError(f"Unsafe package reference: '@{ref.folder}/{ref.name}'")
         if target.is_file():
             return [IndexEntry(ref.folder, ref.name, "", target.stat().st_size, 0)]
         if target.is_dir():
@@ -660,6 +702,13 @@ def uninstall(raw: str, *, package_dir: Optional[str] = None,
     removed, missing = [], []
     for entry in targets:
         path = store / entry.folder / entry.name
+        # Defence in depth: never unlink anything that resolves outside the
+        # store, whatever produced this entry.
+        if not is_within(store, path):
+            raise RefError(
+                f"Unsafe package path for '{entry.ref}' — refusing to remove "
+                f"{path}."
+            )
         if path.is_file():
             path.unlink()
             # prune empty folders
