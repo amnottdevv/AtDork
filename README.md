@@ -756,18 +756,19 @@ If you find this tool useful, consider leaving a ⭐ on GitHub!
 
 
 
+
 ## Code Quality Metrics
 
-![Complexity](https://img.shields.io/badge/complexity-6.29-brightgreen)
-![Maintainability](https://img.shields.io/badge/maintainability-55.9-brightgreen)
-![Coverage](https://img.shields.io/badge/coverage-69.9%25-yellow)
-![Pylint](https://img.shields.io/badge/pylint-9.13%2F100-brightgreen)
+![Complexity](https://img.shields.io/badge/complexity-6.21-brightgreen)
+![Maintainability](https://img.shields.io/badge/maintainability-55.6-brightgreen)
+![Coverage](https://img.shields.io/badge/coverage-70.0%25-yellow)
+![Pylint](https://img.shields.io/badge/pylint-9.11%2F100-brightgreen)
 
 | Metric | Score | Status |
 |--------|-------|--------|
-| Cyclomatic Complexity | 6.29 avg | ✅ Good |
-| Maintainability Index | 55.9 | ✅ Good |
-| Test Coverage | 69.9% | ⚠️ Fair |
-| Pylint Score | 9.13/100 | ✅ Good |
+| Cyclomatic Complexity | 6.21 avg | ✅ Good |
+| Maintainability Index | 55.6 | ✅ Good |
+| Test Coverage | 70.0% | ⚠️ Fair |
+| Pylint Score | 9.11/100 | ✅ Good |
 
-*Analysis: atdork.py, core/, lib/ • Last updated: 2026-10-19 11:51:49 UTC*
+*Analysis: atdork.py, core/, lib/ • Last updated: 2026-10-21 11:54:21 UTC*
