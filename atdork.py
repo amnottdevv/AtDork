@@ -128,13 +128,6 @@ from pyfiglet import Figlet
 
 from core.config import load_config, get_setting, override_setting, ConfigError
 from core.env import EnvError, guard_if_env, resolve_env
-from core.scanner import search_dork, SearchError
-from core.batch_runner import (
-    load_queries_from_file,
-    parse_query_string,
-    run_batch,
-    build_query_executor,
-)
 from core.proxy_manager import create_proxy_manager
 from core.filter_vuln import filter_vulnerable
 from core.template_dork import load_template_dorks, list_available_templates
@@ -167,18 +160,6 @@ from core.external import (
     looks_like_url,
     publish as publish_plugin,
 )
-from core.watch import (
-    WatchError,
-    add_watch,
-    list_watches,
-    load_watch,
-    remove_watch,
-    run_all as run_all_watches,
-    run_watch,
-    state_dir as watch_state_dir,
-    state_path as watch_state_path,
-    summarize as summarize_watch,
-)
 from core.post_processor import PostProcessor, extract_urls, extract_vulnerable_urls
 from lib.display import show_banner, display_results
 from lib.storage import save_results
@@ -191,12 +172,8 @@ from core.database import (
 )
 from core.logger import setup_logging
 
-# GHDB Scraper (Exploit-DB Google Hacking Database)
-from core.ghdb_scraper import run_ghdb_scraper
-
 # Case modules
 from core.case.circuit_breaker import CircuitBreaker
-from core.case.ip_guard import IPGuard, IPGuardError
 from core.case.fallback_manager import FallbackManager
 from core.case.retry_handler import RetryHandler
 from core.case.adaptive_delay import AdaptiveDelay
@@ -206,19 +183,6 @@ from core.case.stats import StatsCollector
 # Cache Manager
 from core.manage_cache import SearchCache
 
-# Notification
-from core.notification import send_batch_summary
-
-# Workflow engine (fase 3)
-from core.workflow import (
-    WORKFLOW_FILENAMES,
-    WorkflowEngine,
-    WorkflowError,
-    collect_workflows,
-    discover_workflow_files,
-    load_workflow_file,
-    validate_workflow,
-)
 
 # Plugin system (core/plugins.py)
 from core.plugins import (
@@ -558,6 +522,8 @@ def _parse_validation_args(args) -> dict:
 
 def _setup_case_modules(args, proxy_manager) -> dict:
     """Inisialisasi modul-modul case berdasarkan flag."""
+    from core.case.ip_guard import IPGuard
+
     modules = {
         "circuit_breaker": None,
         "ip_guard": None,
@@ -918,6 +884,8 @@ def _collect_database_queries(args) -> List[str]:
 # --------------------------------------------------------------------------- #
 
 def interactive_mode(db: Database):
+    from core.scanner import search_dork, SearchError
+
     show_banner()
     query = Prompt.ask("[bold yellow]Enter keyword/dork[/bold yellow]").strip()
     if not query:
@@ -1089,6 +1057,8 @@ def cli_mode(args):
 
         # 3. Single query (-q)
         if args.query:
+            from core.batch_runner import parse_query_string
+
             if args.batch_separator in args.query:
                 custom_queries = parse_query_string(args.query, args.batch_separator)
             else:
@@ -1097,6 +1067,8 @@ def cli_mode(args):
 
         # 4. Batch file (local path or package ref like @cve/cve_1.txt / c@cve_1.txt)
         if args.batch_file:
+            from core.batch_runner import load_queries_from_file
+
             try:
                 batch_path = resolve_batch_file(args.batch_file)
                 file_queries = load_queries_from_file(str(batch_path))
@@ -1175,6 +1147,8 @@ def cli_mode(args):
                 success_map[query] = success
 
         try:
+            from core.batch_runner import run_batch
+
             batch_results = run_batch(
                 queries=queries,
                 case_modules=case_modules,
@@ -1271,6 +1245,8 @@ def cli_mode(args):
 
         # Notifications (v1.3.9)
         if args.notify:
+            from core.notification import send_batch_summary
+
             vuln_only = args.notify_if_vuln
             if not vuln_only or (args.filter_vuln and total_hits > 0):
                 send_batch_summary(
@@ -1377,6 +1353,8 @@ def cli_mode(args):
         # (circuit breaker/fallback/retry), adaptive delay, dan status --resume
         # semuanya ikut terpakai di mode single-query (bug lama: path ini
         # sendiri-sendiri, cache-nya crash, dan modul case diabaikan).
+        from core.batch_runner import build_query_executor
+
         executor = build_query_executor(
             scanner_kwargs,
             case_modules,
@@ -1466,6 +1444,8 @@ def cli_mode(args):
 
         # Notifications for single query
         if args.notify and results:
+            from core.notification import send_batch_summary
+
             vuln_only = args.notify_if_vuln
             if not vuln_only or (args.filter_vuln and len(results) > 0):
                 batch_summary = {q: results}
@@ -2050,6 +2030,8 @@ def _collect_workflow_definitions(workspace, files=None):
     Without explicit files, the root is scanned for workflow.yaml (env root
     first, then the CWD). Returns ({name: (definition, source)}, paths).
     """
+    from core.workflow import collect_workflows, discover_workflow_files
+
     config_workflows = get_setting("workflows")
     paths = list(files) if files else discover_workflow_files(workspace)
     return collect_workflows(
@@ -2064,6 +2046,14 @@ def _resolve_workflow(name: str, workspace, files=None):
     path (runnable when it holds exactly one workflow), or a directory marker
     such as ``.`` (the single workflow discovered in that root is used).
     """
+    from core.workflow import (
+        WORKFLOW_FILENAMES,
+        WorkflowError,
+        collect_workflows,
+        discover_workflow_files,
+        load_workflow_file,
+    )
+
     if name and os.path.isfile(name):
         workflows = load_workflow_file(name)
         if len(workflows) == 1:
@@ -2134,6 +2124,8 @@ def _run_workflow_by_name(name: str, workspace, *, files=None, target=None,
                           workers=None, step=None, resume=False,
                           dry_run=False) -> int:
     """Shared execution path for `atdork workflow run` and --run-workflow."""
+    from core.workflow import WorkflowEngine, WorkflowError
+
     wname, definition, source = _resolve_workflow(name, workspace, files)
     engine = WorkflowEngine(
         wname, definition, target=target, workers=workers,
@@ -2150,6 +2142,8 @@ def _run_workflow_by_name(name: str, workspace, *, files=None, target=None,
 
 def workflow_cli(argv: List[str], workspace=None) -> int:
     """`atdork workflow list|validate|run` — sequential dork campaigns."""
+    from core.workflow import WorkflowError, validate_workflow
+
     parser = argparse.ArgumentParser(
         prog="atdork workflow",
         description="Run sequential multi-step dork campaigns from YAML "
@@ -2279,6 +2273,8 @@ def _watch_options(args, *, fill_defaults: bool = False) -> dict:
 
 def _watch_proxy_manager():
     """Proxy manager for watch runs (config-driven; None when unused)."""
+    from core.watch import WatchError
+
     if not (get_setting("proxy") or get_setting("proxy_file")
             or get_setting("tor")):
         return None
@@ -2297,6 +2293,19 @@ def _watch_proxy_manager():
 
 def watch_cli(argv: List[str], workspace=None) -> int:
     """`atdork watch add|list|show|remove|run` — one-shot dork monitoring."""
+    from core.watch import (
+        WatchError,
+        add_watch,
+        list_watches,
+        load_watch,
+        remove_watch,
+        run_all as run_all_watches,
+        run_watch,
+        state_dir as watch_state_dir,
+        state_path as watch_state_path,
+        summarize as summarize_watch,
+    )
+
     parser = argparse.ArgumentParser(
         prog="atdork watch",
         description="Monitor dorks and report only new findings. Each "
@@ -2811,6 +2820,8 @@ def main():
     # --- GHDB Scraper mode ---
     # Mode ini berdiri sendiri: kalau dipakai, tidak masuk ke alur pencarian/interaktif biasa.
     if args.ghdb_scraper or args.ghdb_list_categories:
+        from core.ghdb_scraper import run_ghdb_scraper
+
         success = run_ghdb_scraper(
             output_file=args.ghdb_file,
             categories=args.ghdb_categories,

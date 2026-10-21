@@ -39,6 +39,11 @@ CREATE TABLE IF NOT EXISTS results (
     FOREIGN KEY (query_id) REFERENCES queries(id),
     UNIQUE(query_id, href)
 );
+
+-- Dedup global mencari berdasarkan href saja. UNIQUE(query_id, href) tidak
+-- bisa dipakai untuk lookup itu (prefix kiri adalah query_id), sehingga tanpa
+-- index ini setiap is_duplicate() menjadi full table scan.
+CREATE INDEX IF NOT EXISTS idx_results_href ON results(href);
 """
 
 
@@ -207,16 +212,58 @@ class Database:
             return False
 
     def add_results_batch(self, query_id: int, results: List[Dict[str, Any]]) -> int:
-        """Tambahkan banyak hasil sekaligus. Mengembalikan jumlah yang benar‑benar baru."""
-        count = 0
+        """Tambahkan banyak hasil sekaligus. Mengembalikan jumlah yang benar‑benar baru.
+
+        Satu transaksi untuk seluruh batch: commit per baris membuat SQLite
+        melakukan fsync ribuan kali dan menjadi bottleneck saat menyimpan hasil.
+        """
+        if not results:
+            return 0
+
+        now = datetime.now(timezone.utc).isoformat()
+        rows = []
         for res in results:
             try:
-                if self.add_result(query_id, res):
-                    count += 1
-            except Exception as e:
-                logger.warning(f"Error in add_result within batch: {e}")
-                continue
-        return count
+                rows.append((
+                    query_id,
+                    res.get("title", ""),
+                    res.get("href", ""),
+                    res.get("body", ""),
+                    json.dumps(res, ensure_ascii=False),
+                    now,
+                ))
+            except (TypeError, ValueError) as e:
+                logger.warning(f"Skipping unserializable result in batch: {e}")
+
+        if not rows:
+            return 0
+
+        conn = self._connect()
+        before = conn.total_changes
+        try:
+            conn.executemany(
+                "INSERT OR IGNORE INTO results "
+                "(query_id, title, href, body, raw_json, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                rows,
+            )
+            conn.commit()
+            # INSERT OR IGNORE tidak menambah total_changes untuk baris duplikat.
+            return conn.total_changes - before
+        except sqlite3.DatabaseError as e:
+            conn.rollback()
+            logger.error(f"Database error in add_results_batch: {e}")
+            # Fallback best-effort: satu baris bermasalah tidak boleh
+            # membuang seluruh batch.
+            count = 0
+            for res in results:
+                try:
+                    if self.add_result(query_id, res):
+                        count += 1
+                except Exception as inner:
+                    logger.warning(f"Error in add_result within batch: {inner}")
+                    continue
+            return count
 
     def get_results_by_query(self, query_id: int) -> List[Dict[str, Any]]:
         """Ambil semua hasil untuk query tertentu."""
@@ -272,9 +319,9 @@ class Database:
         try:
             conn = self._connect()
             row = conn.execute(
-                "SELECT COUNT(*) FROM results WHERE href = ?", (href,)
+                "SELECT 1 FROM results WHERE href = ? LIMIT 1", (href,)
             ).fetchone()
-            return row[0] > 0
+            return row is not None
         except sqlite3.DatabaseError as e:
             logger.error(f"Database error in is_duplicate: {e}")
             return False

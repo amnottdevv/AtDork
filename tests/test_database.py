@@ -93,6 +93,39 @@ def test_is_duplicate_global(db):
     assert db.is_duplicate("http://unique.com") is False
 
 
+def test_results_href_index_exists_for_global_dedup(db):
+    rows = db._connect().execute("PRAGMA index_list(results)").fetchall()
+    assert "idx_results_href" in {row[1] for row in rows}
+
+
+def test_add_results_batch_uses_one_transaction_and_counts_new_rows(db):
+    qid = db.add_query("batch", STATUS_COMPLETED)
+    results = [
+        {"title": f"t{i}", "href": f"http://{i}.com", "body": ""}
+        for i in range(500)
+    ]
+
+    assert db.add_results_batch(qid, results) == 500
+    assert db.add_results_batch(qid, results) == 0
+    assert db.is_duplicate("http://499.com") is True
+
+    qid2 = db.add_query("batch-duplicates", STATUS_COMPLETED)
+    duplicates = [{"title": "a", "href": "http://only-once.com", "body": ""}] * 3
+    assert db.add_results_batch(qid2, duplicates) == 1
+
+
+def test_add_results_batch_skips_unserializable_rows(db):
+    qid = db.add_query("batch-bad", STATUS_COMPLETED)
+    results = [
+        {"title": "ok", "href": "http://ok.com", "body": ""},
+        {"title": object(), "href": "http://bad.com", "body": ""},
+    ]
+
+    assert db.add_results_batch(qid, results) == 1
+    assert db.is_duplicate("http://ok.com") is True
+    assert db.is_duplicate("http://bad.com") is False
+
+
 def test_get_results_by_query_roundtrip_raw_json(db):
     qid = db.add_query("q", STATUS_COMPLETED)
     db.add_result(qid, {"title": "Judul", "href": "http://x.com", "body": "snippet", "backend": "bing"})

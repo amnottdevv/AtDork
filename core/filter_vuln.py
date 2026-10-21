@@ -8,8 +8,9 @@ installed wheel, not only from a repository checkout.
 import logging
 import os
 import re
+from collections import deque
 from importlib import resources
-from typing import Dict, List, Tuple
+from typing import Deque, Dict, List, Optional, Set, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +20,109 @@ PACKAGE_PREFIX = "pkg://"
 
 # Cache: key = resolved resource id, value = compiled regex patterns
 _wordlist_cache: Dict[str, List[re.Pattern]] = {}
+# Cache: key = resolved resource id, value = prefilter index (see _FilterIndex)
+_index_cache: Dict[str, "_FilterIndex"] = {}
+
+# A pattern that contains any of these cannot be reduced to a required literal.
+# `-` is harmless and stays out of the class.
+_REGEX_META = re.compile(r"[\\\[\]()|*+?{}^$]")
+_DOT = re.compile(r"\.")
+
+
+class _AhoCorasick:
+    """Minimal Aho-Corasick automaton (pure Python, read-only after build()).
+
+    It answers one question fast: which required literals occur in this text?
+    The original regexes still make the final match decision, so the automaton
+    only acts as a conservative candidate filter.
+    """
+
+    __slots__ = ("_goto", "_fail", "_out")
+
+    def __init__(self) -> None:
+        self._goto: List[Dict[str, int]] = [{}]
+        self._fail: List[int] = [0]
+        self._out: List[List[int]] = [[]]
+
+    def add(self, word: str, payload: int) -> None:
+        node = 0
+        for ch in word:
+            nxt = self._goto[node].get(ch)
+            if nxt is None:
+                nxt = len(self._goto)
+                self._goto[node][ch] = nxt
+                self._goto.append({})
+                self._fail.append(0)
+                self._out.append([])
+            node = nxt
+        self._out[node].append(payload)
+
+    def build(self) -> None:
+        queue: Deque[int] = deque(self._goto[0].values())
+        while queue:
+            node = queue.popleft()
+            for ch, child in self._goto[node].items():
+                queue.append(child)
+                fail = self._fail[node]
+                while fail and ch not in self._goto[fail]:
+                    fail = self._fail[fail]
+                self._fail[child] = self._goto[fail].get(ch, 0)
+                self._out[child].extend(self._out[self._fail[child]])
+
+    def candidates(self, text: str) -> Set[int]:
+        node = 0
+        found: Set[int] = set()
+        goto, fail, out = self._goto, self._fail, self._out
+        for ch in text:
+            while node and ch not in goto[node]:
+                node = fail[node]
+            node = goto[node].get(ch, 0)
+            if out[node]:
+                found.update(out[node])
+        return found
+
+
+class _FilterIndex:
+    """Required-literal prefilter for one compiled wordlist."""
+
+    __slots__ = ("automaton", "always")
+
+    def __init__(self, automaton: _AhoCorasick, always: Tuple[int, ...]) -> None:
+        self.automaton = automaton
+        self.always = always
+
+
+def _required_literal(pattern: str) -> Optional[str]:
+    """Return a literal every match of ``pattern`` must contain, if provable.
+
+    Wordlist entries are regexes, but in practice almost all of them are plain
+    paths where ``.`` is the only metacharacter. Splitting on ``.`` yields
+    literal segments; at least one full segment must appear in any match, so
+    the longest segment is a safe necessary condition. Anything more complex
+    (classes, alternation, anchors, escapes, non-ASCII case folding) returns
+    ``None`` and is always evaluated with the real regex.
+    """
+    if _REGEX_META.search(pattern) or not pattern.isascii():
+        return None
+    segments = [segment for segment in _DOT.split(pattern) if segment]
+    if not segments:
+        return None
+    return max(segments, key=len)
+
+
+def _build_filter_index(patterns: List[re.Pattern]) -> _FilterIndex:
+    automaton = _AhoCorasick()
+    always: List[int] = []
+    for idx, pattern in enumerate(patterns):
+        literal = _required_literal(pattern.pattern)
+        if literal is None:
+            always.append(idx)
+        else:
+            # casefold() is at least as permissive as re.IGNORECASE for the
+            # ASCII literals accepted above, so it cannot hide a real match.
+            automaton.add(literal.casefold(), idx)
+    automaton.build()
+    return _FilterIndex(automaton, tuple(always))
 
 
 def _is_default_wordlist_dir(wordlist_dir: str) -> bool:
@@ -126,26 +230,49 @@ def load_wordlist(path: str) -> List[re.Pattern]:
     return patterns
 
 
+def _cache_key(location: str) -> str:
+    return location if location.startswith(PACKAGE_PREFIX) else os.path.abspath(location)
+
+
+def _get_patterns(location: str) -> List[re.Pattern]:
+    key = _cache_key(location)
+    patterns = _wordlist_cache.get(key)
+    if patterns is None:
+        patterns = load_wordlist(location)
+        _wordlist_cache[key] = patterns
+    return patterns
+
+
+def _get_index(location: str, patterns: List[re.Pattern]) -> _FilterIndex:
+    key = _cache_key(location)
+    index = _index_cache.get(key)
+    if index is None:
+        index = _build_filter_index(patterns)
+        _index_cache[key] = index
+    return index
+
+
 def get_wordlist(filter_arg: str, wordlist_dir: str = DEFAULT_WORDLIST_DIR) -> List[re.Pattern]:
     """
     Return compiled regex patterns for a filter, with caching.
     """
     _, _, location = resolve_filter_arg(filter_arg, wordlist_dir)
-    cache_key = location if location.startswith(PACKAGE_PREFIX) else os.path.abspath(location)
-    if cache_key in _wordlist_cache:
-        return _wordlist_cache[cache_key]
+    return _get_patterns(location)
 
-    patterns = load_wordlist(location)
-    _wordlist_cache[cache_key] = patterns
-    return patterns
+
+def _resolve_with_index(
+    filter_arg: str, wordlist_dir: str = DEFAULT_WORDLIST_DIR
+) -> Tuple[List[re.Pattern], str, str, _FilterIndex]:
+    base_name, filter_type, location = resolve_filter_arg(filter_arg, wordlist_dir)
+    patterns = _get_patterns(location)
+    return patterns, filter_type, base_name, _get_index(location, patterns)
 
 
 def get_filter_info(filter_arg: str, wordlist_dir: str = DEFAULT_WORDLIST_DIR) -> Tuple[List[re.Pattern], str, str]:
     """
     Return (patterns, filter_type, base_name) for a vulnerability filter.
     """
-    base_name, filter_type, _ = resolve_filter_arg(filter_arg, wordlist_dir)
-    patterns = get_wordlist(filter_arg, wordlist_dir)
+    patterns, filter_type, base_name, _ = _resolve_with_index(filter_arg, wordlist_dir)
     return patterns, filter_type, base_name
 
 
@@ -157,6 +284,10 @@ def filter_vulnerable(
 ) -> Tuple[List[Dict], List[Dict], str]:
     """
     Split search results into vulnerable and safe buckets.
+
+    A required-literal (Aho-Corasick) prefilter skips the vast majority of
+    regex evaluations while the real compiled patterns still decide the final
+    match, so results are identical to a brute-force scan.
     """
     if "platform" in kwargs:
         filter_arg = kwargs["platform"]
@@ -168,7 +299,7 @@ def filter_vulnerable(
     if not results:
         return [], [], "unknown"
 
-    patterns, filter_type, _ = get_filter_info(filter_arg, wordlist_dir)
+    patterns, filter_type, _, index = _resolve_with_index(filter_arg, wordlist_dir)
 
     vulnerable = []
     safe = []
@@ -180,7 +311,19 @@ def filter_vulnerable(
         else:
             # Path mode: gabungkan title, href, dan body.
             text = f"{res.get('title', '')} {res.get('href', '')} {res.get('body', '')}"
-        if any(pattern.search(text) for pattern in patterns):
+
+        matched = False
+        for idx in index.automaton.candidates(text.casefold()):
+            if patterns[idx].search(text):
+                matched = True
+                break
+        if not matched:
+            for idx in index.always:
+                if patterns[idx].search(text):
+                    matched = True
+                    break
+
+        if matched:
             vulnerable.append(res)
         else:
             safe.append(res)
