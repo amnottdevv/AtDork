@@ -165,7 +165,9 @@ def get_package_dir(explicit: Optional[str] = None) -> Path:
     cfg_val = _cfg("package_dir")
     if cfg_val:
         return _as_path(cfg_val)
-    return Path.home() / ".atdork" / "packages"
+    home_override = os.environ.get("HOME") or os.environ.get("USERPROFILE")
+    home_dir = Path(home_override).expanduser() if home_override else Path.home()
+    return home_dir / ".atdork" / "packages"
 
 
 def find_db_repo(explicit: Optional[str] = None) -> Path:
@@ -191,7 +193,9 @@ def _search_paths(explicit: Optional[str]) -> List[Path]:
     cfg_val = _cfg("db_repo")
     if cfg_val:
         paths.append(_as_path(cfg_val))
-    paths.append(Path.home() / DB_REPO_NAME)
+    home_override = os.environ.get("HOME") or os.environ.get("USERPROFILE")
+    home_dir = Path(home_override).expanduser() if home_override else Path.home()
+    paths.append(home_dir / DB_REPO_NAME)
     # Sibling of this checkout: <parent-of-atdork>/Atdork-DB
     paths.append(Path(__file__).resolve().parents[2] / DB_REPO_NAME)
     paths.append(Path.cwd() / DB_REPO_NAME)

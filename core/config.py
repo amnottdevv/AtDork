@@ -369,7 +369,9 @@ def _discover_paths(filepath: Optional[str],
     if filepath is None:
         filepath = os.environ.get("ATDORK_CONFIG") or None
 
-    global_dir = os.path.join(os.path.expanduser("~"), ".config", "atdork")
+    home_override = os.environ.get("HOME") or os.environ.get("USERPROFILE")
+    home_dir = home_override if home_override else os.path.expanduser("~")
+    global_dir = os.path.join(home_dir, ".config", "atdork")
     for name in _GLOBAL_CANDIDATES:
         candidate = os.path.join(global_dir, name)
         if os.path.isfile(candidate):

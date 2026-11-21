@@ -518,7 +518,9 @@ class WorkflowEngine:
         if self.workspace is not None:
             base = Path(self.workspace.state_dir) / "workflows"
         else:
-            base = Path.home() / ".atdork" / "state" / "workflows"
+            home_override = os.environ.get("HOME") or os.environ.get("USERPROFILE")
+            home_dir = Path(home_override).expanduser() if home_override else Path.home()
+            base = home_dir / ".atdork" / "state" / "workflows"
         safe = re.sub(r"[^\w.-]", "_", self.name)
         return base / f"{safe}.json"
 

@@ -147,7 +147,10 @@ def test_guard_rejects_dotdot_escape(tmp_path):
 
 def test_guard_rejects_symlink_escape(tmp_path):
     env = create_env(tmp_path / "ws")
-    (env.root / "tmp" / "evil").symlink_to(tmp_path)   # symlink → outside
+    try:
+        (env.root / "tmp" / "evil").symlink_to(tmp_path, target_is_directory=True)
+    except OSError as exc:
+        pytest.skip(f"directory symlinks unavailable: {exc}")
     with pytest.raises(EnvEscapeError):
         env.guard_write("tmp/evil/leak.db")
 

@@ -78,7 +78,9 @@ def state_dir(workspace: Any = None) -> Path:
     root = getattr(workspace, "state_dir", None)
     if root:
         return Path(root) / WATCH_FOLDER
-    return Path.home() / ".atdork" / "state" / WATCH_FOLDER
+    home_override = os.environ.get("HOME") or os.environ.get("USERPROFILE")
+    home_dir = Path(home_override).expanduser() if home_override else Path.home()
+    return home_dir / ".atdork" / "state" / WATCH_FOLDER
 
 
 def state_path(name: str, workspace: Any = None) -> Path:

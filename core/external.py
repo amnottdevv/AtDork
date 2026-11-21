@@ -84,6 +84,9 @@ def looks_like_url(spec: str) -> bool:
 
 
 def _is_raw_py_url(url: str) -> bool:
+    if url.lower().startswith("file://"):
+        raw_path = url[len("file://"):].split("#", 1)[0]
+        return raw_path.lower().endswith(".py")
     path = urllib.parse.urlsplit(url).path
     return path.lower().endswith(".py")
 
@@ -111,7 +114,19 @@ def _download(url: str) -> bytes:
     """Fetch a single module: ``file://`` reads the path, http(s) downloads it."""
     parts = urllib.parse.urlsplit(url)
     if parts.scheme in ("", "file"):
-        path = Path(urllib.request.url2pathname(parts.path))
+        if os.name == "nt" and url.lower().startswith("file://"):
+            raw_path = url[len("file://"):].replace("/", "\\")
+            if raw_path.startswith("\\") and not re.match(r"^\\\\[A-Za-z]:", raw_path):
+                raw_path = raw_path.lstrip("\\")
+            file_path = raw_path
+        elif parts.scheme == "file" and parts.netloc and parts.netloc != "localhost":
+            if os.name == "nt" and re.match(r"^[A-Za-z]:$", parts.netloc):
+                file_path = parts.netloc + urllib.request.url2pathname(parts.path)
+            else:
+                file_path = "//" + parts.netloc + urllib.request.url2pathname(parts.path)
+        else:
+            file_path = urllib.request.url2pathname(parts.path)
+        path = Path(file_path)
         try:
             data = path.read_bytes()
         except OSError as exc:
@@ -340,7 +355,11 @@ def install_url(spec: str, *, git_ref: Optional[str] = None, force: bool = False
 def _install_py_url(url: str, *, force: bool,
                     package_dir: Optional[str]) -> List[InstallOutcome]:
     data = _download(url)
-    filename = Path(urllib.parse.urlsplit(url).path).name or "plugin.py"
+    if url.lower().startswith("file://"):
+        raw_path = url[len("file://"):].split("#", 1)[0].replace("\\", "/")
+        filename = raw_path.rsplit("/", 1)[-1] or "plugin.py"
+    else:
+        filename = Path(urllib.parse.urlsplit(url).path).name or "plugin.py"
     if not filename.lower().endswith(".py"):
         filename += ".py"
     with _temp_dir(prefix="atdork-ext-file-") as tmp:

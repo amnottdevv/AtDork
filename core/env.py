@@ -59,6 +59,12 @@ LAYOUT_DIRS = (
 REGISTRY_FILENAME = "environments.yml"
 
 
+def user_home() -> Path:
+    """Resolve the user's home consistently across platforms and test environments."""
+    override = os.environ.get("HOME") or os.environ.get("USERPROFILE")
+    return Path(override).expanduser() if override else Path.home()
+
+
 class EnvError(Exception):
     """Environment resolution/creation problem (bad root, missing marker)."""
 
@@ -70,7 +76,7 @@ class EnvEscapeError(EnvError):
 # ── Registry ───────────────────────────────────────────────────────────────
 
 def registry_path() -> Path:
-    return Path.home() / ".config" / "atdork" / REGISTRY_FILENAME
+    return user_home() / ".config" / "atdork" / REGISTRY_FILENAME
 
 
 def read_registry() -> Dict[str, Any]:
