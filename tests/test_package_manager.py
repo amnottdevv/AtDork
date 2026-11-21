@@ -254,7 +254,10 @@ def test_is_within_blocks_escapes(tmp_path):
     assert not is_within(root, root / ".." / "outside.txt")
     assert not is_within(root, Path("/etc/passwd"))
     link = root / "link"
-    link.symlink_to(tmp_path / "outside")
+    try:
+        link.symlink_to(tmp_path / "outside", target_is_directory=True)
+    except OSError as exc:
+        pytest.skip(f"directory symlinks unavailable: {exc}")
     assert not is_within(root, link / "x.txt")      # symlink is resolved first
 
 

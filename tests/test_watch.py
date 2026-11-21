@@ -9,6 +9,7 @@ captured, and HOME / state dirs live in tmp_path.
 
 import io
 import json
+import os
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -97,7 +98,8 @@ def test_validate_name_bad(name):
 
 
 def test_state_path_without_env(tmp_path):
-    assert state_dir() == Path.home() / ".atdork" / "state" / "watch"
+    home = Path(os.environ["HOME"])
+    assert state_dir() == home / ".atdork" / "state" / "watch"
     assert state_path("acme").name == "acme.json"
 
 

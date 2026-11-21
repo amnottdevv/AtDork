@@ -1931,7 +1931,7 @@ def env_cli(argv: List[str]) -> int:
             env = create_env(args_.path, name=args_.name, force=args_.force)
             console.print(f"[green]✔ Environment ready:[/green] {env.root}")
             for key, value in env.describe_paths().items():
-                console.print(f"  [dim]{key:8}[/dim] {value}")
+                console.print(f"  [dim]{key:8}[/dim]", value, soft_wrap=True)
             console.print(
                 f"\n[dim]Use it:[/dim] atdork --env {env.root} -q \"...\"  "
                 f"[dim]or set as default:[/dim] atdork env use {env.root}"
@@ -1951,7 +1951,7 @@ def env_cli(argv: List[str]) -> int:
                     tags += " [green](active)[/green]"
                 if Env.at(root) is None:
                     tags += " [red](missing)[/red]"
-                console.print(f"  {root}{tags}")
+                console.print(f"  {root}", markup=False, soft_wrap=True)
             return 0
 
         if args_.action == "use":
@@ -1963,7 +1963,8 @@ def env_cli(argv: List[str]) -> int:
                     f"atdork env create {args_.path}"
                 )
             set_active_env(env.root)
-            console.print(f"[green]✔ Active environment:[/green] {env.root}")
+            console.print("[green]✔ Active environment:[/green]", env.root,
+                          markup=False, soft_wrap=True)
             return 0
 
         if args_.action == "which":
@@ -1972,8 +1973,9 @@ def env_cli(argv: List[str]) -> int:
                 console.print("[yellow]No environment active.[/yellow] "
                               "(--env, ATDORK_ENV, or 'atdork env use <path>')")
                 return 0
-            console.print(f"[green]✔ Environment:[/green] {env.root}"
-                          + (f" [dim]({env.name})[/dim]" if env.name else ""))
+            console.print("[green]✔ Environment:[/green]", env.root,
+                          f"({env.name})" if env.name else "",
+                          markup=False, soft_wrap=True)
             for key, value in env.describe_paths().items():
                 console.print(f"  [dim]{key:8}[/dim] {value}")
             return 0
